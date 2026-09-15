@@ -1,0 +1,175 @@
+from typing import Any
+from google import genai
+from google.genai import types
+
+from app.core.config import settings
+from app.llm.base import (
+    LLMError,
+    LLMGenerationError,
+    LLMProvider,
+    LLMProviderNotConfiguredError,
+    LLMResponse,
+)
+from app.llm.context import LLMContext
+
+
+class GeminiProvider(LLMProvider):
+    """Google Gemini LLM provider implementation using the official google-genai SDK."""
+
+    def __init__(
+        self,
+        api_key: str | None = None,
+        model_name: str | None = None,
+        client: Any | None = None,
+    ) -> None:
+        """Initialize the Gemini provider.
+
+        Args:
+            api_key: Optional API key. Defaults to settings.gemini_api_key.
+            model_name: Optional model identifier. Defaults to settings.gemini_model.
+            client: Optional pre-configured genai.Client (useful for mocking in tests).
+        """
+        self.api_key = api_key or settings.gemini_api_key
+        self.model_name = model_name or settings.gemini_model or "gemini-2.5-flash"
+        self._client = client
+
+        # Initialize client if API key is provided and no client was injected
+        if self._client is None and self.api_key:
+            self._client = genai.Client(api_key=self.api_key)
+
+    @property
+    def provider_name(self) -> str:
+        return "gemini"
+
+    def _convert_context_to_gemini(
+        self,
+        context: LLMContext,
+    ) -> tuple[list[types.Content], str | None]:
+        """Convert provider-neutral LLMContext into Gemini Content objects and system instruction.
+
+        Database / Neutral roles:
+          - 'user'      -> Gemini 'user'
+          - 'assistant' -> Gemini 'model'
+          - 'system'    -> Accumulated into system_instruction
+        """
+        contents: list[types.Content] = []
+        system_parts: list[str] = list(context.system_instructions)
+
+        for msg in context.messages:
+            if msg.role == "system":
+                system_parts.append(msg.content)
+            elif msg.role == "user":
+                contents.append(
+                    types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(text=msg.content)],
+                    )
+                )
+            elif msg.role == "assistant":
+                contents.append(
+                    types.Content(
+                        role="model",
+                        parts=[types.Part.from_text(text=msg.content)],
+                    )
+                )
+            else:
+                # Default unknown roles to user for safety
+                contents.append(
+                    types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(text=msg.content)],
+                    )
+                )
+
+        combined_system = "\n\n".join(system_parts) if system_parts else None
+        return contents, combined_system
+
+    async def generate_response(
+        self,
+        context: LLMContext,
+    ) -> LLMResponse:
+        """Generate response from Gemini model using provider-neutral LLMContext.
+
+        Raises:
+            LLMProviderNotConfiguredError: If API key is missing.
+            LLMGenerationError: If the upstream call fails or produces empty output.
+        """
+        if self._client is None:
+            raise LLMProviderNotConfiguredError(
+                "Gemini API key is not configured. Please set GEMINI_API_KEY in the environment."
+            )
+
+        if not context.messages:
+            raise LLMGenerationError("Cannot generate response from empty message history.")
+
+        contents, resolved_system = self._convert_context_to_gemini(context=context)
+
+        config: types.GenerateContentConfig | None = None
+        if resolved_system:
+            config = types.GenerateContentConfig(system_instruction=resolved_system)
+
+        try:
+            response = await self._client.aio.models.generate_content(
+                model=self.model_name,
+                contents=contents,
+                config=config,
+            )
+        except LLMError:
+            raise
+        except Exception as exc:
+            err_msg = str(exc)
+            if self.api_key and self.api_key in err_msg:
+                err_msg = err_msg.replace(self.api_key, "[REDACTED]")
+            raise LLMGenerationError(f"Gemini API request failed: {err_msg}") from exc
+
+        # Extract output text
+        content_text = getattr(response, "text", None)
+        if not content_text or not content_text.strip():
+            raise LLMGenerationError("Gemini returned an empty or blank response.")
+
+        return LLMResponse(content=content_text.strip())
+
+    async def generate_structured(
+        self,
+        context: LLMContext,
+        response_schema: type[Any] | None = None,
+    ) -> str:
+        """Generate structured JSON output using Gemini's native JSON mode."""
+        if self._client is None:
+            raise LLMProviderNotConfiguredError(
+                "Gemini API key is not configured. Please set GEMINI_API_KEY in the environment."
+            )
+
+        if not context.messages:
+            raise LLMGenerationError("Cannot generate response from empty message history.")
+
+        contents, resolved_system = self._convert_context_to_gemini(context=context)
+
+        config_kwargs: dict[str, Any] = {"response_mime_type": "application/json"}
+        if resolved_system:
+            config_kwargs["system_instruction"] = resolved_system
+        if response_schema is not None:
+            config_kwargs["response_schema"] = response_schema
+
+        config = types.GenerateContentConfig(**config_kwargs)
+
+        try:
+            response = await self._client.aio.models.generate_content(
+                model=self.model_name,
+                contents=contents,
+                config=config,
+            )
+        except LLMError:
+            raise
+        except Exception as exc:
+            err_msg = str(exc)
+            if self.api_key and self.api_key in err_msg:
+                err_msg = err_msg.replace(self.api_key, "[REDACTED]")
+            raise LLMGenerationError(f"Gemini structured request failed: {err_msg}") from exc
+
+        content_text = getattr(response, "text", None)
+        if not content_text or not content_text.strip():
+            raise LLMGenerationError("Gemini returned an empty structured response.")
+
+        return content_text.strip()
+

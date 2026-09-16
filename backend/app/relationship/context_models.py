@@ -6,7 +6,7 @@ Strictly excludes raw floating-point metrics, levels, XP, or romance gamificatio
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-MAX_FIELD_LENGTH: int = 1000
+MAX_FIELD_LENGTH: int = 2000
 
 
 class RelationshipContext(BaseModel):

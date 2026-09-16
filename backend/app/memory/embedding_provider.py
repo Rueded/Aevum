@@ -190,9 +190,19 @@ class GeminiEmbeddingProvider:
             )
 
         try:
+            # Map legacy text-embedding-004 to current gemini-embedding-2
+            api_model_name = "gemini-embedding-2" if self.model_name_val == "text-embedding-004" else self.model_name_val
+            
+            # The new SDK requires EmbedContentConfig for output_dimensionality if we want to preserve 768
+            from google.genai import types
+            config = None
+            if self.model_name_val == "text-embedding-004":
+                config = types.EmbedContentConfig(output_dimensionality=768)
+
             response = await self._client.aio.models.embed_content(
-                model=self.model_name_val,
+                model=api_model_name,
                 contents=text,
+                config=config,
             )
             if not response.embeddings or not response.embeddings[0].values:
                 raise EmbeddingGenerationError("Gemini API returned an empty embedding response.")

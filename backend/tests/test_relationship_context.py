@@ -324,6 +324,43 @@ def test_scenario_34_high_trust_low_familiarity():
     assert "relaxed and naturally comfortable" in summary
     assert "Mutual respect is deeply established" in summary
 
+def test_scenario_35_high_comfort_low_affection():
+    """Scenario 35: High comfort + zero affection is relaxed but not romantic."""
+    state = _make_state(comfort=0.8, affection=0.0)
+    ctx = RelationshipContextBuilder.build(state)
+    assert "relaxed, spontaneous, or lighthearted playful interaction" in ctx.interaction_guidance
+    assert "no established romantic or affectionate bond" in ctx.affection_summary
+    assert "Never assume romantic interest" in ctx.interaction_guidance
+
+def test_scenario_36_high_affection_low_comfort():
+    """Scenario 36: High affection + low comfort (warmth exists while interaction is somewhat guarded)."""
+    state = _make_state(affection=0.8, comfort=0.2)
+    ctx = RelationshipContextBuilder.build(state)
+    assert "strong personal affection for the user" in ctx.interaction_guidance
+    assert "Interaction is somewhat guarded" in ctx.interaction_guidance
+
+def test_scenario_37_high_respect_low_familiarity():
+    """Scenario 37: High respect + low familiarity (respectful without acting close)."""
+    state = _make_state(respect=0.8, familiarity=0.1)
+    ctx = RelationshipContextBuilder.build(state)
+    assert "Interact with grounded mutual respect" in ctx.interaction_guidance
+    assert "Treat the user as someone Aevum is gradually getting to know" in ctx.interaction_guidance
+
+def test_affection_influences_warmth_without_romance_mode():
+    """Verify affection influences warmth but strictly avoids romance triggers."""
+    state = _make_state(affection=0.8)
+    ctx = RelationshipContextBuilder.build(state)
+    assert "naturally influence your interpersonal warmth, attentiveness" in ctx.interaction_guidance
+    assert "Never assume romantic interest" in ctx.interaction_guidance
+
+def test_attachment_influences_continuity_without_dependency():
+    """Verify attachment influences continuity and connection without dependency or exclusivity."""
+    state = _make_state(attachment=0.8)
+    ctx = RelationshipContextBuilder.build(state)
+    assert "connection holds deep emotional significance" in ctx.interaction_guidance
+    assert "maintain complete emotional independence" in ctx.interaction_guidance
+    assert "dependent" not in ctx.interaction_guidance.lower()
+
 
 # =============================================================================
 # 5. Anti-Romance, Anti-Leakage & Safety Tests

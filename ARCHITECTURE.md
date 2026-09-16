@@ -106,6 +106,15 @@ The Character Engine is the supervisory coordinator within Aevum Core. It binds 
 * **Independent Routines**: The character has her own circadian rhythm, schedule, and activities (sleeping, cooking, studying, reading, relaxing).
 * **Social Life & Hobbies**: Simulated network of friends and external interests. She can share stories about what happened in her day, independent of user interactions.
 * **Unavailability**: If she is in the middle of a focused activity, sleeping, or away, she may respond with a delay, send a brief check-in, or indicate that she is currently busy.
+* **Life Simulation Orchestration**:
+  * `LifeSimulator` owns Life rules (plan start, activity completion, LifeEvent creation).
+  * `LifeSimulationOrchestrator` owns cross-domain coordination (Life → Emotion).
+  * `LifeEmotionIntegrator` owns Life → Emotion interpretation (deterministic, no LLM).
+  * `EmotionEngine` owns emotional transition/application.
+  * The simulation tick is explicitly invoked by a caller; no permanent scheduler exists yet.
+  * The tick is deterministic and timezone-safe (operates on explicit UTC instants).
+  * Processing is idempotent: repeated ticks at the same instant produce no duplicate artifacts.
+  * Life → Emotion integration does not automatically mutate Memory, Relationship, CharacterState, or Conversation.
 
 #### E. Event Engine
 * **Scheduled Events**: Calendar events, daily habits, recurring milestones.

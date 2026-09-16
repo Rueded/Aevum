@@ -12,6 +12,7 @@ from app.llm.base import ChatMessage
 from app.llm.context import LLMContext
 from app.llm.context_builder import build_context
 from app.relationship.context_builder import RelationshipContextBuilder
+from app.life.context_builder import LifeContextBuilder
 
 
 class ResponseContextAssembler:
@@ -119,6 +120,18 @@ class ResponseContextAssembler:
             "</current_emotion>"
         )
 
+        # 5.5 Life Context Block
+        life_block = LifeContextBuilder.format_context(context.life)
+
+        # 6. Behavioral Guidance Block
+        behavior_ctx = context.behavior
+        hints = "\n".join(f"- {hint}" for hint in behavior_ctx.behavioral_hints)
+        behavior_block = (
+            "<behavioral_guidance>\n"
+            f"{hints}\n"
+            "</behavioral_guidance>"
+        )
+
         # Assemble system instructions list
         system_instructions: list[str] = [
             core_rules,
@@ -126,11 +139,21 @@ class ResponseContextAssembler:
             state_block,
             relationship_block,
             emotion_block,
+            life_block,
+            behavior_block,
         ]
 
         # 6. Memory Context Block (if available)
         if context.memory.context_block:
+            mem_hints = "\n".join(f"- {hint}" for hint in context.memory.experience.continuity_hints)
+            memory_experience_block = (
+                "<memory_experience_guidance>\n"
+                f"{mem_hints}\n"
+                "</memory_experience_guidance>"
+            )
+
             system_instructions.append(context.memory.context_block)
+            system_instructions.append(memory_experience_block)
 
         # 7. Messages sequence preserving conversation history
         copied_messages: list[ChatMessage] = []

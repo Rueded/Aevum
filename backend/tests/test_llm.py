@@ -139,3 +139,42 @@ async def test_gemini_provider_upstream_error_sanitizes_credentials():
     err_text = str(exc_info.value)
     assert secret_key not in err_text
     assert "[REDACTED]" in err_text
+
+
+@pytest.mark.asyncio
+async def test_gemini_provider_strips_additional_properties_from_pydantic_schema():
+    """Verify GeminiProvider strips additionalProperties from generated Pydantic JSON schemas to fix API errors."""
+    from pydantic import BaseModel
+    import json
+
+    class DummyNested(BaseModel):
+        field: str
+
+    class DummySchema(BaseModel):
+        items: list[DummyNested]
+
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = '{"items": [{"field": "value"}]}'
+    mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
+
+    provider = GeminiProvider(api_key="mock-key", client=mock_client)
+    context = build_context(messages=[ChatMessage(role="user", content="Hello")])
+    
+    result = await provider.generate_structured(context=context, response_schema=DummySchema)
+    
+    assert result == '{"items": [{"field": "value"}]}'
+    
+    # Check what was actually passed to the provider
+    mock_client.aio.models.generate_content.assert_awaited_once()
+    call_args = mock_client.aio.models.generate_content.await_args
+    config = call_args.kwargs.get("config")
+    
+    assert config is not None
+    schema_dict = config.response_schema
+    assert isinstance(schema_dict, dict)
+    
+    # The actual schema string shouldn't contain 'additionalProperties'
+    schema_str = json.dumps(schema_dict)
+    assert "additionalProperties" not in schema_str
+

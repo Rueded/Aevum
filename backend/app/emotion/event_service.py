@@ -64,6 +64,18 @@ class EmotionEventService:
         normalized_summary = payload.summary.strip().lower()
 
         # Check existing events for identical character, type, and normalized summary
+        # If source_life_event_id is provided, check for that exact ID
+        if payload.source_life_event_id:
+            query = select(EmotionEventRecord).where(
+                EmotionEventRecord.character_id == payload.character_id,
+                EmotionEventRecord.source_life_event_id == payload.source_life_event_id,
+            )
+            result = await self._session.execute(query)
+            existing = result.scalars().first()
+            if existing:
+                logger.info("Skipping duplicate emotion event for life event %s", payload.source_life_event_id)
+                return None
+        
         query = select(EmotionEventRecord).where(
             EmotionEventRecord.character_id == payload.character_id,
             EmotionEventRecord.event_type == payload.event_type.value,
@@ -86,8 +98,12 @@ class EmotionEventService:
             event_type=payload.event_type.value,
             summary=payload.summary.strip(),
             source=payload.source.value,
+            source_life_event_id=payload.source_life_event_id,
             emotional_relevance=payload.emotional_relevance,
         )
+        if payload.created_at is not None:
+            record.created_at = payload.created_at
+            
         self._session.add(record)
         await self._session.commit()
         await self._session.refresh(record)
@@ -168,6 +184,7 @@ class EmotionEventService:
             event_type=EmotionEventType(record.event_type),
             summary=record.summary,
             source=EmotionEventSource(record.source),
+            source_life_event_id=record.source_life_event_id,
             emotional_relevance=record.emotional_relevance,
             created_at=_ensure_utc(record.created_at),
         )

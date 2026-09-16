@@ -34,8 +34,10 @@ from app.character.models import (
 from app.character.state_models import CharacterMood, CharacterState
 from app.emotion.emotion_models import EmotionState, EmotionType
 from app.memory.context_builder import build_memory_context
-from app.memory.models import HybridMemoryResult, Memory
+from app.memory.models import HybridMemoryResult, Memory, MemoryCategory
 from app.relationship.context_models import RelationshipContext
+from app.life.context_models import CharacterLifeContext
+from app.relationship.models import RelationshipState
 
 
 class CharacterDefinitionContext(BaseModel):
@@ -152,6 +154,80 @@ class CharacterEmotionContext(BaseModel):
         )
 
 
+class MemoryExperienceContext(BaseModel):
+    """Immutable semantic guidance derived from retrieved memories."""
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    continuity_hints: tuple[str, ...] = Field(
+        ...,
+        description="Qualitative behavioral hints about how to naturally use these memories.",
+    )
+
+    @classmethod
+    def synthesize(
+        cls,
+        memories: Optional[Sequence[Union[HybridMemoryResult, Memory]]] = None,
+    ) -> "MemoryExperienceContext":
+        """Synthesize behavioral continuity hints from retrieved memory characteristics."""
+        hints = []
+        if not memories:
+            return cls(continuity_hints=())
+
+        has_low_confidence = False
+        has_high_confidence = False
+        has_high_importance = False
+        categories = set()
+
+        for item in memories:
+            mem = item.memory if isinstance(item, HybridMemoryResult) else item
+            categories.add(mem.category)
+
+            if mem.confidence < 0.4:
+                has_low_confidence = True
+            elif mem.confidence > 0.8:
+                has_high_confidence = True
+
+            if mem.importance > 0.7:
+                has_high_importance = True
+
+        if has_low_confidence:
+            hints.append("Some retrieved memories are marked as low-confidence. Use them cautiously and express uncertainty naturally (e.g., 'I vaguely recall...'). Do not assert them as absolute fact.")
+        
+        if has_high_confidence:
+            hints.append("You have strongly established memories relevant to this context. You may treat them as established context if appropriate.")
+
+        if has_high_importance:
+            hints.append("Some retrieved memories are marked as highly important. If contextually relevant, you may give them stronger continuity significance.")
+
+        if MemoryCategory.USER_GOAL in categories:
+            hints.append("A relevant user goal was retrieved. When contextually appropriate, you may naturally follow up or reference their progress.")
+
+        if MemoryCategory.USER_PROBLEM in categories:
+            hints.append("A past user problem or concern was retrieved. You may gently check in or keep it in mind if it relates to their current situation.")
+
+        if MemoryCategory.EVENT in categories:
+            hints.append("A past event is relevant. You can naturally provide continuity by referencing it if the user brings up related topics.")
+
+        if MemoryCategory.PREFERENCE in categories:
+            hints.append("A known user preference is relevant. You may let this influence your recommendations or choices without awkwardly pointing out that you remembered it.")
+
+        if MemoryCategory.PROMISE in categories:
+            hints.append("A previous promise or commitment is relevant. Treat this with stronger continuity significance.")
+
+        if MemoryCategory.JOKE in categories:
+            hints.append("A shared inside joke was retrieved. You may enable a natural callback if the timing is right, but do not force it.")
+
+        if MemoryCategory.CHARACTER_EVENT in categories:
+            hints.append("One of your own past personal experiences is relevant. You may naturally reference your own history if it relates to the conversation.")
+
+        if not hints:
+            hints.append("Use the retrieved memories naturally as background context. Do not force them into the conversation if they are not directly relevant.")
+
+        hints.append("Important: Memory is context, not a database dump. Do not explicitly announce that you are looking at your memory database.")
+
+        return cls(continuity_hints=tuple(hints))
+
+
 class CharacterMemoryContext(BaseModel):
     """Immutable semantic context for retrieved relevant memories."""
 
@@ -165,6 +241,10 @@ class CharacterMemoryContext(BaseModel):
         default=None,
         description="Formatted XML memory context block for LLM grounding (if memories fit budget).",
     )
+    experience: MemoryExperienceContext = Field(
+        ...,
+        description="Synthesized memory experience guidance.",
+    )
 
     @classmethod
     def from_memories(
@@ -173,13 +253,65 @@ class CharacterMemoryContext(BaseModel):
     ) -> "CharacterMemoryContext":
         """Construct context directly from retrieved memories sequence."""
         if not memories:
-            return cls(memories=(), context_block=None)
+            return cls(
+                memories=(),
+                context_block=None,
+                experience=MemoryExperienceContext.synthesize(None),
+            )
         contents: list[str] = []
         for item in memories:
             mem = item.memory if isinstance(item, HybridMemoryResult) else item
             contents.append(mem.content)
         context_block = build_memory_context(memories)
-        return cls(memories=tuple(contents), context_block=context_block)
+        return cls(
+            memories=tuple(contents),
+            context_block=context_block,
+            experience=MemoryExperienceContext.synthesize(memories),
+        )
+
+
+class CharacterBehaviorContext(BaseModel):
+    """Immutable semantic guidance derived from mood, emotion, and relationship state."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    behavioral_hints: tuple[str, ...] = Field(
+        ...,
+        description="Qualitative behavioral hints reflecting current state.",
+    )
+
+    @classmethod
+    def synthesize(
+        cls,
+        state: CharacterStateContext,
+        emotion: CharacterEmotionContext,
+    ) -> "CharacterBehaviorContext":
+        """Synthesize behavioral hints from current domain states."""
+        hints = []
+
+        # Energy/Mood driven hints
+        if state.energy < 0.3:
+            hints.append("You are feeling physically or mentally exhausted. Keep responses relatively brief and lower-energy.")
+        elif state.energy > 0.8:
+            hints.append("You are feeling highly energetic and alert. Your tone can be more animated or enthusiastic.")
+
+        if state.stress > 0.7:
+            hints.append("You are currently highly stressed. Your tone may be terse, anxious, or distracted.")
+
+        # Emotion driven hints
+        emo_type = emotion.emotion_type.value
+        if emotion.intensity >= 0.6:
+            hints.append(f"Your dominant emotion is {emo_type}. Let this strongly color your word choice and focus.")
+        elif emotion.intensity >= 0.3:
+            hints.append(f"Your dominant emotion is {emo_type}. Let this subtly influence your tone.")
+
+        # Relationship guidance is handled authoritatively by RelationshipContext,
+        # ensuring no raw scores leak here and removing duplicated logic.
+
+        if not hints:
+            hints.append("Maintain your baseline personality and conversational tone.")
+
+        return cls(behavioral_hints=tuple(hints))
 
 
 class CharacterResponseContext(BaseModel):
@@ -193,3 +325,5 @@ class CharacterResponseContext(BaseModel):
     relationship: RelationshipContext = Field(..., description="Current qualitative relationship context.")
     emotion: CharacterEmotionContext = Field(..., description="Current emotional state context.")
     memory: CharacterMemoryContext = Field(..., description="Relevant memory context.")
+    behavior: CharacterBehaviorContext = Field(..., description="Synthesized behavioral cues and hints.")
+    life: CharacterLifeContext = Field(..., description="Current factual life context.")

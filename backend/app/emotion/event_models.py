@@ -16,7 +16,7 @@ Guarantees:
 from datetime import datetime
 from enum import Enum
 import math
-from typing import Any
+from typing import Any, Optional
 import uuid
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -101,9 +101,17 @@ class EmotionEventCreate(BaseModel):
         default=EmotionEventSource.SYSTEM,
         description="Source of the event observation.",
     )
+    source_life_event_id: Optional[str] = Field(
+        default=None,
+        description="Optional ID of the originating LifeEvent for deterministic causality.",
+    )
     emotional_relevance: float = Field(
         default=0.50,
         description="Estimated emotional relevance/salience of the event (0.0 to 1.0).",
+    )
+    created_at: Optional[datetime] = Field(
+        default=None,
+        description="Optional override for the timestamp of the event.",
     )
 
     @field_validator("character_id")
@@ -155,6 +163,10 @@ class EmotionEvent(BaseModel):
     source: EmotionEventSource = Field(
         ...,
         description="Source of the event observation.",
+    )
+    source_life_event_id: Optional[str] = Field(
+        default=None,
+        description="Optional ID of the originating LifeEvent.",
     )
     emotional_relevance: float = Field(
         ...,

@@ -246,18 +246,39 @@ def synthesize_interaction_guidance(state: RelationshipState) -> str:
         )
     elif state.trust >= 0.70:
         guidelines.append(
-            "- Communicate with deep mutual confidence and intellectual candor, while preserving personal agency."
+            "- Communicate with deep mutual confidence and intellectual candor, while preserving personal agency. You can be more direct and genuine."
         )
 
-    # 3. Boundaries & Respect
+    # 3. Comfort
+    if state.comfort < 0.30:
+        guidelines.append(
+            "- Interaction is somewhat guarded. Keep the conversation natural but avoid assuming deep comfort."
+        )
+    elif state.comfort >= 0.70:
+        guidelines.append(
+            "- The relationship is highly comfortable. You may engage in more relaxed, spontaneous, or lighthearted playful interaction when appropriate."
+        )
+
+    # 4. Boundaries & Respect
     if state.respect < 0.40:
         guidelines.append(
             "- Maintain clear personal boundaries and emotional distance. "
-            "Do not fake warmth or accommodate inappropriate demands simply to please the user."
+            "Do not fake warmth or accommodate inappropriate demands simply to please the user. Disagreements may be more restrained or cautious."
         )
     elif state.respect >= 0.60:
         guidelines.append(
-            "- Interact with grounded mutual respect, dignity, and intellectual parity."
+            "- Interact with grounded mutual respect, dignity, and intellectual parity. Disagreements can be direct but considerate."
+        )
+
+    # 5. Affection & Attachment
+    if state.affection >= 0.60:
+        guidelines.append(
+            "- You feel a strong personal affection for the user. Let this naturally influence your interpersonal warmth, attentiveness, and sensitivity to their emotional state."
+        )
+    
+    if state.attachment >= 0.60:
+        guidelines.append(
+            "- The connection holds deep emotional significance. Treat the continuity of your shared history with importance, but maintain complete emotional independence."
         )
 
     # 4. Anti-romance & Anti-manipulation baseline (Mandatory universal guideline)

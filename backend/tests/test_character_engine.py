@@ -22,12 +22,16 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.character.engine import CharacterEngine
+from app.life.context_models import CharacterLifeContext
+from app.life.models import LifeState
 from app.character.engine_models import (
+    CharacterBehaviorContext,
     CharacterDefinitionContext,
     CharacterEmotionContext,
     CharacterMemoryContext,
     CharacterResponseContext,
     CharacterStateContext,
+    MemoryExperienceContext,
     format_emotion_summary,
 )
 from app.character.models import (
@@ -168,6 +172,11 @@ def test_character_response_context_creation() -> None:
         relationship=RelationshipContextBuilder.build(rel_state),
         emotion=CharacterEmotionContext.from_state(emo_state),
         memory=CharacterMemoryContext.from_memories([]),
+        behavior=CharacterBehaviorContext.synthesize(
+            CharacterStateContext.from_state(char_state),
+            CharacterEmotionContext.from_state(emo_state),
+        ),
+        life=CharacterLifeContext(current_location_summary='Aevum is currently at: HOME.', current_activity_summary='Aevum is currently resting.', recent_experience_summary=(), life_guidance=('You are resting.',)),
     )
 
     assert ctx.user_input == "Tell me about your thoughts on time."
@@ -195,6 +204,11 @@ def test_character_response_context_immutability() -> None:
         relationship=RelationshipContextBuilder.build(rel_state),
         emotion=CharacterEmotionContext.from_state(emo_state),
         memory=CharacterMemoryContext.from_memories([]),
+        behavior=CharacterBehaviorContext.synthesize(
+            CharacterStateContext.from_state(char_state),
+            CharacterEmotionContext.from_state(emo_state),
+        ),
+        life=CharacterLifeContext(current_location_summary='Aevum is currently at: HOME.', current_activity_summary='Aevum is currently resting.', recent_experience_summary=(), life_guidance=('You are resting.',)),
     )
 
     with pytest.raises(ValidationError):
@@ -216,6 +230,10 @@ def test_character_response_context_extra_fields_rejected() -> None:
             relationship=RelationshipContextBuilder.build(rel_state),
             emotion=CharacterEmotionContext.from_state(emo_state),
             memory=CharacterMemoryContext.from_memories([]),
+            behavior=CharacterBehaviorContext.synthesize(
+                CharacterStateContext.from_state(char_state),
+                CharacterEmotionContext.from_state(emo_state),
+            ),
             extra_field="disallowed",  # type: ignore[call-arg]
         )
 
@@ -269,6 +287,8 @@ async def test_build_response_context_preloaded_states() -> None:
         relationship_state=rel_state,
         emotion_state=emo_state,
         memories=[mem1],
+        life_state=LifeState(id='aevum', character_id='aevum', current_activity='REST', current_location='HOME', status='ACTIVE', version=1, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)),
+        recent_events=[]
     )
 
     # 1. User input
@@ -319,6 +339,8 @@ async def test_build_response_context_empty_memory_case() -> None:
         relationship_state=rel_state,
         emotion_state=emo_state,
         memories=[],
+        life_state=LifeState(id='aevum', character_id='aevum', current_activity='REST', current_location='HOME', status='ACTIVE', version=1, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)),
+        recent_events=[]
     )
 
     assert ctx.memory.memories == ()
@@ -342,6 +364,8 @@ async def test_engine_determinism() -> None:
         relationship_state=rel_state,
         emotion_state=emo_state,
         memories=[],
+        life_state=LifeState(id='aevum', character_id='aevum', current_activity='REST', current_location='HOME', status='ACTIVE', version=1, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)),
+        recent_events=[]
     )
 
     ctx2 = await engine.build_response_context(
@@ -351,6 +375,8 @@ async def test_engine_determinism() -> None:
         relationship_state=rel_state,
         emotion_state=emo_state,
         memories=[],
+        life_state=LifeState(id='aevum', character_id='aevum', current_activity='REST', current_location='HOME', status='ACTIVE', version=1, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)),
+        recent_events=[]
     )
 
     assert ctx1 == ctx2
@@ -377,6 +403,8 @@ async def test_input_immutability() -> None:
         relationship_state=rel_state,
         emotion_state=emo_state,
         memories=[],
+        life_state=LifeState(id='aevum', character_id='aevum', current_activity='REST', current_location='HOME', status='ACTIVE', version=1, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc)),
+        recent_events=[]
     )
 
     assert char_state.energy == orig_energy
@@ -485,3 +513,52 @@ async def test_side_effect_boundary(test_session: AsyncSession) -> None:
     assert experiences_before == experiences_after
     assert conversations_before == conversations_after
     assert memories_before == memories_after
+
+
+def test_memory_experience_synthesis_confidence() -> None:
+    """Memory experience synthesizes confidence guidance."""
+    mem_low = Memory(
+        id="mem-1", category=MemoryCategory.FACT, content="Low confidence.",
+        confidence=0.3, importance=0.5, created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    mem_high = Memory(
+        id="mem-2", category=MemoryCategory.FACT, content="High confidence.",
+        confidence=0.9, importance=0.5, created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    
+    ctx_low = MemoryExperienceContext.synthesize([mem_low])
+    assert any("low-confidence" in h for h in ctx_low.continuity_hints)
+    
+    ctx_high = MemoryExperienceContext.synthesize([mem_high])
+    assert any("strongly established" in h for h in ctx_high.continuity_hints)
+
+
+def test_memory_experience_synthesis_importance() -> None:
+    """Memory experience synthesizes importance guidance."""
+    mem_important = Memory(
+        id="mem-1", category=MemoryCategory.FACT, content="Very important.",
+        confidence=0.9, importance=0.9, created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc)
+    )
+    ctx = MemoryExperienceContext.synthesize([mem_important])
+    assert any("highly important" in h for h in ctx.continuity_hints)
+
+
+def test_memory_experience_synthesis_categories() -> None:
+    """Memory experience synthesizes category-specific guidance."""
+    categories = [
+        MemoryCategory.USER_GOAL, MemoryCategory.USER_PROBLEM,
+        MemoryCategory.EVENT, MemoryCategory.PREFERENCE,
+        MemoryCategory.PROMISE, MemoryCategory.JOKE,
+        MemoryCategory.CHARACTER_EVENT
+    ]
+    for cat in categories:
+        mem = Memory(
+            id="mem-1", category=cat, content="Test content",
+            confidence=0.9, importance=0.5, created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
+        )
+        ctx = MemoryExperienceContext.synthesize([mem])
+        assert len(ctx.continuity_hints) >= 2 # 1 cat hint + 1 common hint at least

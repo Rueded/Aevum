@@ -12,6 +12,7 @@ dependencies = [
     "sqlalchemy>=2.0.30",
     "aiosqlite>=0.20.0",
     "google-genai>=1.0.0",
+    "tzdata>=2026.4",
 ]
 
 [project.optional-dependencies]

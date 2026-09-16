@@ -13,12 +13,15 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.life.context_models import CharacterLifeContext
 from app.character.engine_models import (
+    CharacterBehaviorContext,
     CharacterDefinitionContext,
     CharacterEmotionContext,
     CharacterMemoryContext,
     CharacterResponseContext,
     CharacterStateContext,
+    MemoryExperienceContext,
     format_emotion_summary,
 )
 from app.character.models import (
@@ -203,6 +206,12 @@ def _build_test_response_context(
         memory=CharacterMemoryContext(
             memories=mem_tuple,
             context_block=mem_block,
+            experience=MemoryExperienceContext.synthesize(None),
+        ),
+        life=CharacterLifeContext(current_location_summary='Aevum is currently at: HOME.', current_activity_summary='Aevum is currently resting.', recent_experience_summary=(), life_guidance=('You are resting.',)),
+        behavior=CharacterBehaviorContext.synthesize(
+            CharacterStateContext.from_state(char_state),
+            CharacterEmotionContext.from_state(emo_state),
         ),
     )
 

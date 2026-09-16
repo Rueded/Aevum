@@ -758,6 +758,12 @@ class EmotionEventRecord(Base):
         String(20),
         nullable=False,
     )
+    source_life_event_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("life_events.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     emotional_relevance: Mapped[float] = mapped_column(
         Float,
         nullable=False,
@@ -846,3 +852,79 @@ class EmotionInfluenceRecord(Base):
 
 
 
+
+class LifeStateRecord(Base):
+    """Represents the current life state of the character."""
+    __tablename__ = "life_states"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default="aevum")
+    character_id: Mapped[str] = mapped_column(String(36), nullable=False, default="aevum")
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+    
+    current_activity: Mapped[str] = mapped_column(String(100), nullable=False)
+    current_location: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="ACTIVE")
+
+class LifeActivityRecord(Base):
+    """Represents a discrete activity in the character's life."""
+    __tablename__ = "life_activities"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    plan_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
+    character_id: Mapped[str] = mapped_column(String(36), nullable=False, default="aevum", index=True)
+    activity_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    location: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    planned_end_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    importance: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+class LifePlanRecord(Base):
+    """Represents a planned action or intention."""
+    __tablename__ = "life_plans"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    plan_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
+    character_id: Mapped[str] = mapped_column(String(36), nullable=False, default="aevum", index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    planned_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    planned_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="PLANNED", index=True)
+    importance: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+class LifeEventRecord(Base):
+    """Represents a factual event that occurred in the character's life."""
+    __tablename__ = "life_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    plan_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
+    character_id: Mapped[str] = mapped_column(String(36), nullable=False, default="aevum", index=True)
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+    significance: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+class LifeGoalRecord(Base):
+    """Represents a personal goal."""
+    __tablename__ = "life_goals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    plan_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
+    character_id: Mapped[str] = mapped_column(String(36), nullable=False, default="aevum", index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="ACTIVE", index=True)
+    importance: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)

@@ -149,7 +149,27 @@ class GeminiProvider(LLMProvider):
         if resolved_system:
             config_kwargs["system_instruction"] = resolved_system
         if response_schema is not None:
-            config_kwargs["response_schema"] = response_schema
+            # Handle Pydantic models by stripping additionalProperties which causes Gemini API errors
+            if hasattr(response_schema, "model_json_schema"):
+                schema_dict = response_schema.model_json_schema()
+                
+                def strip_additional_properties(schema: dict[str, Any]) -> dict[str, Any]:
+                    if not isinstance(schema, dict):
+                        return schema
+                    schema = {k: v for k, v in schema.items() if k != "additionalProperties"}
+                    for k, v in schema.items():
+                        if isinstance(v, dict):
+                            schema[k] = strip_additional_properties(v)
+                        elif isinstance(v, list):
+                            schema[k] = [
+                                strip_additional_properties(item) if isinstance(item, dict) else item 
+                                for item in v
+                            ]
+                    return schema
+                
+                config_kwargs["response_schema"] = strip_additional_properties(schema_dict)
+            else:
+                config_kwargs["response_schema"] = response_schema
 
         config = types.GenerateContentConfig(**config_kwargs)
 

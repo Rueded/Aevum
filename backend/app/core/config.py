@@ -1,5 +1,6 @@
 from pathlib import Path
-from pydantic import Field
+from pydantic import Field, field_validator
+from zoneinfo import ZoneInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -41,6 +42,20 @@ class Settings(BaseSettings):
         default="text-embedding-004",
         alias="AEVUM_EMBEDDING_MODEL",
     )
+
+    aevum_timezone: str = Field(
+        default="Asia/Kuala_Lumpur",
+        alias="AEVUM_TIMEZONE",
+    )
+
+    @field_validator("aevum_timezone")
+    @classmethod
+    def validate_timezone(cls, v: str) -> str:
+        try:
+            ZoneInfo(v)
+        except Exception:
+            raise ValueError(f"Invalid timezone: {v}")
+        return v
 
     model_config = SettingsConfigDict(
         env_file=(_PROJECT_ROOT / ".env", ".env"),

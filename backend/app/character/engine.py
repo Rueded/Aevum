@@ -27,6 +27,7 @@ from typing import Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.character.engine_models import (
+    CharacterBehaviorContext,
     CharacterDefinitionContext,
     CharacterEmotionContext,
     CharacterMemoryContext,
@@ -45,6 +46,9 @@ from app.memory.models import HybridMemoryResult, HybridMemoryRetrievalQuery, Me
 from app.relationship.context_builder import RelationshipContextBuilder
 from app.relationship.models import RelationshipState
 from app.relationship.service import RelationshipService
+from app.life.models import LifeState, LifeEvent
+from app.life.services import LifeService
+from app.life.context_builder import LifeContextBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +74,8 @@ class CharacterEngine:
         relationship_state: Optional[RelationshipState] = None,
         emotion_state: Optional[EmotionState] = None,
         memories: Optional[Sequence[Union[HybridMemoryResult, Memory]]] = None,
+        life_state: Optional[LifeState] = None,
+        recent_events: Optional[Sequence[LifeEvent]] = None,
     ) -> CharacterResponseContext:
         """Gather all relevant domain contexts into a structured CharacterResponseContext.
 
@@ -159,6 +165,30 @@ class CharacterEngine:
 
         mem_ctx = CharacterMemoryContext.from_memories(memories)
 
+        # 6.5 Life Context
+        if life_state is None:
+            if self._session is None:
+                raise RuntimeError("Cannot load life_state without a database session.")
+            life_service = LifeService(self._session)
+            life_state = await life_service.get_life_state(character_id)
+            if life_state is None:
+                raise RuntimeError(f"Life state for '{character_id}' not found.")
+                
+        if recent_events is None:
+            if self._session is not None:
+                life_service = LifeService(self._session)
+                recent_events = await life_service.list_events(character_id, limit=3)
+            else:
+                recent_events = ()
+                
+        life_ctx = LifeContextBuilder.build(life_state, recent_events)
+
+        # 7. Behavior synthesis
+        behavior_ctx = CharacterBehaviorContext.synthesize(
+            state=state_ctx,
+            emotion=emotion_ctx,
+        )
+
         return CharacterResponseContext(
             user_input=cleaned_user_input,
             character=char_ctx,
@@ -166,4 +196,6 @@ class CharacterEngine:
             relationship=rel_ctx,
             emotion=emotion_ctx,
             memory=mem_ctx,
+            behavior=behavior_ctx,
+            life=life_ctx,
         )

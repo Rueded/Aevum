@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import enum
+from typing import Optional
 import uuid
 
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
@@ -170,6 +171,24 @@ class CharacterDefinitionRecord(Base):
         back_populates="character",
         cascade="all, delete-orphan",
         order_by="CharacterBoundaryRecord.order_index.asc()",
+    )
+    emotion_state: Mapped[Optional["EmotionStateRecord"]] = relationship(
+        "EmotionStateRecord",
+        back_populates="character",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    emotion_events: Mapped[list["EmotionEventRecord"]] = relationship(
+        "EmotionEventRecord",
+        back_populates="character",
+        cascade="all, delete-orphan",
+        order_by="EmotionEventRecord.created_at.desc()",
+    )
+    emotion_influences: Mapped[list["EmotionInfluenceRecord"]] = relationship(
+        "EmotionInfluenceRecord",
+        back_populates="character",
+        cascade="all, delete-orphan",
+        order_by="EmotionInfluenceRecord.created_at.desc()",
     )
 
 
@@ -536,6 +555,291 @@ class MemoryEmbeddingRecord(Base):
         "MemoryRecord",
         back_populates="embeddings",
     )
+
+
+class RelationshipRecord(Base):
+    """Represents current multidimensional relationship state persisted in SQLite."""
+
+    __tablename__ = "relationships"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default="default",
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36),
+        nullable=False,
+        default="user",
+        index=True,
+    )
+    version: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        nullable=False,
+    )
+
+    # Multidimensional relationship axes (normalized 0.0 - 1.0)
+    familiarity: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=0.05,
+    )
+    trust: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=0.20,
+    )
+    comfort: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=0.10,
+    )
+    affection: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=0.00,
+    )
+    attachment: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=0.00,
+    )
+    respect: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=0.50,
+    )
+
+    experiences: Mapped[list["RelationshipExperienceRecord"]] = relationship(
+        "RelationshipExperienceRecord",
+        back_populates="relationship",
+        cascade="all, delete-orphan",
+    )
+
+
+class RelationshipExperienceRecord(Base):
+    """Represents a discrete historical relationship-relevant experience persisted in SQLite."""
+
+    __tablename__ = "relationship_experiences"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    relationship_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("relationships.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    experience_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+    source: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+    summary: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+    )
+    significance: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+    confidence: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+        index=True,
+    )
+
+    relationship: Mapped["RelationshipRecord"] = relationship(
+        "RelationshipRecord",
+        back_populates="experiences",
+    )
+
+
+class EmotionStateRecord(Base):
+    """Represents current dominant emotional state persisted in SQLite."""
+
+    __tablename__ = "emotion_states"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    character_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("character_definitions.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+        default="aevum",
+    )
+    emotion_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+    intensity: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        nullable=False,
+    )
+    version: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+
+    character: Mapped[Optional["CharacterDefinitionRecord"]] = relationship(
+        "CharacterDefinitionRecord",
+        back_populates="emotion_state",
+    )
+
+
+class EmotionEventRecord(Base):
+    """Represents an emotionally relevant cause or event persisted in SQLite."""
+
+    __tablename__ = "emotion_events"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    character_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("character_definitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+    summary: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+    )
+    source: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+    emotional_relevance: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+        index=True,
+    )
+
+    character: Mapped[Optional["CharacterDefinitionRecord"]] = relationship(
+        "CharacterDefinitionRecord",
+        back_populates="emotion_events",
+    )
+    influences: Mapped[list["EmotionInfluenceRecord"]] = relationship(
+        "EmotionInfluenceRecord",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        order_by="EmotionInfluenceRecord.created_at.desc()",
+    )
+
+
+class EmotionInfluenceRecord(Base):
+    """Represents a proposed emotional influence from an event persisted in SQLite."""
+
+    __tablename__ = "emotion_influences"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    character_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("character_definitions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("emotion_events.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    target_emotion: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+    direction: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+    strength: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+    reason: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+        index=True,
+    )
+
+    character: Mapped[Optional["CharacterDefinitionRecord"]] = relationship(
+        "CharacterDefinitionRecord",
+        back_populates="emotion_influences",
+    )
+    event: Mapped[Optional["EmotionEventRecord"]] = relationship(
+        "EmotionEventRecord",
+        back_populates="influences",
+    )
+
+
+
+
+
 
 
 

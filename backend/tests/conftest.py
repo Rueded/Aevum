@@ -26,9 +26,15 @@ from app.llm.context import LLMContext
 class FakeLLMProvider(LLMProvider):
     """Mock LLM Provider for hermetic testing."""
 
-    def __init__(self, response_text: str = "Simulated assistant reply.") -> None:
+    def __init__(
+        self,
+        response_text: str = "Simulated assistant reply.",
+        structured_response_text: str | None = None,
+    ) -> None:
         self.response_text = response_text
+        self.structured_response_text = structured_response_text
         self.call_history: list[LLMContext] = []
+        self.structured_call_history: list[LLMContext] = []
 
     @property
     def provider_name(self) -> str:
@@ -40,6 +46,17 @@ class FakeLLMProvider(LLMProvider):
     ) -> LLMResponse:
         self.call_history.append(context)
         return LLMResponse(content=self.response_text)
+
+    async def generate_structured(
+        self,
+        context: LLMContext,
+        response_schema=None,
+    ) -> str:
+        self.structured_call_history.append(context)
+        if self.structured_response_text is not None:
+            return self.structured_response_text
+        return '{"signals": []}'
+
 
 
 

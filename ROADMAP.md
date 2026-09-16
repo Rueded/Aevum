@@ -66,26 +66,35 @@ Phase 12 ◄── Phase 11 ◄── Phase 10 ◄── Phase 9 ◄── Phase
 ### Phase 4 — Relationship
 * **Objective**: Implement multidimensional relationship modeling and progression.
 * **Deliverables**:
-  * Multidimensional state model (Trust, Familiarity, Respect, Affection).
-  * Progression and regression dynamics driven by interactions and consistency.
-  * Stage milestones (Stranger → Acquaintance → Friend → Close Friend / Confidant).
-* **Exit Criteria**: Relationship starts at neutral acquaintance level and requires natural, consistent interaction over time to deepen.
+  * Phase 4.1 — Relationship Foundation *(Completed)*: Persistent `RelationshipState` model, optimistic concurrency, relational storage, and default bootstrap seeding.
+  * Phase 4.2 — Relationship Interaction Signal Foundation *(Completed)*: Extraction of structured behavioral signals from conversation dialogue with deterministic application policy, bounds clamping, aggregate capping, and strict affection isolation.
+  * Phase 4.3 — Relationship Context Integration *(Completed)*: Qualitative semantic translation of relationship state via `RelationshipContextBuilder`, injecting `<relationship_context>` into `LLMContext.system_instructions` without raw metrics.
+  * Phase 4.4 — Relationship Experience / History Foundation *(Completed)*: Structured recording and persistence of relationship-relevant historical experiences (`RelationshipExperienceRecord`) decoupled from continuous state metrics and memory.
+* **Exit Criteria**: Relationship starts at neutral acquaintance level and requires natural, consistent interaction over time to deepen, grounding language generation without exposing internal mechanics.
 
 ---
 
 ### Phase 5 — Emotion
 * **Objective**: Implement causal emotional simulation and internal drives.
 * **Deliverables**:
-  * Multi-axis emotional state vector (valence, arousal, dominance, specific moods).
+  * Phase 5.1 — Emotion Model Foundation *(Completed)*: Persistent `EmotionState` domain model, non-romantic `EmotionType` vocabulary (17 states), single dominant affective state representation ($0.0 \le \text{intensity} \le 1.0$), `emotion_states` SQLite table with cascade to `character_definitions`, deterministic bootstrap baseline (`NEUTRAL`, `0.50`), and `EmotionService` with optimistic concurrency control.
+  * Phase 5.2 — Emotion Cause / Event Foundation *(Completed)*: Persistent `EmotionEvent` domain model, `EmotionEventType` vocabulary (7 types), `emotion_events` SQLite table with cascade to `character_definitions`, and `EmotionEventService` with deterministic duplicate protection and reverse-chronological retrieval.
+  * Phase 5.3 — Emotion Influence Foundation *(Completed)*: Persistent `EmotionInfluence` domain model, `EmotionInfluenceDirection` (`POSITIVE`, `NEGATIVE`), `emotion_influences` SQLite table linked to `character_definitions` and `emotion_events`, and `EmotionInfluenceService` with deterministic duplicate protection and reverse-chronological retrieval.
+  * Phase 5.4 — Emotion Transition Proposal Foundation *(Completed)*: Pure, deterministic `EmotionTransitionEvaluator` and immutable `EmotionTransitionProposal` model calculating bounded proposed transitions without mutating or persisting authoritative state.
+  * Phase 5.5 — Emotion State Application Foundation *(Completed)*: `EmotionStateApplicationService` and `EmotionStateApplicationResult` model establishing the controlled boundary to apply proposals to authoritative `EmotionState` with optimistic concurrency and stale proposal protection.
+  * Phase 5.6 — Emotion Engine Foundation *(Completed)*: `EmotionEngine` internal orchestration layer connecting influence evaluation and authoritative state application without cross-domain coupling or psychology rule duplication.
   * Deterministic state transition engine (reactions to conversation topics, events, fatigue).
   * Baseline decay curves (moods naturally settle back to temperament baseline over time).
 * **Exit Criteria**: Companion's emotional state changes for identifiable reasons and influences dialogue tone and responsiveness.
 
 ---
 
-### Phase 6 — Autonomous Life
-* **Objective**: Give the companion her own life, schedule, and activities independent of the user.
+### Phase 6 — Autonomous Life & Character Engine
+* **Objective**: Give the companion her own life, schedule, and internal engine orchestration for response decisions.
 * **Deliverables**:
+  * Phase 6.1 — Character Engine Foundation *(Completed)*: Read-only internal orchestration boundary (`CharacterEngine`) that gathers `CharacterDefinition`, `CharacterState`, `RelationshipState`, `EmotionState`, and relevant `Memory` into an immutable `CharacterResponseContext` without exposing raw database records, without LLM dependencies, and with zero state mutations.
+  * Phase 6.2 — Response Generation Foundation *(Completed)*: `ResponseGenerator` service and `ResponseContextAssembler` that bridge `CharacterResponseContext` to the LLM Provider abstraction, enforcing strict prompt isolation, deterministic assembly, and zero domain mutations.
+  * Phase 6.3 — First Playable Conversation Foundation *(Completed)*: Vertical slice wiring UI, API router, character engine, LLM provider, and message persistence.
   * Circadian clock and daily routine simulation (sleeping, studying, hobbies, chores).
   * Simulated social graph (friends, acquaintances, family references).
   * Availability state machine (available, busy, away, sleeping) affecting response behavior.

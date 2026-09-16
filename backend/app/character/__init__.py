@@ -20,6 +20,23 @@ from app.character.state_models import (
     CharacterState,
     CharacterStateUpdate,
 )
+from app.character.engine import (
+    CharacterEngine,
+)
+from app.character.engine_models import (
+    CharacterDefinitionContext,
+    CharacterEmotionContext,
+    CharacterMemoryContext,
+    CharacterResponseContext,
+    CharacterStateContext,
+    format_emotion_summary,
+)
+from app.character.response_models import CharacterResponse
+from app.character.prompt_assembler import (
+    ResponseContextAssembler,
+    assemble_response_llm_context,
+)
+from app.character.response_generator import ResponseGenerator
 from app.character.state_service import (
     CharacterStateConflictError,
     CharacterStateService,
@@ -33,19 +50,30 @@ __all__ = [
     "Boundary",
     "CharacterDefinition",
     "CharacterDefinitionConflictError",
+    "CharacterDefinitionContext",
     "CharacterDefinitionService",
+    "CharacterEmotionContext",
+    "CharacterEngine",
     "CharacterIdentity",
+    "CharacterMemoryContext",
     "CharacterMood",
+    "CharacterResponse",
+    "CharacterResponseContext",
     "CharacterState",
     "CharacterStateConflictError",
+    "CharacterStateContext",
     "CharacterStateService",
     "CharacterStateUpdate",
     "Personality",
     "Preference",
     "PreferenceSentiment",
+    "ResponseContextAssembler",
+    "ResponseGenerator",
     "apply_character_state_update",
+    "assemble_response_llm_context",
     "create_initial_aevum_definition",
     "create_initial_aevum_state",
+    "format_emotion_summary",
     "get_character_definition",
     "get_character_state",
     "update_character_definition",

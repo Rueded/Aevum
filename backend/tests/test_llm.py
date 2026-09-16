@@ -47,8 +47,9 @@ def test_llm_provider_cannot_be_instantiated_directly():
 
 
 @pytest.mark.asyncio
-async def test_gemini_provider_missing_api_key_raises_error():
+async def test_gemini_provider_missing_api_key_raises_error(monkeypatch):
     """Verify GeminiProvider raises LLMProviderNotConfiguredError when initialized without API key."""
+    monkeypatch.setattr("app.llm.gemini.settings.gemini_api_key", None)
     provider = GeminiProvider(api_key=None, client=None)
     context = build_context(messages=[ChatMessage(role="user", content="Hi")])
     with pytest.raises(LLMProviderNotConfiguredError) as exc_info:

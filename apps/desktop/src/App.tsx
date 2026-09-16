@@ -163,7 +163,7 @@ export function App() {
       <header className="header">
         <h1 className="title">Aevum</h1>
         <p className="tagline">A Persistent Digital Life</p>
-        <div className="phase-badge">Phase 1.3: Gemini LLM Integration</div>
+        <div className="phase-badge">Phase 6.3: First Playable Conversation</div>
       </header>
 
       {/* Backend Health Banner */}

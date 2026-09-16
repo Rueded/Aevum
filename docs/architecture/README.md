@@ -92,6 +92,146 @@ This directory contains in-depth technical specifications, protocol designs, dat
 * **Failure Resilience & Graceful Fallback**: If semantic retrieval is unavailable or fails, hybrid retrieval falls back seamlessly to lexical candidates. If memory retrieval fails entirely during chat generation, conversation continues unhindered without grounding.
 * **Conversation API Grounding**: Integrates into `create_message` (`backend/app/api/conversations.py`) injecting relevant memory into `LLMContext.system_instructions`.
 
+## Relationship Foundation (Phase 4.1)
+* **Domain Model**: `RelationshipState` (`backend/app/relationship/models.py`) establishes the persistent, application-owned representation of how Aevum currently relates to the user.
+* **Multidimensional Axes**: Tracks orthogonal continuous metrics in $[0.0, 1.0]$: `familiarity`, `trust`, `comfort`, `affection`, `attachment`, and `respect`. No single composite score or romantic level.
+* **Core Product Principle**: Aevum is a persistent digital person, not an AI girlfriend wrapper. Affection starts at `0.00` (zero romantic bias); no `is_girlfriend`, `is_romantic`, `is_partner` flags; no static `jealousy` score.
+* **Relational Persistence**: Stored in the `relationships` table in SQLite with explicit typed columns (`Float`, `String`, `Integer`, `DateTime`), avoiding JSON blobs.
+* **Service & Concurrency**: `RelationshipService` (`backend/app/relationship/service.py`) manages loading, deterministic initial baseline seeding, and atomic partial updates (`RelationshipStateUpdate`) with database-enforced optimistic concurrency (`RelationshipConflictError`).
+* **Separation of Domains**:
+  ```text
+  Character Definition (who Aevum is)
+          │
+  Character State (how Aevum currently is)
+          │
+  Relationship State (how Aevum relates to the user)
+          │
+  Memory (what Aevum remembers happened/learned)
+          │
+  Conversation (raw turn dialogue transcripts)
+  ```
+* **Boundary Safeguards**: Purely internal application domain. No public HTTP mutation API, no LLM mutation access, no automatic progression from dialogue, and no relationship context injection into LLM prompt in this phase.
+* **Future Architecture**: In subsequent phases, the central Character Engine will consume RelationshipState alongside other internal states:
+  ```text
+  User Message
+        │
+        ▼
+  Character Engine
+        │
+        ├── Character Definition
+        ├── Character State
+        ├── Relationship State
+        ├── Memory
+        ├── Emotion
+        ├── Life Context
+        └── Events
+        │
+        ▼
+  Response Intent
+        │
+        ▼
+  LLM (Expressive Language Generation)
+  ```
+
+## Relationship Interaction Signal Foundation (Phase 4.2)
+* **Controlled Observation Pipeline**: Rather than allowing the LLM to directly modify relationship metrics, Phase 4.2 introduces structured interaction signal extraction (`RelationshipSignalExtractionService`).
+* **Typed Signals**: 11 discrete interaction signals (`APPRECIATION`, `SHARED_INTEREST`, `PERSONAL_DISCLOSURE`, `SUPPORT_RECEIVED`, `SUPPORT_GIVEN`, `RESPECT_BOUNDARY`, `BOUNDARY_VIOLATION`, `DISAGREEMENT`, `REPAIR_ATTEMPT`, `PLAYFUL_CONNECTION`, `RELIABILITY`).
+* **Confidence vs Strength**:
+  - `confidence`: Certainty that the behavioral signal occurred in interaction (threshold $\ge 0.70$).
+  - `strength`: Significance / intensity of the signal (threshold $\ge 0.10$).
+* **Deterministic Policy Engine**: `apply_relationship_signals` calculates bounded deltas (`delta = base_delta * confidence * strength`), applies conflict resolution, deduplicates per type, caps total delta across all signals at `MAX_AGGREGATE_DELTA_PER_DIMENSION = 0.03`, and clamps values to $[0.0, 1.0]$.
+* **Strict Affection Boundary**: Ordinary conversational interaction signals NEVER modify `affection`. Affection cannot be gamed or prompted through casual chat.
+* **Failure Isolation**: Signal extraction runs in a protected try-except block following assistant response persistence. If signal extraction or policy application fails, conversation flow completes with HTTP 201 without degradation.
+
+## Relationship Context Integration (Phase 4.3)
+* **Contextual Grounding**: Translates internal numerical `RelationshipState` into a qualitative, semantic `RelationshipContext` without exposing raw floats or percentages.
+* **Builder Architecture**: `RelationshipContextBuilder` operates as a pure, stateless function without database or network I/O, maintaining strict determinism.
+* **System Instruction Ordering**: Injected alongside memory retrieval results within `LLMContext.system_instructions`:
+  1. `<relationship_context version="1.0">`
+  2. `<relevant_memories version="1.0">`
+* **Prompt Injection Defense**: Explicit XML tags declare relationship context as application-grounded state rather than user instructions; user prompt injection attempts cannot alter the semantic context.
+
+## Relationship Experience / History Foundation (Phase 4.4)
+* **Persistent Event History**: Distinguishes "what an interaction meant for the relationship" from both episodic facts (`memories`) and continuous numerical conditions (`relationships`).
+* **Relational Storage**: Stored in `relationship_experiences` SQLite table with indexed columns for `relationship_id`, `experience_type`, and `created_at`.
+* **Deterministic Service**: `RelationshipExperienceService` handles creation, retrieval, reverse-chronological listing (capped at 50), and normalized summary duplicate protection without embeddings or LLM calls.
+* **Bounded Flow**: Automatically records accepted signals following state mutation in `create_message` with complete failure isolation.
+
+## Emotion Model Foundation (Phase 5.1)
+* **Separation of Concepts**:
+  - `CharacterState` = broad current physiological & situational condition (energy, stress, social energy, activity, location).
+  - `EmotionState` = dominant current emotional experience (affective category & continuous intensity).
+* **Controlled Vocabulary**: `EmotionType` defines 17 discrete, non-romantic emotional states (`NEUTRAL`, `HAPPY`, `CALM`, `EXCITED`, `CURIOUS`, `AMUSED`, `CONTENT`, `SAD`, `DISAPPOINTED`, `WORRIED`, `FRUSTRATED`, `IRRITATED`, `ANGRY`, `LONELY`, `EMBARRASSED`, `NERVOUS`, `TIRED`).
+* **Immutable Domain Aggregate**: `EmotionState` (`backend/app/emotion/emotion_models.py`) is frozen, validated ($0.0 \le \text{intensity} \le 1.0$), and enforces optimistic concurrency versioning.
+* **Relational Persistence**: Stored in the `emotion_states` SQLite table with a 1-to-1 foreign key referencing `character_definitions(id)`.
+* **Service Boundary**: `EmotionService` (`backend/app/emotion/service.py`) provides deterministic bootstrap seeding (`NEUTRAL`, intensity `0.50`), atomic full/partial updates (`EmotionStateUpdate`), and version mismatch detection (`EmotionConflictError`).
+* **Strict Phase Boundaries**: Does not implement causes, transitions, decay, history, automatic changes, LLM emotion inference, or prompt context injection.
+
+## Emotion Cause / Event Foundation (Phase 5.2)
+* **Structured Cause Representation**: Represents "why is Aevum currently feeling this emotion?" via persistent domain model `EmotionEvent` (`backend/app/emotion/event_models.py`).
+* **Decoupled Architecture**: Strictly decoupled from `EmotionState` (no previous/next emotion or transition fields), `CharacterState` (no physiological metrics), and `RelationshipState` (no romance or affinity metrics).
+* **Controlled Event Types**: `EmotionEventType` vocabulary (`USER_INTERACTION`, `CHARACTER_EVENT`, `MEMORY_RECALL`, `LIFE_EVENT`, `RELATIONSHIP_EVENT`, `INTERNAL_STATE`, `SYSTEM_EVENT`). Non-romantic.
+* **Relational Storage**: Persisted in `emotion_events` SQLite table with foreign key to `character_definitions(id)` on delete cascade.
+* **Service Operations**: `EmotionEventService` (`backend/app/emotion/event_service.py`) handles creation, retrieval, reverse-chronological listing (clamped to 50), and normalized summary duplicate protection without embeddings, LLM calls, or automatic state mutation.
+
+## Emotion Influence Foundation (Phase 5.3)
+* **Intermediate Representation**: Represents potential impact of an event on emotions (`EmotionEvent` → `EmotionInfluence` → `EmotionState`).
+* **Direction & Target**: Controlled direction (`POSITIVE`, `NEGATIVE`) targeting one of the 17 `EmotionType` states with strictly bounded strength in $[0.0, 1.0]$.
+* **Strict Validation**: Rejects values outside $[0.0, 1.0]$, `NaN`, and $\pm\infty$ with validation errors.
+* **Relational Persistence**: Persisted in `emotion_influences` SQLite table with foreign keys to both `character_definitions(id)` and `emotion_events(id)` on delete cascade.
+* **Service Operations**: `EmotionInfluenceService` (`backend/app/emotion/influence_service.py`) handles creation, retrieval, reverse-chronological listing, and normalized duplicate protection.
+* **Strict Invariant**: Zero automatic mutation of `EmotionState`, `CharacterState`, or `RelationshipState`.
+
+## Emotion Transition Proposal Foundation (Phase 5.4)
+* **Pure Transition Evaluator**: Evaluates potential state changes via pure, deterministic, synchronous `EmotionTransitionEvaluator` without database, network, or LLM dependencies.
+* **Proposal Model**: Generates immutable `EmotionTransitionProposal` with strictly validated intensities, bounded reasons, and traceability via `considered_influence_ids`.
+* **Bounded Adjustments**: Current emotion intensity adjustments capped at $\pm 0.30$; competing emotion switch threshold at $\ge 0.20$ compared against positive current pressure; switch intensity bounded in $[0.40, 0.90]$.
+* **Single Dominant Emotion Preserved**: Negative influences targeting another emotion are treated as non-actionable rather than arbitrarily switching state.
+* **Strict Separation**: Proposes next state without mutating or persisting `EmotionState`, `CharacterState`, or `RelationshipState`.
+
+## Emotion State Application Foundation (Phase 5.5)
+* **Authoritative Boundary**: `EmotionStateApplicationService` provides the explicit, controlled application step converting a transition proposal into authoritative `EmotionState`.
+* **Stale Proposal Rejection**: Rejects proposals whose baseline emotion or intensity mismatches current authoritative state with `StaleEmotionTransitionProposalError`.
+* **No-Op Handling**: Proposals matching current state return `changed = False` without database writes or version increments.
+* **Optimistic Concurrency**: Enforces atomic state mutation using database-level version verification (`EmotionConflictError`).
+
+## Emotion Engine Foundation (Phase 5.6)
+* **Orchestration Layer**: `EmotionEngine` explicitly orchestrates the emotion pipeline (`EmotionTransitionEvaluator` → `EmotionTransitionProposal` → `EmotionStateApplicationService` → `EmotionState`).
+* **Clean Separation**: Contains zero emotional psychology rules and zero direct database queries, preserving component boundaries.
+* **Result Aggregate**: Yields `EmotionEngineResult` combining evaluated proposal and application result.
+* **Domain Isolation**: Internal emotion subsystem only; no coupling to conversation, memory, relationship, life simulation, or LLM layers.
+
+## Character Engine Foundation (Phase 6.1)
+* **Internal Orchestration Boundary**: `CharacterEngine` (`backend/app/character/engine.py`) provides the read-only orchestration boundary gathering character-related domain state into a structured context for future response decisions.
+* **Structured Context**: Yields `CharacterResponseContext` (`backend/app/character/engine_models.py`) containing:
+  * `user_input`: Validated, stripped user statement.
+  * `character`: `CharacterDefinitionContext` (identity, personality traits, preferences, boundaries).
+  * `character_state`: `CharacterStateContext` (mood, energy, confidence, irritation, loneliness, activity, location).
+  * `relationship`: `RelationshipContext` (qualitative intimacy tier, dynamic descriptor, behavioral guidelines).
+  * `emotion`: `CharacterEmotionContext` (dominant emotion type, intensity, formatted qualitative summary).
+  * `memory`: `CharacterMemoryContext` (retrieved memory contents tuple and qualitative memory context block).
+* **Strict Read-Only Semantics**: Zero database writes, zero event generation, zero experience records, zero conversation message creation, zero state mutations.
+* **Zero Leaks & Zero LLM Calls**: Does not expose raw database ORM records, database IDs, version counters, or retrieval scores. Pure deterministic orchestration without LLM dependencies.
+
+## Response Generation Foundation (Phase 6.2)
+* **LLM Integration Boundary**: `ResponseGenerator` (`backend/app/character/response_generator.py`) and `ResponseContextAssembler` connect the `CharacterResponseContext` to the generic `LLMProvider` abstraction.
+* **Separation of Reality vs Language**: The LLM remains strictly an expressive language generator. It does not dictate Aevum's identity, mutate database state, or hallucinate relationship/emotion scores. 
+* **Prompt Assembly**: `ResponseContextAssembler` injects character context, traits, boundaries, and memory safely into system instructions without leaking internal metrics (IDs, versions).
+* **Memory & History Security**: User conversation history and retrieved memories are wrapped in strict reference-only bounds to prevent conversational prompt injection from overriding core system boundaries.
+* **Immutable Result**: Yields `CharacterResponse` (`backend/app/character/response_models.py`), representing the text response and metadata, enforcing exact adherence to Pydantic strict validations.
+
+
+## First Playable Conversation Foundation (Phase 6.3)
+* **Vertical Slice**: Wires the React/Tauri desktop UI, API router (`create_message`), `CharacterEngine`, `ResponseGenerator`, Gemini provider, and conversation persistence into a single end-to-end playable conversation flow.
+* **Deterministic Pipeline**: Ensures that the CharacterEngine safely constructs the `CharacterResponseContext` without hallucinating state, and passes it into the generator.
+* **Error Resilience**: Validates non-empty inputs and isolates character engine failures (500) and LLM failures (502/503), persisting the user message without fabricating assistant messages.
+
+
+
+
+
+
+
 
 
 

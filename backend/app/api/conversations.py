@@ -22,12 +22,21 @@ from app.llm import (
     build_context,
     get_llm_provider,
 )
+from app.character.engine import CharacterEngine
+from app.character.response_generator import ResponseGenerator
 from app.memory import (
     EmbeddingProvider,
     HybridMemoryRetrievalQuery,
     HybridMemoryRetrievalService,
     build_memory_context,
     get_embedding_provider,
+)
+from app.relationship import (
+    RelationshipExperienceService,
+    RelationshipService,
+    RelationshipSignalExtractionService,
+    apply_relationship_signals,
+    build_relationship_context,
 )
 
 logger = logging.getLogger(__name__)
@@ -105,10 +114,18 @@ async def create_message(
       4. Grounding: Retrieves relevant long-term memories and injects them into system instructions.
       5. Invokes the LLM provider to generate a grounded assistant response.
       6. Persists the generated assistant message upon success.
-      7. If generation fails, returns appropriate HTTP error (503 if not configured, 502 if upstream fails);
+      7. Analyzes interaction for relationship signals and applies deterministic policy.
+      8. If generation fails, returns appropriate HTTP error (503 if not configured, 502 if upstream fails);
          the user message remains persisted without an assistant message.
     """
-    # 1. Validate conversation exists
+    # 1. Validate non-empty input
+    if not payload.content or not payload.content.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Message content cannot be empty or whitespace.",
+        )
+
+    # 1b. Validate conversation exists
     query = select(Conversation).where(Conversation.id == conversation_id)
     result = await db.execute(query)
     conversation = result.scalar_one_or_none()
@@ -139,43 +156,34 @@ async def create_message(
     history_result = await db.execute(history_query)
     stored_messages = history_result.scalars().all()
 
-    # 4. Retrieve relevant memories for context grounding (Phase 3.7)
-    memory_context_str: str | None = None
+    # 4. Build CharacterResponseContext using CharacterEngine (Phase 6.3)
     try:
-        hybrid_service = HybridMemoryRetrievalService(
-            session=db,
-            embedding_provider=embedding_provider,
+        char_engine = CharacterEngine(session=db, embedding_provider=embedding_provider)
+        response_context = await char_engine.build_response_context(
+            user_input=payload.content,
+            character_id="aevum",
+            user_id="user",
         )
-        retrieval_query = HybridMemoryRetrievalQuery(
-            text=payload.content,
-            limit=5,
-        )
-        retrieval_res = await hybrid_service.retrieve(retrieval_query)
-        if retrieval_res.memories:
-            memory_context_str = build_memory_context(retrieval_res.memories)
     except Exception as exc:
-        logger.warning(
-            "Memory context retrieval failed for conversation '%s': %s",
-            conversation_id,
-            exc,
-        )
-        memory_context_str = None
+        logger.error("CharacterEngine failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal character engine failure.",
+        ) from exc
 
-    # 5. Convert into provider-neutral ChatMessage format and construct LLMContext
+    # 5. Convert into provider-neutral ChatMessage format
     chat_messages = [
         ChatMessage(role=m.role, content=m.content)
         for m in stored_messages
     ]
-    system_instructions = [memory_context_str] if memory_context_str else None
-    llm_context = build_context(
-        messages=chat_messages,
-        system_instructions=system_instructions,
-    )
 
-    # 5. Call the LLM provider with provider-neutral LLMContext
+    # 6. Call the LLM provider through ResponseGenerator (Phase 6.3)
     try:
-        llm_response = await llm_provider.generate_response(context=llm_context)
-
+        response_generator = ResponseGenerator(provider=llm_provider)
+        llm_response = await response_generator.generate_response(
+            context=response_context,
+            conversation_history=chat_messages,
+        )
     except LLMProviderNotConfiguredError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -187,14 +195,7 @@ async def create_message(
             detail=str(exc),
         ) from exc
 
-    # 6. Validate non-empty assistant response
-    if not llm_response.content or not llm_response.content.strip():
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="LLM provider generated an empty response.",
-        )
-
-    # 7. Persist assistant response
+    # 8. Persist assistant response
     assistant_msg = Message(
         conversation_id=conversation_id,
         role=MessageRole.ASSISTANT.value,
@@ -205,11 +206,45 @@ async def create_message(
     await db.commit()
     await db.refresh(assistant_msg)
 
-    # 8. Return both persisted messages
+    # 9. Analyze interaction for relationship signals and apply deterministic policy (Phase 4.2)
+    try:
+        extraction_service = RelationshipSignalExtractionService(llm_provider=llm_provider)
+        interaction_context = chat_messages + [
+            ChatMessage(role=assistant_msg.role, content=assistant_msg.content)
+        ]
+        extraction_result = await extraction_service.extract_signals(interaction_context)
+        if extraction_result.is_success and extraction_result.signals:
+            rel_service = RelationshipService(db)
+            current_rel = await rel_service.get_relationship_state()
+            rel_update = apply_relationship_signals(
+                state=current_rel,
+                signals=extraction_result.signals,
+            )
+            if rel_update is not None:
+                await rel_service.apply_update(
+                    update_data=rel_update,
+                    expected_version=current_rel.version,
+                )
+
+            # Record accepted relationship experiences (Phase 4.4)
+            exp_service = RelationshipExperienceService(db)
+            await exp_service.record_signals(
+                signals=extraction_result.signals,
+                relationship_id=current_rel.id,
+            )
+    except Exception as exc:
+        logger.warning(
+            "Relationship signal and experience processing failed for conversation '%s': %s",
+            conversation_id,
+            exc,
+        )
+
+    # 10. Return both persisted messages
     return MessageCreateResponse(
         message=MessageRead.model_validate(user_msg),
         assistant_response=MessageRead.model_validate(assistant_msg),
         assistant_status="generated",
     )
+
 
 

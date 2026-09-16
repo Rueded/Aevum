@@ -594,7 +594,8 @@ def test_embedding_configuration_defaults() -> None:
     assert s.embedding_model != s.gemini_model
 
 
-def test_gemini_embedding_provider_unconfigured_raises() -> None:
+def test_gemini_embedding_provider_unconfigured_raises(monkeypatch) -> None:
+    monkeypatch.setattr("app.memory.embedding_provider.settings.gemini_api_key", None)
     provider = GeminiEmbeddingProvider(api_key=None, client=None)
     with pytest.raises(EmbeddingProviderNotConfiguredError):
         import asyncio

@@ -392,8 +392,8 @@ async def test_conversation_api_grounds_response_with_retrieved_memory(
     # Verify that LLM provider received system instruction with retrieved memory
     assert len(fake_provider.call_history) == 1
     llm_context = fake_provider.call_history[0]
-    assert len(llm_context.system_instructions) == 1
-    sys_instruction = llm_context.system_instructions[0]
+    assert any("<relevant_memories" in inst for inst in llm_context.system_instructions)
+    sys_instruction = next(inst for inst in llm_context.system_instructions if "<relevant_memories" in inst)
     assert "<relevant_memories" in sys_instruction
     assert "User prefers studying in quiet libraries rather than cafes." in sys_instruction
 

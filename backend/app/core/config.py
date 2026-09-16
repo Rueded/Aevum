@@ -1,5 +1,8 @@
+from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 class Settings(BaseSettings):
@@ -39,10 +42,8 @@ class Settings(BaseSettings):
         alias="AEVUM_EMBEDDING_MODEL",
     )
 
-
     model_config = SettingsConfigDict(
-
-        env_file=".env",
+        env_file=(_PROJECT_ROOT / ".env", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )

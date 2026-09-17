@@ -79,6 +79,7 @@ class MemoryCurationService:
         source_type: MemoryCandidateSource = MemoryCandidateSource.MANUAL,
         candidate_id: str | None = None,
         subject_entity: MemorySubjectEntity | None = None,
+        commit: bool = True,
     ) -> MemoryCandidate:
         """Create and persist a new PENDING memory candidate."""
         stable_id = candidate_id or str(uuid.uuid4())
@@ -118,7 +119,10 @@ class MemoryCurationService:
             version=1,
         )
         self._session.add(record)
-        await self._session.commit()
+        if commit:
+            await self._session.commit()
+        else:
+            await self._session.flush()
 
         return domain_cand
 

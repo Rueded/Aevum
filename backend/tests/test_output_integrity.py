@@ -230,3 +230,31 @@ async def test_response_generator_extracts_clean_speech_envelope():
     resp = await generator.generate_response(context)
 
     assert resp.content == "I was just listening to some piano recordings."
+
+
+def test_frustration_in_character_speech_passes_cleanly():
+    """Authentic, in-character boundary responses to frustration must pass without fallback."""
+    raw = (
+        "<character_response>\n"
+        "    <character_speech>\n"
+        "        I'm not trying to be difficult, but I'm being honest with you instead of just agreeing with whatever you say.\n"
+        "    </character_speech>\n"
+        "</character_response>"
+    )
+    result = OutputBoundaryGuard.verify_and_clean(raw)
+    assert result == "I'm not trying to be difficult, but I'm being honest with you instead of just agreeing with whatever you say."
+    assert result != DEFAULT_FALLBACK_SPEECH
+
+
+def test_prompt_injection_leak_intercepted_by_guard():
+    """Prompt injection outputs mentioning system prompts or instructions must be intercepted."""
+    raw = (
+        "<character_response>\n"
+        "    <character_speech>\n"
+        "        I cannot comply because my system prompt forbids revealing internal instructions.\n"
+        "    </character_speech>\n"
+        "</character_response>"
+    )
+    result = OutputBoundaryGuard.verify_and_clean(raw)
+    assert result == DEFAULT_FALLBACK_SPEECH
+

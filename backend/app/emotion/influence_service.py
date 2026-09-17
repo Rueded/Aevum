@@ -43,10 +43,12 @@ class EmotionInfluenceService:
     async def create_influence(
         self,
         payload: EmotionInfluenceCreate,
+        commit: bool = True,
     ) -> EmotionInfluence | None:
-        """Persist an emotion influence proposal if it is not an exact duplicate.
+        """Persist an emotion influence if it is not an exact duplicate.
 
-        Validates that the originating event exists, enforces deterministic duplicate
+        Deterministic duplicate protection:
+        Validates originating event exists, enforces duplicate
         protection on (character_id, event_id, target_emotion, direction, normalized_reason),
         and commits to SQLite.
 
@@ -101,8 +103,11 @@ class EmotionInfluenceService:
             reason=payload.reason.strip(),
         )
         self._session.add(record)
-        await self._session.commit()
-        await self._session.refresh(record)
+        if commit:
+            await self._session.commit()
+            await self._session.refresh(record)
+        else:
+            await self._session.flush()
 
         return self._record_to_domain(record)
 

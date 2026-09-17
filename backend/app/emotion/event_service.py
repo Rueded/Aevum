@@ -40,6 +40,7 @@ class EmotionEventService:
     async def create_event(
         self,
         payload: EmotionEventCreate,
+        commit: bool = True,
     ) -> EmotionEvent | None:
         """Persist an emotion event if it is not an exact duplicate.
 
@@ -105,8 +106,11 @@ class EmotionEventService:
             record.created_at = payload.created_at
             
         self._session.add(record)
-        await self._session.commit()
-        await self._session.refresh(record)
+        if commit:
+            await self._session.commit()
+            await self._session.refresh(record)
+        else:
+            await self._session.flush()
 
         return self._record_to_domain(record)
 

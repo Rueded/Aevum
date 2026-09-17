@@ -642,3 +642,42 @@ async def test_character_engine_failure_does_not_fail_message_creation_completel
     assert len(messages) == 1
     assert messages[0]["content"] == "Trigger engine failure"
     assert messages[0]["role"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_post_turn_memory_extraction_failure_does_not_fail_conversation_response(
+    client: AsyncClient,
+    fake_provider: FakeLLMProvider,
+    monkeypatch,
+):
+    """Verify that failure in non-critical post-turn memory extraction never turns a 201 response into a 500 error."""
+    from app.memory.extraction_service import MemoryExtractionService
+
+    fake_provider.response_text = "I am a valid generated answer."
+
+    async def _failing_extract(*args, **kwargs):
+        raise RuntimeError("Simulated memory extraction crash")
+
+    monkeypatch.setattr(MemoryExtractionService, "extract_and_create_candidates", _failing_extract)
+
+    conv_res = await client.post("/conversations")
+    conv_id = conv_res.json()["id"]
+
+    msg_res = await client.post(
+        f"/conversations/{conv_id}/messages",
+        json={"role": "user", "content": "I like Earl Grey tea."},
+    )
+    # The conversational turn MUST succeed with 201 Created and the valid assistant response
+    assert msg_res.status_code == 201
+    data = msg_res.json()
+    assert data["assistant_status"] == "generated"
+    assert data["assistant_response"]["content"] == "I am a valid generated answer."
+
+    # Both messages must be safely persisted
+    get_res = await client.get(f"/conversations/{conv_id}")
+    assert get_res.status_code == 200
+    msgs = get_res.json()["messages"]
+    assert len(msgs) == 2
+    assert msgs[0]["role"] == "user"
+    assert msgs[1]["role"] == "assistant"
+

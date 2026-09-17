@@ -82,6 +82,7 @@ class EmotionService:
         updated_state: EmotionState,
         expected_version: int | None = None,
         character_id: str = DEFAULT_CHARACTER_ID,
+        commit: bool = True,
     ) -> EmotionState:
         """Update entire emotion state atomically with database-enforced optimistic concurrency."""
         now = utc_now()
@@ -134,7 +135,10 @@ class EmotionService:
             if result.rowcount == 0:
                 raise EmotionConflictError(expected_version=0, actual_version=0)
 
-        await self._session.commit()
+        if commit:
+            await self._session.commit()
+        else:
+            await self._session.flush()
         return await self.get_emotion_state(character_id=character_id)
 
     async def apply_update(
@@ -142,6 +146,7 @@ class EmotionService:
         state_update: EmotionStateUpdate,
         expected_version: int | None = None,
         character_id: str = DEFAULT_CHARACTER_ID,
+        commit: bool = True,
     ) -> EmotionState:
         """Apply a validated partial replacement request atomically with optimistic concurrency."""
         current = await self.get_emotion_state(character_id=character_id)
@@ -173,6 +178,7 @@ class EmotionService:
             updated_state=candidate,
             expected_version=target_version,
             character_id=character_id,
+            commit=commit,
         )
 
     async def _persist_initial_state(self, state: EmotionState) -> None:

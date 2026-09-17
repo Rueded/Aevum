@@ -59,12 +59,14 @@ class EmotionStateApplicationService:
         self,
         current_state: EmotionState,
         proposal: EmotionTransitionProposal,
+        commit: bool = True,
     ) -> EmotionStateApplicationResult:
         """Apply an EmotionTransitionProposal against an authoritative EmotionState.
 
         Args:
             current_state: Authoritative EmotionState against which proposal is validated.
             proposal: The proposed state transition to apply.
+            commit: Whether to commit the transaction immediately (default True).
 
         Returns:
             EmotionStateApplicationResult detailing previous and applied state, and whether mutation occurred.
@@ -127,6 +129,7 @@ class EmotionStateApplicationService:
             updated_state=candidate,
             expected_version=current_state.version,
             character_id=current_state.character_id,
+            commit=commit,
         )
 
         logger.info(

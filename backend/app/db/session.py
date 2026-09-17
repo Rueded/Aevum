@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
+from app.db.migrations import migrate_sqlite_schema
 
 
 class Base(DeclarativeBase):
@@ -33,10 +34,11 @@ async_session_factory = async_sessionmaker(
 
 
 async def init_db(engine_to_use: AsyncEngine | None = None) -> None:
-    """Initialize database tables according to declarative metadata."""
+    """Initialize database tables according to declarative metadata and migrate missing columns."""
     target_engine = engine_to_use or engine
     async with target_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(migrate_sqlite_schema)
 
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:

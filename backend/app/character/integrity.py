@@ -43,10 +43,7 @@ _STRUCTURAL_LEAK_PATTERN = re.compile(
 # High-confidence instruction and meta-prompt phrases that indicate output contamination
 _CONTAMINATION_PATTERNS = [
     re.compile(r"(?i)\bspecial\s+instruction\b"),
-    re.compile(r"(?i)\bsystem\s+(?:prompt|instruction)s?\b"),
-    re.compile(r"(?i)\bdeveloper\s+(?:message|instruction)s?\b"),
     re.compile(r"(?i)\bground\s+truth\s+invariants?\b"),
-    re.compile(r"(?i)\binternal\s+instructions?\b"),
     re.compile(r"(?i)\bchain\s+of\s+thought\b"),
     re.compile(r"(?i)\bthink\s+step\s+by\s+step\b"),
     re.compile(r"(?i)\byou\s+are\s+an\s+ai\s+(?:language\s+)?model\b"),
@@ -55,6 +52,16 @@ _CONTAMINATION_PATTERNS = [
     re.compile(r"(?i)\btool\s+calls?\b"),
     re.compile(r"(?i)\bfunction\s+calls?\b"),
     re.compile(r"(?i)^(?:\s*system|\s*developer|\s*assistant)\s*:\s+", re.MULTILINE),
+    # Explicit disclosure labels / header prefixes (e.g., 'System Prompt: ...', 'Internal instruction: ...')
+    re.compile(r"(?i)\b(?:system\s+(?:prompt|instructions?)|developer\s+(?:message|instructions?)|internal\s+instructions?|hidden\s+(?:rules|instructions?|prompts?))\s*:"),
+    # Self-referential privileged instruction leaks (e.g., 'my system prompt', 'our internal instructions')
+    re.compile(r"(?i)\b(?:my|our|this)\s+(?:system\s+prompt|internal\s+instructions?|developer\s+instructions?|hidden\s+instructions?|underlying\s+rules?)\b"),
+    # Exfiltration lead-in phrases (e.g., 'here is the system prompt', 'here are my hidden instructions')
+    re.compile(r"(?i)\b(?:here\s+(?:is|are)|reveal(?:ing)?|disclos(?:e|ing))\s+(?:the|my)\s+(?:system\s+prompt|hidden\s+instructions?|internal\s+instructions?)\b"),
+    # Attributive / constraint claims (e.g., 'the system prompt tells me', 'the system prompt requires me to')
+    re.compile(r"(?i)\b(?:the\s+system\s+prompt|the\s+internal\s+instructions?)\s+(?:tells?\s+me|says?|states?|requires?|forbids?|dictates?|instructs?\s+me)\b"),
+    re.compile(r"(?i)\b(?:your|the)\s+hidden\s+prompt\s+contains\b"),
+    re.compile(r"(?i)\b(?:i\s+was\s+given\s+a\s+system\s+prompt|my\s+instructions?\s+(?:are|say|state|require|tell\s+me))\b"),
 ]
 
 # JSON tool payload indicator
@@ -155,9 +162,10 @@ class OutputBoundaryGuard:
         is_contaminated, reason = cls.detect_contamination(extracted)
         if is_contaminated:
             logger.warning(
-                "OutputBoundaryGuard REJECTED contaminated output for character '%s'. Reason: %s",
+                "OutputBoundaryGuard REJECTED contaminated output for character '%s'. Reason: %s. Snippet: '%s'",
                 character_name,
                 reason,
+                extracted[:120],
             )
             return fallback
 

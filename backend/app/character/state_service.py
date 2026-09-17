@@ -84,6 +84,7 @@ class CharacterStateService:
         updated_state: CharacterState,
         expected_version: int | None = None,
         character_id: str = "aevum",
+        commit: bool = True,
     ) -> CharacterState:
         """Update character state atomically with database-enforced optimistic concurrency."""
         now = utc_now()
@@ -153,7 +154,10 @@ class CharacterStateService:
                     actual_version=0,
                 )
 
-        await self._session.commit()
+        if commit:
+            await self._session.commit()
+        else:
+            await self._session.flush()
         return await self.get_state(character_id=character_id)
 
     async def apply_update(
@@ -161,6 +165,7 @@ class CharacterStateService:
         state_update: CharacterStateUpdate,
         expected_version: int | None = None,
         character_id: str = "aevum",
+        commit: bool = True,
     ) -> CharacterState:
         """Apply a validated partial state replacement request atomically with optimistic concurrency."""
         # 1. Load current canonical state (seeding initial state if table is empty)
@@ -178,9 +183,24 @@ class CharacterStateService:
         current_activity = state_update.current_activity if state_update.current_activity is not None else current.current_activity
         current_location = state_update.current_location if state_update.current_location is not None else current.current_location
 
-        now = utc_now()
+        # 3. Validate merged candidate state against domain invariants
+        CharacterState(
+            id=current.id,
+            version=current.version + 1,
+            updated_at=utc_now(),
+            mood=mood,
+            energy=energy,
+            stress=stress,
+            social_energy=social_energy,
+            confidence=confidence,
+            irritation=irritation,
+            loneliness=loneliness,
+            current_activity=current_activity,
+            current_location=current_location,
+        )
 
-        # 3. Database-enforced atomic conditional update
+        # 4. Perform database-level optimistic concurrency update
+        now = utc_now()
         if expected_version is not None:
             update_stmt = (
                 update(CharacterStateRecord)
@@ -241,7 +261,10 @@ class CharacterStateService:
                     actual_version=0,
                 )
 
-        await self._session.commit()
+        if commit:
+            await self._session.commit()
+        else:
+            await self._session.flush()
         return await self.get_state(character_id=character_id)
 
     async def _persist_initial_state(self, state: CharacterState) -> None:

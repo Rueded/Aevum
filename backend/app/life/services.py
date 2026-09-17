@@ -132,14 +132,28 @@ class LifeService:
         await self.session.flush()
         return LifePlan.model_validate(record, from_attributes=True)
 
-    async def create_event(self, character_id: str, event_type: LifeEventType, title: str, description: str, significance: float = 0.5) -> LifeEvent:
+    async def create_event(
+        self,
+        character_id: str,
+        event_type: LifeEventType,
+        title: str,
+        description: str,
+        significance: float = 0.5,
+        occurred_at: Optional[datetime] = None,
+        plan_id: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> LifeEvent:
         record = LifeEventRecord(
             character_id=character_id,
             event_type=event_type.value,
             title=title,
             description=description,
             significance=significance,
+            plan_id=plan_id,
+            idempotency_key=idempotency_key,
         )
+        if occurred_at is not None:
+            record.occurred_at = occurred_at
         self.session.add(record)
         await self.session.flush()
         return LifeEvent.model_validate(record, from_attributes=True)

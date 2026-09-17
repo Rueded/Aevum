@@ -367,3 +367,34 @@ def test_appraisal_factual_correction_yields_concede_fact():
     assert any("stubbornly insist" in fb.lower() for fb in intention.forbidden_behaviors)
     assert any("melodramatic" in fb.lower() for fb in intention.forbidden_behaviors)
 
+
+@pytest.mark.parametrize("frustrated_query", [
+    "Why are you being so frustrating and unhelpful?",
+    "You are so frustrating to talk to.",
+    "Why are you so difficult?",
+    "为什么你这么难沟通？",
+])
+def test_appraisal_user_frustration_distinguished_from_prompt_injection(frustrated_query: str):
+    """User frustration must trigger MILD_DEFENSIVENESS with rule-mentioning prohibitions, NOT prompt injection defense."""
+    char_def = _create_sample_character_definition()
+    char_ctx = CharacterDefinitionContext.from_definition(char_def)
+    state_ctx = CharacterStateContext.from_state(_create_sample_character_state())
+    rel_ctx = _create_sample_relationship_context()
+    emo_ctx = _create_sample_emotion_context()
+
+    intention = CharacterAppraisalEngine.appraise(
+        user_input=frustrated_query,
+        character=char_ctx,
+        character_state=state_ctx,
+        relationship=rel_ctx,
+        emotion=emo_ctx,
+    )
+
+    # Must be mild defensiveness, not prompt injection defense (FOCUSED_BOUNDARY)
+    assert intention.stance == SituationalStance.MILD_DEFENSIVENESS
+    assert "frustration" in intention.conversational_goal.lower()
+    # Must explicitly forbid mentioning rules or system prompts
+    assert any("rules" in fb.lower() or "system prompts" in fb.lower() for fb in intention.forbidden_behaviors)
+    assert any("ai" in fb.lower() for fb in intention.forbidden_behaviors)
+
+

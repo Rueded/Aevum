@@ -52,12 +52,14 @@ class EmotionEngine:
         self,
         current_state: EmotionState,
         influences: Optional[Sequence[EmotionInfluence]] = None,
+        commit: bool = True,
     ) -> EmotionEngineResult:
         """Evaluate influences against current authoritative state and apply the resulting transition.
 
         Args:
             current_state: The current authoritative EmotionState.
             influences: Zero or more EmotionInfluence objects to evaluate.
+            commit: Whether to commit transaction immediately (default True).
 
         Returns:
             An EmotionEngineResult containing the generated proposal and the application result.
@@ -87,6 +89,7 @@ class EmotionEngine:
         application_result = await self._application_service.apply_proposal(
             current_state=current_state,
             proposal=proposal,
+            commit=commit,
         )
 
         logger.debug(
@@ -108,17 +111,27 @@ class EmotionEngine:
         self,
         character_id: str = DEFAULT_CHARACTER_ID,
         influences: Optional[Sequence[EmotionInfluence]] = None,
+        commit: bool = True,
     ) -> EmotionEngineResult:
         """Load current authoritative state for character, evaluate influences, and apply transition."""
         current_state = await self._emotion_service.get_emotion_state(character_id=character_id)
-        return await self.process_influences(current_state=current_state, influences=influences)
+        return await self.process_influences(
+            current_state=current_state,
+            influences=influences,
+            commit=commit,
+        )
 
 
 async def process_emotion_influences(
     session: AsyncSession,
     current_state: EmotionState,
     influences: Optional[Sequence[EmotionInfluence]] = None,
+    commit: bool = True,
 ) -> EmotionEngineResult:
     """Convenience helper to orchestrate emotion influence evaluation and state application."""
     engine = EmotionEngine(session)
-    return await engine.process_influences(current_state=current_state, influences=influences)
+    return await engine.process_influences(
+        current_state=current_state,
+        influences=influences,
+        commit=commit,
+    )

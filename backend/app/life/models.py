@@ -97,6 +97,7 @@ class LifeEvent(BaseModel):
     description: str
     occurred_at: datetime
     significance: float = Field(default=0.5, ge=0.0, le=1.0)
+    idempotency_key: Optional[str] = Field(default=None, description="Deterministic deduplication key.")
     created_at: datetime
 
 class LifeGoal(BaseModel):

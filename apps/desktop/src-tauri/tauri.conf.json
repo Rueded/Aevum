@@ -13,8 +13,10 @@
     "windows": [
       {
         "title": "Aevum",
-        "width": 800,
-        "height": 600,
+        "width": 1080,
+        "height": 720,
+        "minWidth": 720,
+        "minHeight": 520,
         "resizable": true
       }
     ],

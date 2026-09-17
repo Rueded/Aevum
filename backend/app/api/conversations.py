@@ -206,12 +206,17 @@ async def create_message(
     await db.commit()
     await db.refresh(assistant_msg)
 
-    # 9. Analyze interaction for relationship signals and apply deterministic policy (Phase 4.2)
+    # Safely construct response models immediately from committed records
+    user_read = MessageRead.model_validate(user_msg)
+    assistant_read = MessageRead.model_validate(assistant_msg)
+
+    interaction_context = chat_messages + [
+        ChatMessage(role=assistant_msg.role, content=assistant_msg.content)
+    ]
+
+    # 9. Non-critical post-turn processing: Relationship signals (isolated boundary)
     try:
         extraction_service = RelationshipSignalExtractionService(llm_provider=llm_provider)
-        interaction_context = chat_messages + [
-            ChatMessage(role=assistant_msg.role, content=assistant_msg.content)
-        ]
         extraction_result = await extraction_service.extract_signals(interaction_context)
         if extraction_result.is_success and extraction_result.signals:
             rel_service = RelationshipService(db)
@@ -233,16 +238,40 @@ async def create_message(
                 relationship_id=current_rel.id,
             )
     except Exception as exc:
+        await db.rollback()
         logger.warning(
             "Relationship signal and experience processing failed for conversation '%s': %s",
             conversation_id,
             exc,
         )
 
+    # 9b. Non-critical post-turn processing: Memory extraction and curation (isolated boundary)
+    try:
+        from app.memory.curation_service import MemoryCurationService
+        from app.memory.extraction_service import MemoryExtractionService
+
+        mem_extraction_service = MemoryExtractionService(
+            session=db,
+            llm_provider=llm_provider,
+        )
+        mem_extract_res = await mem_extraction_service.extract_and_create_candidates(
+            messages=interaction_context,
+        )
+        if mem_extract_res.is_success and mem_extract_res.candidate_ids:
+            curation_service = MemoryCurationService(session=db)
+            await curation_service.curate_pending_candidates()
+    except Exception as exc:
+        await db.rollback()
+        logger.warning(
+            "Memory candidate extraction and curation failed for conversation '%s': %s",
+            conversation_id,
+            exc,
+        )
+
     # 10. Return both persisted messages
     return MessageCreateResponse(
-        message=MessageRead.model_validate(user_msg),
-        assistant_response=MessageRead.model_validate(assistant_msg),
+        message=user_read,
+        assistant_response=assistant_read,
         assistant_status="generated",
     )
 

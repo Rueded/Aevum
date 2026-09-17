@@ -1,330 +1,278 @@
-import { useEffect, useState, useCallback, FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
+import { api } from "./api";
+import { ChatView } from "./components/ChatView";
+import { PresenceHeader } from "./components/PresenceHeader";
+import { Sidebar } from "./components/Sidebar";
+import {
+  CharacterDebugResponse,
+  CharacterStateResponse,
+  ConversationDetail,
+  HealthData,
+  LifeResponse,
+  MemoryItem,
+  MessageItem,
+  RelationshipResponse,
+} from "./types";
 
-interface HealthData {
-  status: string;
-  app: string;
-  version: string;
-  database: string;
-}
-
-interface MessageItem {
-  id: string;
-  conversation_id: string;
-  role: string;
-  content: string;
-  created_at: string;
-}
-
-interface ConversationDetail {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  messages: MessageItem[];
-}
-
-const BACKEND_BASE_URL = "http://127.0.0.1:8000";
 const LOCAL_STORAGE_CONV_KEY = "aevum_active_conversation_id";
 
 export function App() {
-  // Backend health state
+  // Backend & companion state
   const [health, setHealth] = useState<HealthData | null>(null);
-  const [backendError, setBackendError] = useState<string | null>(null);
+  const [characterState, setCharacterState] = useState<CharacterStateResponse | null>(null);
+  const [relationship, setRelationship] = useState<RelationshipResponse | null>(null);
+  const [life, setLife] = useState<LifeResponse | null>(null);
+  const [memories, setMemories] = useState<MemoryItem[]>([]);
+  const [debugData, setDebugData] = useState<CharacterDebugResponse | null>(null);
 
-  // Conversation state
+  // Active chat session state
   const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
     return localStorage.getItem(LOCAL_STORAGE_CONV_KEY);
   });
   const [conversation, setConversation] = useState<ConversationDetail | null>(null);
-  const [loadingConversation, setLoadingConversation] = useState<boolean>(false);
-  const [conversationError, setConversationError] = useState<string | null>(null);
+  const [inputMessage, setInputMessage] = useState<string>("");
+  const [lastFailedMessage, setLastFailedMessage] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
-  // Message input & generation state
-  const [messageInput, setMessageInput] = useState<string>("");
-  const [sendingMessage, setSendingMessage] = useState<boolean>(false);
-  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  // Layout & panel state
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"about" | "relationship" | "memories" | "debug">("about");
 
-  // Check health
+  // Load backend health
   const checkHealth = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/health`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      const data: HealthData = await res.json();
+      const data = await api.getHealth();
       setHealth(data);
-      setBackendError(null);
-    } catch (err: unknown) {
+    } catch {
       setHealth(null);
-      setBackendError(err instanceof Error ? err.message : "Failed to connect");
     }
   }, []);
 
-  // Fetch active conversation from database
-  const fetchConversation = useCallback(async (convId: string) => {
-    setLoadingConversation(true);
-    setConversationError(null);
+  // Refresh character domain state (read-only projection)
+  const refreshCompanionState = useCallback(async () => {
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/conversations/${convId}`);
-      if (res.status === 404) {
+      const [charData, relData, lifeData, memData] = await Promise.all([
+        api.getCharacterState().catch(() => null),
+        api.getRelationship().catch(() => null),
+        api.getLife().catch(() => null),
+        api.getMemories().catch(() => []),
+      ]);
+
+      if (charData) setCharacterState(charData);
+      if (relData) setRelationship(relData);
+      if (lifeData) setLife(lifeData);
+      if (memData) setMemories(memData);
+    } catch (err) {
+      console.warn("Failed to refresh companion state:", err);
+    }
+  }, []);
+
+  // Refresh debug data when tab is active
+  const refreshDebugData = useCallback(async () => {
+    try {
+      const data = await api.getDebug();
+      setDebugData(data);
+    } catch (err) {
+      console.warn("Failed to refresh debug data:", err);
+    }
+  }, []);
+
+  // Fetch conversation messages
+  const loadConversation = useCallback(async (convId: string) => {
+    try {
+      const data = await api.getConversation(convId);
+      setConversation(data);
+      setChatError(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error loading conversation";
+      if (msg.includes("404") || msg.includes("not found")) {
+        // Conversation was deleted or reset
         localStorage.removeItem(LOCAL_STORAGE_CONV_KEY);
         setActiveConversationId(null);
         setConversation(null);
-        setConversationError(`Conversation ${convId} not found in database (may have been reset).`);
-        return;
+      } else {
+        setChatError(msg);
       }
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      const data: ConversationDetail = await res.json();
-      setConversation(data);
-    } catch (err: unknown) {
-      setConversationError(err instanceof Error ? err.message : "Error fetching conversation");
-    } finally {
-      setLoadingConversation(false);
     }
   }, []);
 
-  // Create new conversation in backend
-  const handleCreateConversation = async () => {
-    setLoadingConversation(true);
-    setConversationError(null);
-    setActionFeedback(null);
+  // Initialize or create conversation on demand
+  const handleCreateNewConversation = useCallback(async () => {
+    setChatError(null);
+    setLastFailedMessage(null);
     try {
-      const res = await fetch(`${BACKEND_BASE_URL}/conversations`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      const created: { id: string } = await res.json();
+      const created = await api.createConversation();
       localStorage.setItem(LOCAL_STORAGE_CONV_KEY, created.id);
       setActiveConversationId(created.id);
-      await fetchConversation(created.id);
-      setActionFeedback(`Created new persistent conversation: ${created.id}`);
-    } catch (err: unknown) {
-      setConversationError(err instanceof Error ? err.message : "Failed to create conversation");
-      setLoadingConversation(false);
-    }
-  };
-
-  // Send message to backend and receive assistant generation
-  const handleSendMessage = async (e: FormEvent) => {
-    e.preventDefault();
-    const trimmed = messageInput.trim();
-    if (!trimmed || !activeConversationId) return;
-
-    setSendingMessage(true);
-    setConversationError(null);
-    setActionFeedback(null);
-
-    try {
-      const res = await fetch(`${BACKEND_BASE_URL}/conversations/${activeConversationId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: "user", content: trimmed }),
+      setConversation({
+        id: created.id,
+        created_at: created.created_at,
+        updated_at: created.updated_at,
+        messages: [],
       });
-
-      if (!res.ok) {
-        const errorBody = await res.json().catch(() => null);
-        const detail = errorBody?.detail || `HTTP ${res.status}: ${res.statusText}`;
-
-        // In case of 502/503, user message was still committed in DB; refetch to display it
-        await fetchConversation(activeConversationId);
-        throw new Error(`LLM generation error (${res.status}): ${detail}`);
-      }
-
-      setMessageInput("");
-      // Refetch conversation to display user message and newly persisted assistant reply
-      await fetchConversation(activeConversationId);
-      setActionFeedback("Assistant response generated via Gemini and persisted to SQLite.");
+      await refreshCompanionState();
     } catch (err: unknown) {
-      setConversationError(err instanceof Error ? err.message : "Failed to process message");
-    } finally {
-      setSendingMessage(false);
+      setChatError(err instanceof Error ? err.message : "Failed to create conversation");
     }
-  };
-
-  // Clear local ID
-  const handleClearLocalId = () => {
-    localStorage.removeItem(LOCAL_STORAGE_CONV_KEY);
-    setActiveConversationId(null);
-    setConversation(null);
-    setActionFeedback("Cleared active conversation ID from localStorage.");
-  };
+  }, [refreshCompanionState]);
 
   // Initial load
   useEffect(() => {
     checkHealth();
-  }, [checkHealth]);
+    refreshCompanionState();
 
-  useEffect(() => {
     if (activeConversationId) {
-      fetchConversation(activeConversationId);
+      loadConversation(activeConversationId);
+    } else {
+      // Auto-create initial conversation if none saved
+      handleCreateNewConversation();
     }
-  }, [activeConversationId, fetchConversation]);
+  }, [checkHealth, refreshCompanionState, activeConversationId, loadConversation, handleCreateNewConversation]);
+
+  // Refresh debug data when debug tab is viewed
+  useEffect(() => {
+    if (isSidebarOpen && activeTab === "debug") {
+      refreshDebugData();
+    }
+  }, [isSidebarOpen, activeTab, refreshDebugData]);
+
+  // Send message with retry support
+  const handleSendMessage = async (textToSend?: string) => {
+    const content = (textToSend !== undefined ? textToSend : inputMessage).trim();
+    if (!content || isGenerating) return;
+
+    let convId = activeConversationId;
+    if (!convId) {
+      try {
+        const created = await api.createConversation();
+        convId = created.id;
+        localStorage.setItem(LOCAL_STORAGE_CONV_KEY, convId);
+        setActiveConversationId(convId);
+      } catch (err: unknown) {
+        setChatError(err instanceof Error ? err.message : "Failed to initialize conversation session");
+        return;
+      }
+    }
+
+    if (textToSend === undefined) {
+      setInputMessage("");
+    }
+    setLastFailedMessage(null);
+    setChatError(null);
+    setIsGenerating(true);
+
+    // Optimistically render user message immediately
+    const tempUserMsg: MessageItem = {
+      id: `temp-${Date.now()}`,
+      conversation_id: convId,
+      role: "user",
+      content: content,
+      created_at: new Date().toISOString(),
+    };
+
+    setConversation((prev) => ({
+      id: convId!,
+      created_at: prev?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      messages: [...(prev?.messages || []), tempUserMsg],
+    }));
+
+    try {
+      const res = await api.sendMessage(convId, content);
+
+      // Successfully generated and persisted
+      if (res.assistant_response) {
+        setConversation((prev) => {
+          const filtered = (prev?.messages || []).filter((m) => m.id !== tempUserMsg.id);
+          return {
+            id: convId!,
+            created_at: prev?.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            messages: [...filtered, res.message, res.assistant_response!],
+          };
+        });
+      } else {
+        await loadConversation(convId);
+      }
+
+      setLastFailedMessage(null);
+
+      // Update companion domain state in background (relationship, life, memories)
+      refreshCompanionState();
+
+      // P3: Refresh memories shortly after turn to sync post-turn background distillation
+      setTimeout(() => {
+        api.getMemories().then(setMemories).catch(() => {});
+      }, 1500);
+
+      if (isSidebarOpen && activeTab === "debug") {
+        refreshDebugData();
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Failed to get response from Aevum";
+      setChatError(`Response issue: ${errMsg}`);
+      setLastFailedMessage(content);
+      // Reload actual persisted messages from backend (user message is persisted even on 502)
+      if (convId) {
+        loadConversation(convId);
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Delete memory
+  const handleDeleteMemory = async (memoryId: string) => {
+    await api.deleteMemory(memoryId);
+    setMemories((prev) => prev.filter((m) => m.id !== memoryId));
+    if (isSidebarOpen && activeTab === "debug") {
+      refreshDebugData();
+    }
+  };
 
   return (
-    <div className="container">
-      <header className="header">
-        <h1 className="title">Aevum</h1>
-        <p className="tagline">A Persistent Digital Life</p>
-        <div className="phase-badge">Phase 6.3: First Playable Conversation</div>
-      </header>
+    <div className="companion-app-root">
+      <PresenceHeader
+        health={health}
+        characterState={characterState}
+        isGenerating={isGenerating}
+        onNewConversation={handleCreateNewConversation}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        activeTab={activeTab}
+        onSelectTab={(tab) => setActiveTab(tab)}
+      />
 
-      {/* Backend Health Banner */}
-      <div className="health-bar">
-        <div className="health-bar-left">
-          <span
-            className={`dot ${
-              health?.status === "ok" ? "green" : backendError ? "red" : "yellow"
-            }`}
-          ></span>
-          <span className="health-label">
-            Core Backend:{" "}
-            <strong>
-              {health?.status === "ok" ? "Online (SQLite Connected)" : backendError ? "Offline" : "Checking..."}
-            </strong>
-          </span>
-        </div>
-        <button className="btn-secondary" onClick={checkHealth}>
-          Check Health
-        </button>
+      <div className="companion-main-body">
+        <main className="chat-main-column">
+          <ChatView
+            messages={conversation?.messages || []}
+            isGenerating={isGenerating}
+            input={inputMessage}
+            onInputChange={setInputMessage}
+            onSendMessage={() => handleSendMessage()}
+            error={chatError}
+            onRetry={lastFailedMessage ? () => handleSendMessage(lastFailedMessage) : undefined}
+            characterName={characterState?.name || "Aevum"}
+          />
+        </main>
+
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          characterState={characterState}
+          relationship={relationship}
+          life={life}
+          memories={memories}
+          onDeleteMemory={handleDeleteMemory}
+          debugData={debugData}
+          activeConversationId={activeConversationId}
+        />
       </div>
-
-      {backendError && (
-        <div className="error-box">
-          <strong>Backend Connection Error:</strong> {backendError}
-        </div>
-      )}
-
-      {/* Conversation Session Controls */}
-      <section className="card">
-        <div className="card-header">
-          <h2 className="card-title">Conversation Session</h2>
-          <div className="button-group">
-            <button
-              className="btn-primary"
-              onClick={handleCreateConversation}
-              disabled={loadingConversation || sendingMessage}
-            >
-              + New Conversation
-            </button>
-            {activeConversationId && (
-              <>
-                <button
-                  className="btn-secondary"
-                  onClick={() => fetchConversation(activeConversationId)}
-                  disabled={loadingConversation || sendingMessage}
-                >
-                  Reload from DB
-                </button>
-                <button
-                  className="btn-outline"
-                  onClick={handleClearLocalId}
-                  disabled={sendingMessage}
-                >
-                  Clear Local ID
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="session-meta">
-          <div className="meta-item">
-            <span className="meta-label">Active Conversation ID:</span>
-            <code className="meta-value">
-              {activeConversationId || "None (Create a conversation to begin)"}
-            </code>
-          </div>
-          {conversation && (
-            <div className="meta-item">
-              <span className="meta-label">Created At:</span>
-              <span className="meta-value">
-                {new Date(conversation.created_at).toLocaleString()}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {conversationError && (
-          <div className="error-box">
-            <strong>Notice:</strong> {conversationError}
-          </div>
-        )}
-
-        {actionFeedback && <div className="feedback-box">{actionFeedback}</div>}
-
-        {/* Persisted Messages Display */}
-        <div className="messages-section">
-          <h3 className="section-title">
-            Persisted Messages ({conversation?.messages.length ?? 0})
-          </h3>
-
-          {!activeConversationId ? (
-            <div className="empty-state">
-              No active conversation selected. Click <strong>+ New Conversation</strong> to start.
-            </div>
-          ) : loadingConversation ? (
-            <div className="loading-state">Loading messages from SQLite database...</div>
-          ) : conversation?.messages && conversation.messages.length > 0 ? (
-            <div className="message-list">
-              {conversation.messages.map((msg) => (
-                <div key={msg.id} className={`message-item ${msg.role}`}>
-                  <div className="message-header">
-                    <span className={`role-badge ${msg.role}`}>
-                      {msg.role === "assistant" ? "AEVUM (GEMINI)" : msg.role.toUpperCase()}
-                    </span>
-                    <span className="message-time">
-                      {new Date(msg.created_at).toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <div className="message-content">{msg.content}</div>
-                </div>
-              ))}
-              {sendingMessage && (
-                <div className="message-item assistant" style={{ opacity: 0.7 }}>
-                  <div className="message-header">
-                    <span className="role-badge assistant">AEVUM (GENERATING...)</span>
-                  </div>
-                  <div className="message-content" style={{ fontStyle: "italic", color: "#8b949e" }}>
-                    Generating response from Gemini...
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="empty-state">
-              No messages in this conversation yet. Send a message below to begin.
-            </div>
-          )}
-        </div>
-
-        {/* Message Sender Form */}
-        {activeConversationId && (
-          <form className="message-form" onSubmit={handleSendMessage}>
-            <input
-              type="text"
-              className="message-input"
-              placeholder={
-                sendingMessage
-                  ? "Waiting for Gemini response..."
-                  : "Type a message to converse with Gemini..."
-              }
-              value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
-              disabled={sendingMessage || loadingConversation}
-            />
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={sendingMessage || loadingConversation || !messageInput.trim()}
-            >
-              {sendingMessage ? "Generating..." : "Send Message"}
-            </button>
-          </form>
-        )}
-      </section>
-
-      {/* Architectural Reality Note */}
-      <aside className="note-box">
-        <strong>Architecture Principle:</strong> The application owns reality; the LLM generates language. This desktop client renders conversation history persisted in SQLite. The Gemini provider translates conversation context into natural language without owning character state, memory, or personality.
-      </aside>
     </div>
   );
 }

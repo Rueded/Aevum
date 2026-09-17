@@ -924,6 +924,7 @@ class LifeEventRecord(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
     significance: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(120), nullable=True, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
 
 class LifeGoalRecord(Base):

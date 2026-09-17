@@ -103,6 +103,7 @@ class HybridMemoryRetrievalService:
         lexical_query = MemoryRetrievalQuery(
             text=query.text,
             categories=query.categories,
+            subject_entities=query.subject_entities,
             limit=candidate_limit,
         )
         lexical_res = await self._lexical_service.retrieve(lexical_query)
@@ -114,6 +115,7 @@ class HybridMemoryRetrievalService:
                 semantic_query = SemanticMemoryRetrievalQuery(
                     text=query.text,
                     categories=query.categories,
+                    subject_entities=query.subject_entities,
                     limit=candidate_limit,
                     min_similarity=query.min_similarity,
                 )

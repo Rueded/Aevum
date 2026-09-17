@@ -6,8 +6,8 @@ identity, structured personality tendencies, preferences, and behavioral boundar
 
 from datetime import datetime
 import enum
-from typing import Any
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing import Any, Optional
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 
 class PreferenceSentiment(str, enum.Enum):
@@ -139,6 +139,56 @@ class Boundary(BaseModel):
         return v.strip()
 
 
+
+
+class CharacterCoreAnchor(BaseModel):
+    """Immutable existential core of the character.
+    
+    Contains bedrock identity, innate temperamental traits, and non-negotiable boundaries.
+    Never altered through conversational drift or prompt suggestions.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    identity: CharacterIdentity = Field(..., description="Foundational identity.")
+    core_traits: tuple[str, ...] = Field(..., description="Unalterable innate character traits.")
+    core_boundaries: tuple[Boundary, ...] = Field(..., description="Non-negotiable ethical and behavioral boundaries.")
+    existential_anchor: str = Field(
+        default="A persistent digital life living an authentic, independent existence.",
+        description="Core philosophical axiom.",
+    )
+
+
+class CharacterSurfacePersona(BaseModel):
+    """Evolving surface persona, conversational habits, and developing interests.
+    
+    Can evolve slowly through structured experience consolidation, while anchored to core traits.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    conversational_style: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description="Current conversational patterns.",
+    )
+    speech_habits: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description="Surface speech quirks or phrases.",
+    )
+    active_topics_of_interest: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description="Current topics capturing character curiosity.",
+    )
+    evolving_preferences: tuple[Preference, ...] = Field(
+        default_factory=tuple,
+        description="Preferences that have emerged through recent experiences.",
+    )
+    mood_expression_bias: Optional[str] = Field(
+        default=None,
+        description="Situational stylistic tendency in how emotions are surfaced.",
+    )
+
+
 class CharacterDefinition(BaseModel):
     """Aggregate root representing the canonical, persistent character definition.
 
@@ -178,9 +228,35 @@ class CharacterDefinition(BaseModel):
         description="Persistent behavioral boundaries.",
     )
 
+    _custom_core_anchor: Optional[CharacterCoreAnchor] = PrivateAttr(default=None)
+    _custom_surface_persona: Optional[CharacterSurfacePersona] = PrivateAttr(default=None)
+
     @field_validator("preferences", "boundaries", mode="before")
     @classmethod
     def coerce_to_tuple(cls, v: Any) -> Any:
         if isinstance(v, (list, tuple)):
             return tuple(v)
         return v
+
+    @property
+    def core_anchor(self) -> CharacterCoreAnchor:
+        """Immutable existential core anchor derived from foundational identity, traits, and boundaries."""
+        if self._custom_core_anchor is not None:
+            return self._custom_core_anchor
+        return CharacterCoreAnchor(
+            identity=self.identity,
+            core_traits=self.personality.core_traits,
+            core_boundaries=self.boundaries,
+        )
+
+    @property
+    def surface_persona(self) -> CharacterSurfacePersona:
+        """Dynamic surface persona derived from communication style, habits, and preferences."""
+        if self._custom_surface_persona is not None:
+            return self._custom_surface_persona
+        return CharacterSurfacePersona(
+            conversational_style=self.personality.communication_style,
+            speech_habits=self.personality.behavioral_tendencies,
+            active_topics_of_interest=tuple(p.item for p in self.preferences),
+            evolving_preferences=self.preferences,
+        )

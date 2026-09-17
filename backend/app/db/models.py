@@ -3,7 +3,7 @@ import enum
 from typing import Optional
 import uuid
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -381,6 +381,12 @@ class MemoryRecord(Base):
         nullable=False,
         index=True,
     )
+    subject_entity: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="USER",
+        index=True,
+    )
     content: Mapped[str] = mapped_column(
         Text,
         nullable=False,
@@ -450,6 +456,12 @@ class MemoryCandidateRecord(Base):
     category: Mapped[str] = mapped_column(
         String(32),
         nullable=False,
+        index=True,
+    )
+    subject_entity: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="USER",
         index=True,
     )
     content: Mapped[str] = mapped_column(
@@ -927,4 +939,59 @@ class LifeGoalRecord(Base):
     importance: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
     progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+
+class CharacterBiographyRecord(Base):
+    """Represents canonical biographical ground truth for a character."""
+    __tablename__ = "character_biography"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    character_id: Mapped[str] = mapped_column(String(36), nullable=False, default="aevum", index=True)
+    domain: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    subject: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="ESTABLISHED", index=True)
+    canonical_value: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    disclosure_min_trust: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+
+class CharacterSocialRecord(Base):
+    """Represents a person in the character's independent social circle."""
+    __tablename__ = "character_social_records"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    character_id: Mapped[str] = mapped_column(String(36), nullable=False, default="aevum", index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    relationship: Mapped[str] = mapped_column(String(100), nullable=False)
+    traits: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="ACTIVE", index=True)
+    last_mentioned_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+
+class CharacterWorldFactRecord(Base):
+    """Represents factual preferences, world knowledge, and tastes owned by the character."""
+    __tablename__ = "character_world_facts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    character_id: Mapped[str] = mapped_column(String(36), nullable=False, default="aevum", index=True)
+    category: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    item: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    details: Mapped[str] = mapped_column(Text, nullable=False)
+    importance: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+
+class PermissionRecord(Base):
+    """Represents local system capability grant or denial (default least privilege)."""
+    __tablename__ = "system_permissions"
+
+    capability: Mapped[str] = mapped_column(String(50), primary_key=True)
+    is_granted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    granted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)

@@ -446,6 +446,9 @@ async def test_build_response_context_loads_from_database(test_session: AsyncSes
     assert ctx.relationship.familiarity_summary is not None
     assert ctx.emotion.emotion_type == EmotionType.NEUTRAL
     assert ctx.emotion.intensity == 0.50
+    assert ctx.personal_world is not None
+    assert len(ctx.personal_world.world_facts) > 0
+    assert len(ctx.personal_world.epistemic_directives) > 0
 
 
 # ---------------------------------------------------------------------------

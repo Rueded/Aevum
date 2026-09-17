@@ -13,6 +13,7 @@ from app.llm.context import LLMContext
 from app.llm.context_builder import build_context
 from app.relationship.context_builder import RelationshipContextBuilder
 from app.life.context_builder import LifeContextBuilder
+from app.world.context_builder import PersonalWorldContextBuilder
 
 
 class ResponseContextAssembler:
@@ -88,6 +89,16 @@ class ResponseContextAssembler:
             char_lines.append("\nBoundaries:")
             for b in char_def.boundaries:
                 char_lines.append(f"- {b.description}")
+
+        if char_def.surface_persona:
+            sp = char_def.surface_persona
+            if sp.speech_habits:
+                char_lines.append("\nSurface Speech Habits & Quirks:")
+                for habit in sp.speech_habits:
+                    char_lines.append(f"- {habit}")
+            if sp.active_topics_of_interest:
+                char_lines.append(f"\nActive Topics of Interest: {', '.join(sp.active_topics_of_interest)}")
+
         char_lines.append("</character_identity>")
         character_block = "\n".join(char_lines)
 
@@ -123,13 +134,52 @@ class ResponseContextAssembler:
         # 5.5 Life Context Block
         life_block = LifeContextBuilder.format_context(context.life)
 
-        # 6. Behavioral Guidance Block
+        # 5.6 Personal World & Epistemic Grounding Block
+        personal_world_block = (
+            PersonalWorldContextBuilder.format_context(context.personal_world)
+            if context.personal_world
+            else ""
+        )
+
+        # 6. Behavioral Guidance & Contract Block
         behavior_ctx = context.behavior
+        behavior_sections = []
+        if behavior_ctx.intention:
+            intention = behavior_ctx.intention
+            contract_lines = [
+                "<behavioral_contract>",
+                f"Stance: {intention.stance.value}",
+                f"Conversational Goal: {intention.conversational_goal}",
+                f"Micro-reaction: {intention.micro_reaction}",
+                f"Target Warmth: {intention.desired_warmth:.2f}",
+                f"Target Directness: {intention.desired_directness:.2f}",
+            ]
+            if intention.forbidden_behaviors:
+                contract_lines.append("Strictly Forbidden Behaviors (DO NOT VIOLATE):")
+                for fb in intention.forbidden_behaviors:
+                    contract_lines.append(f"- {fb}")
+            contract_lines.append("</behavioral_contract>")
+            behavior_sections.append("\n".join(contract_lines))
+
         hints = "\n".join(f"- {hint}" for hint in behavior_ctx.behavioral_hints)
-        behavior_block = (
+        behavior_sections.append(
             "<behavioral_guidance>\n"
             f"{hints}\n"
             "</behavioral_guidance>"
+        )
+        behavior_block = "\n\n".join(behavior_sections)
+
+        # 6.5 Output Contract Block
+        output_contract_block = (
+            "<output_contract>\n"
+            "Wrap your actual dialogue inside the following XML envelope:\n"
+            "<character_response>\n"
+            "    <character_speech>\n"
+            "        Your natural character speech here.\n"
+            "    </character_speech>\n"
+            "</character_response>\n"
+            "Output ONLY the XML envelope containing character speech. Do not include markdown backticks around the envelope, internal reasoning, or system commentary.\n"
+            "</output_contract>"
         )
 
         # Assemble system instructions list
@@ -140,8 +190,20 @@ class ResponseContextAssembler:
             relationship_block,
             emotion_block,
             life_block,
-            behavior_block,
         ]
+        if personal_world_block:
+            system_instructions.append(personal_world_block)
+        if context.presence and context.presence.absence_guidance:
+            presence_block = (
+                "<presence_guidance>\n"
+                f"{context.presence.absence_guidance}\n"
+                "</presence_guidance>"
+            )
+            system_instructions.append(presence_block)
+        system_instructions.extend([
+            behavior_block,
+            output_contract_block,
+        ])
 
         # 6. Memory Context Block (if available)
         if context.memory.context_block:

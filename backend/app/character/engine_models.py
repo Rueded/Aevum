@@ -26,8 +26,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.character.models import (
     Boundary,
+    CharacterCoreAnchor,
     CharacterDefinition,
     CharacterIdentity,
+    CharacterSurfacePersona,
     Personality,
     Preference,
 )
@@ -37,7 +39,10 @@ from app.memory.context_builder import build_memory_context
 from app.memory.models import HybridMemoryResult, Memory, MemoryCategory
 from app.relationship.context_models import RelationshipContext
 from app.life.context_models import CharacterLifeContext
+from app.life.presence import PresenceState
 from app.relationship.models import RelationshipState
+from app.world.models import PersonalWorldContext
+from app.character.intention_models import SituationalStance, TurnIntention
 
 
 class CharacterDefinitionContext(BaseModel):
@@ -56,6 +61,14 @@ class CharacterDefinitionContext(BaseModel):
         default_factory=tuple,
         description="Persistent behavioral boundaries.",
     )
+    core_anchor: Optional[CharacterCoreAnchor] = Field(
+        default=None,
+        description="Immutable core anchor.",
+    )
+    surface_persona: Optional[CharacterSurfacePersona] = Field(
+        default=None,
+        description="Surface persona and evolving expression.",
+    )
 
     @classmethod
     def from_definition(cls, definition: CharacterDefinition) -> "CharacterDefinitionContext":
@@ -66,6 +79,8 @@ class CharacterDefinitionContext(BaseModel):
             personality=definition.personality,
             preferences=definition.preferences,
             boundaries=definition.boundaries,
+            core_anchor=definition.core_anchor,
+            surface_persona=definition.surface_persona,
         )
 
 
@@ -279,12 +294,17 @@ class CharacterBehaviorContext(BaseModel):
         ...,
         description="Qualitative behavioral hints reflecting current state.",
     )
+    intention: Optional[TurnIntention] = Field(
+        default=None,
+        description="Authoritative situational stance and turn intention.",
+    )
 
     @classmethod
     def synthesize(
         cls,
         state: CharacterStateContext,
         emotion: CharacterEmotionContext,
+        intention: Optional[TurnIntention] = None,
     ) -> "CharacterBehaviorContext":
         """Synthesize behavioral hints from current domain states."""
         hints = []
@@ -311,7 +331,7 @@ class CharacterBehaviorContext(BaseModel):
         if not hints:
             hints.append("Maintain your baseline personality and conversational tone.")
 
-        return cls(behavioral_hints=tuple(hints))
+        return cls(behavioral_hints=tuple(hints), intention=intention)
 
 
 class CharacterResponseContext(BaseModel):
@@ -327,3 +347,5 @@ class CharacterResponseContext(BaseModel):
     memory: CharacterMemoryContext = Field(..., description="Relevant memory context.")
     behavior: CharacterBehaviorContext = Field(..., description="Synthesized behavioral cues and hints.")
     life: CharacterLifeContext = Field(..., description="Current factual life context.")
+    personal_world: Optional[PersonalWorldContext] = Field(default=None, description="Personal world and epistemic context.")
+    presence: Optional[PresenceState] = Field(default=None, description="Current presence and absence dynamics.")

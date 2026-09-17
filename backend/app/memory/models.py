@@ -41,6 +41,19 @@ class MemoryCategory(str, enum.Enum):
     CHARACTER_EVENT = "CHARACTER_EVENT"
 
 
+class MemorySubjectEntity(str, enum.Enum):
+    """Explicit entity attribution for who a memory belongs to or describes.
+
+    Distinguishes character-owned facts, user-owned facts, and third-party/NPC facts
+    to prevent speaker attribution drift across long interaction horizons.
+    """
+
+    AEVUM = "AEVUM"
+    USER = "USER"
+    NPC = "NPC"
+    OTHER = "OTHER"
+
+
 def _validate_normalized_float(v: float, field_name: str) -> float:
     """Ensure float is a finite normalized number between 0.0 and 1.0 inclusive."""
     if math.isnan(v):
@@ -83,6 +96,10 @@ class Memory(BaseModel):
     category: MemoryCategory = Field(
         ...,
         description="Semantic category of the memory.",
+    )
+    subject_entity: MemorySubjectEntity = Field(
+        default=MemorySubjectEntity.USER,
+        description="Entity/person that this memory pertains to or belongs to (AEVUM, USER, NPC, OTHER).",
     )
     content: str = Field(
         ...,
@@ -135,6 +152,18 @@ class Memory(BaseModel):
     def validate_content_field(cls, v: str, info: Any) -> str:
         return _validate_memory_content(v, info.field_name)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _default_subject_entity(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "subject_entity" not in data or data["subject_entity"] is None:
+                category = data.get("category")
+                if category in (MemoryCategory.CHARACTER_EVENT, MemoryCategory.CHARACTER_EVENT.value):
+                    data["subject_entity"] = MemorySubjectEntity.AEVUM
+                else:
+                    data["subject_entity"] = MemorySubjectEntity.USER
+        return data
+
 
 class MemoryUpdate(BaseModel):
     """Immutable, validated request to partially modify an existing memory.
@@ -146,6 +175,7 @@ class MemoryUpdate(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     content: str | None = None
+    subject_entity: MemorySubjectEntity | None = None
     importance: float | None = None
     confidence: float | None = None
     emotional_weight: float | None = None
@@ -217,6 +247,10 @@ class MemoryCandidate(BaseModel):
         ...,
         description="Proposed category for the candidate.",
     )
+    subject_entity: MemorySubjectEntity = Field(
+        default=MemorySubjectEntity.USER,
+        description="Entity/person that this candidate memory pertains to (AEVUM, USER, NPC, OTHER).",
+    )
     content: str = Field(
         ...,
         description="Proposed semantic content of the memory candidate.",
@@ -258,6 +292,18 @@ class MemoryCandidate(BaseModel):
         description="Monotonically increasing version counter for optimistic concurrency.",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _default_subject_entity(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "subject_entity" not in data or data["subject_entity"] is None:
+                category = data.get("category")
+                if category in (MemoryCategory.CHARACTER_EVENT, MemoryCategory.CHARACTER_EVENT.value):
+                    data["subject_entity"] = MemorySubjectEntity.AEVUM
+                else:
+                    data["subject_entity"] = MemorySubjectEntity.USER
+        return data
+
     @field_validator("importance", "confidence", "emotional_weight")
     @classmethod
     def validate_metrics(cls, v: float, info: Any) -> float:
@@ -279,6 +325,7 @@ class MemoryCandidateUpdate(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     content: str | None = None
+    subject_entity: MemorySubjectEntity | None = None
     importance: float | None = None
     confidence: float | None = None
     emotional_weight: float | None = None
@@ -342,6 +389,10 @@ class MemoryExtractionProposal(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     category: MemoryCategory
+    subject_entity: MemorySubjectEntity = Field(
+        default=MemorySubjectEntity.USER,
+        description="Entity/person that this proposed memory pertains to (AEVUM, USER, NPC, OTHER).",
+    )
     content: str
     importance: float = 0.5
     confidence: float = 0.9
@@ -453,6 +504,10 @@ class MemoryRetrievalQuery(BaseModel):
     categories: tuple[MemoryCategory, ...] = Field(
         default=(),
         description="Optional category filter. If empty, all memory categories are eligible.",
+    )
+    subject_entities: tuple[MemorySubjectEntity, ...] = Field(
+        default=(),
+        description="Optional subject entity filter (AEVUM, USER, NPC, OTHER). If empty, all entities are eligible.",
     )
     limit: int = Field(
         default=5,
@@ -597,6 +652,10 @@ class SemanticMemoryRetrievalQuery(BaseModel):
         default=(),
         description="Optional category filter. If empty, all memory categories are eligible.",
     )
+    subject_entities: tuple[MemorySubjectEntity, ...] = Field(
+        default=(),
+        description="Optional subject entity filter (AEVUM, USER, NPC, OTHER). If empty, all entities are eligible.",
+    )
     limit: int = Field(
         default=5,
         ge=1,
@@ -663,6 +722,10 @@ class HybridMemoryRetrievalQuery(BaseModel):
     categories: tuple[MemoryCategory, ...] = Field(
         default=(),
         description="Optional category filter. If empty, all memory categories are eligible.",
+    )
+    subject_entities: tuple[MemorySubjectEntity, ...] = Field(
+        default=(),
+        description="Optional subject entity filter (AEVUM, USER, NPC, OTHER). If empty, all entities are eligible.",
     )
     limit: int = Field(
         default=5,

@@ -9,6 +9,7 @@ import logging
 from typing import Optional
 
 from app.character.engine_models import CharacterResponseContext
+from app.character.integrity import OutputBoundaryGuard
 from app.character.prompt_assembler import ResponseContextAssembler
 from app.character.response_models import CharacterResponse
 from app.llm.base import (
@@ -68,12 +69,17 @@ class ResponseGenerator:
 
         llm_response = await self.provider.generate_response(llm_context)
 
-        content = (llm_response.content or "").strip()
-        if not content:
+        raw_content = (llm_response.content or "").strip()
+        if not raw_content:
             raise LLMGenerationError("Upstream provider returned empty response content.")
 
+        clean_speech = OutputBoundaryGuard.verify_and_clean(
+            raw_text=raw_content,
+            character_name=context.character.name,
+        )
+
         return CharacterResponse(
-            content=content,
+            content=clean_speech,
             character_name=context.character.name,
             raw_metadata=llm_response.raw_response,
         )

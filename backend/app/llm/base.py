@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 from pydantic import BaseModel, Field
 
 
@@ -12,6 +13,10 @@ class ChatMessage(BaseModel):
     content: str = Field(
         ...,
         description="Text content of the message.",
+    )
+    raw_parts: Any | None = Field(
+        default=None,
+        description="Optional provider-native parts (e.g. thought blocks/signatures) preserved internally for multi-turn model turns.",
     )
 
 
@@ -39,9 +44,13 @@ class LLMResponse(BaseModel):
         ...,
         description="The synthesized dialogue text.",
     )
-    raw_response: dict | None = Field(
+    raw_response: Any | None = Field(
         default=None,
         description="Optional raw provider metadata (e.g. usage, finish reason).",
+    )
+    thought_content: str | None = Field(
+        default=None,
+        description="Optional internal reasoning/thought filtered out from public text.",
     )
 
 

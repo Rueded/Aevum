@@ -49,6 +49,9 @@ from app.relationship.service import RelationshipService
 from app.life.models import LifeState, LifeEvent
 from app.life.services import LifeService
 from app.life.context_builder import LifeContextBuilder
+from app.world.models import PersonalWorldContext
+from app.world.service import PersonalWorldService
+from app.character.appraisal import CharacterAppraisalEngine
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +79,7 @@ class CharacterEngine:
         memories: Optional[Sequence[Union[HybridMemoryResult, Memory]]] = None,
         life_state: Optional[LifeState] = None,
         recent_events: Optional[Sequence[LifeEvent]] = None,
+        personal_world: Optional[PersonalWorldContext] = None,
     ) -> CharacterResponseContext:
         """Gather all relevant domain contexts into a structured CharacterResponseContext.
 
@@ -183,10 +187,37 @@ class CharacterEngine:
                 
         life_ctx = LifeContextBuilder.build(life_state, recent_events)
 
-        # 7. Behavior synthesis
+        # 6.7 Personal World & Epistemic context
+        if personal_world is None:
+            if self._session is not None:
+                try:
+                    world_service = PersonalWorldService(self._session)
+                    trust_score = (relationship_state.trust * 100.0) if relationship_state else 0.0
+                    personal_world = await world_service.get_personal_world_context(
+                        character_id=character_id,
+                        user_input=cleaned_user_input,
+                        trust_score=trust_score,
+                    )
+                except Exception as exc:
+                    logger.warning("Personal world context resolution failed: %s", exc)
+                    personal_world = PersonalWorldContext()
+            else:
+                personal_world = PersonalWorldContext()
+
+        # 7. Appraisal & Behavior synthesis
+        turn_intention = CharacterAppraisalEngine.appraise(
+            user_input=cleaned_user_input,
+            character=char_ctx,
+            character_state=state_ctx,
+            relationship=rel_ctx,
+            emotion=emotion_ctx,
+            life=life_ctx,
+            personal_world=personal_world,
+        )
         behavior_ctx = CharacterBehaviorContext.synthesize(
             state=state_ctx,
             emotion=emotion_ctx,
+            intention=turn_intention,
         )
 
         return CharacterResponseContext(
@@ -198,4 +229,5 @@ class CharacterEngine:
             memory=mem_ctx,
             behavior=behavior_ctx,
             life=life_ctx,
+            personal_world=personal_world,
         )

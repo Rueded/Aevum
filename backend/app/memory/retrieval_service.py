@@ -23,6 +23,7 @@ from app.memory.models import (
     MemoryRetrievalQuery,
     MemoryRetrievalResult,
     MemoryRetrievalSignals,
+    MemorySubjectEntity,
     ScoredMemory,
 )
 from app.memory.service import _ensure_utc
@@ -142,9 +143,16 @@ def _record_to_domain(record: MemoryRecord) -> Memory:
     assert created is not None
     assert updated is not None
 
+    rec_subj = getattr(record, "subject_entity", None)
+    try:
+        subj_entity = MemorySubjectEntity(rec_subj) if rec_subj else MemorySubjectEntity.USER
+    except (ValueError, KeyError):
+        subj_entity = MemorySubjectEntity.USER
+
     return Memory(
         id=record.id,
         category=MemoryCategory(record.category),
+        subject_entity=subj_entity,
         content=record.content,
         importance=record.importance,
         confidence=record.confidence,
@@ -203,6 +211,9 @@ class MemoryRetrievalService:
         if query.categories:
             cat_values = [c.value if hasattr(c, "value") else str(c) for c in query.categories]
             stmt = stmt.where(MemoryRecord.category.in_(cat_values))
+        if query.subject_entities:
+            subj_values = [s.value if hasattr(s, "value") else str(s) for s in query.subject_entities]
+            stmt = stmt.where(MemoryRecord.subject_entity.in_(subj_values))
 
         result = await self._session.scalars(stmt)
         records = result.all()

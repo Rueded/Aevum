@@ -66,12 +66,20 @@ class GeminiProvider(LLMProvider):
                     )
                 )
             elif msg.role == "assistant":
-                contents.append(
-                    types.Content(
-                        role="model",
-                        parts=[types.Part.from_text(text=msg.content)],
+                if msg.raw_parts:
+                    contents.append(
+                        types.Content(
+                            role="model",
+                            parts=list(msg.raw_parts),
+                        )
                     )
-                )
+                else:
+                    contents.append(
+                        types.Content(
+                            role="model",
+                            parts=[types.Part.from_text(text=msg.content)],
+                        )
+                    )
             else:
                 # Default unknown roles to user for safety
                 contents.append(
@@ -122,12 +130,44 @@ class GeminiProvider(LLMProvider):
                 err_msg = err_msg.replace(self.api_key, "[REDACTED]")
             raise LLMGenerationError(f"Gemini API request failed: {err_msg}") from exc
 
-        # Extract output text
-        content_text = getattr(response, "text", None)
+        # Extract output text, carefully filtering out internal thought/reasoning parts
+        text_parts: list[str] = []
+        thought_parts: list[str] = []
+
+        if hasattr(response, "candidates") and response.candidates:
+            cand = response.candidates[0]
+            if hasattr(cand, "content") and cand.content and hasattr(cand.content, "parts") and cand.content.parts:
+                for p in cand.content.parts:
+                    is_thought = getattr(p, "thought", False)
+                    p_text = getattr(p, "text", None)
+                    if p_text:
+                        if is_thought:
+                            thought_parts.append(p_text)
+                        else:
+                            text_parts.append(p_text)
+
+        if text_parts:
+            content_text = "".join(text_parts)
+        else:
+            content_text = getattr(response, "text", None)
+
         if not content_text or not content_text.strip():
             raise LLMGenerationError("Gemini returned an empty or blank response.")
 
-        return LLMResponse(content=content_text.strip())
+        thought_str = "".join(thought_parts).strip() if thought_parts else None
+
+        # Capture raw candidate parts if available to preserve thought signatures internally
+        raw_parts = None
+        if hasattr(response, "candidates") and response.candidates:
+            cand = response.candidates[0]
+            if hasattr(cand, "content") and cand.content and hasattr(cand.content, "parts"):
+                raw_parts = cand.content.parts
+
+        return LLMResponse(
+            content=content_text.strip(),
+            thought_content=thought_str,
+            raw_response={"raw_parts": raw_parts} if raw_parts else None,
+        )
 
     async def generate_structured(
         self,

@@ -13,6 +13,7 @@ from app.db.models import MemoryRecord, utc_now
 from app.memory.models import (
     Memory,
     MemoryCategory,
+    MemorySubjectEntity,
     MemoryUpdate,
 )
 
@@ -60,29 +61,35 @@ class MemoryService:
         confidence: float = 0.9,
         emotional_weight: float = 0.0,
         memory_id: str | None = None,
+        subject_entity: MemorySubjectEntity | None = None,
     ) -> Memory:
         """Create and persist a new long-term memory record."""
         stable_id = memory_id or str(uuid.uuid4())
         now = utc_now()
 
         # Validate domain constraints via domain model instantiation
-        domain_mem = Memory(
-            id=stable_id,
-            category=category,
-            content=content,
-            importance=importance,
-            confidence=confidence,
-            emotional_weight=emotional_weight,
-            created_at=now,
-            updated_at=now,
-            last_recalled=None,
-            times_recalled=0,
-            version=1,
-        )
+        domain_mem_kwargs: dict[str, object] = {
+            "id": stable_id,
+            "category": category,
+            "content": content,
+            "importance": importance,
+            "confidence": confidence,
+            "emotional_weight": emotional_weight,
+            "created_at": now,
+            "updated_at": now,
+            "last_recalled": None,
+            "times_recalled": 0,
+            "version": 1,
+        }
+        if subject_entity is not None:
+            domain_mem_kwargs["subject_entity"] = subject_entity
+
+        domain_mem = Memory(**domain_mem_kwargs)
 
         record = MemoryRecord(
             id=domain_mem.id,
             category=domain_mem.category.value,
+            subject_entity=domain_mem.subject_entity.value,
             content=domain_mem.content,
             importance=domain_mem.importance,
             confidence=domain_mem.confidence,
@@ -110,14 +117,18 @@ class MemoryService:
     async def list_memories(
         self,
         category: MemoryCategory | None = None,
+        subject_entity: MemorySubjectEntity | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> list[Memory]:
-        """Deterministically list memories with optional category filter and pagination."""
+        """Deterministically list memories with optional category and subject filters."""
         query = select(MemoryRecord)
         if category is not None:
             cat_val = category.value if hasattr(category, "value") else str(category)
             query = query.where(MemoryRecord.category == cat_val)
+        if subject_entity is not None:
+            subj_val = subject_entity.value if hasattr(subject_entity, "value") else str(subject_entity)
+            query = query.where(MemoryRecord.subject_entity == subj_val)
 
         query = query.order_by(
             MemoryRecord.created_at.desc(),
@@ -144,6 +155,8 @@ class MemoryService:
             "version": MemoryRecord.version + 1,
             "updated_at": now,
         }
+        if memory_update.subject_entity is not None:
+            values_to_update["subject_entity"] = memory_update.subject_entity.value
         if memory_update.content is not None:
             values_to_update["content"] = memory_update.content
         if memory_update.importance is not None:
@@ -265,9 +278,16 @@ class MemoryService:
         assert created is not None
         assert updated is not None
 
+        rec_subj = getattr(record, "subject_entity", None)
+        try:
+            subj_entity = MemorySubjectEntity(rec_subj) if rec_subj else MemorySubjectEntity.USER
+        except (ValueError, KeyError):
+            subj_entity = MemorySubjectEntity.USER
+
         return Memory(
             id=record.id,
             category=MemoryCategory(record.category),
+            subject_entity=subj_entity,
             content=record.content,
             importance=record.importance,
             confidence=record.confidence,
@@ -291,6 +311,7 @@ async def create_memory(
     confidence: float = 0.9,
     emotional_weight: float = 0.0,
     memory_id: str | None = None,
+    subject_entity: MemorySubjectEntity | None = None,
 ) -> Memory:
     """Convenience function to create and persist a new long-term memory."""
     service = MemoryService(session)
@@ -301,6 +322,7 @@ async def create_memory(
         confidence=confidence,
         emotional_weight=emotional_weight,
         memory_id=memory_id,
+        subject_entity=subject_entity,
     )
 
 
@@ -316,6 +338,7 @@ async def get_memory(
 async def list_memories(
     session: AsyncSession,
     category: MemoryCategory | None = None,
+    subject_entity: MemorySubjectEntity | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> list[Memory]:
@@ -323,6 +346,7 @@ async def list_memories(
     service = MemoryService(session)
     return await service.list_memories(
         category=category,
+        subject_entity=subject_entity,
         limit=limit,
         offset=offset,
     )

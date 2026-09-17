@@ -45,10 +45,11 @@ CRITICAL RULES:
 5. NEVER extract passwords, API keys, credentials, tokens, or sensitive secret material under any circumstances.
 6. DO NOT redefine Aevum's identity, personality, or relationship dynamics.
 7. Permitted categories: FACT, PREFERENCE, EVENT, EXPERIENCE, PROMISE, JOKE, RELATIONSHIP, USER_GOAL, USER_PROBLEM, CHARACTER_EVENT.
-8. Importance, confidence, and emotional_weight must be numbers between 0.0 and 1.0.
+8. Subject entity: Must specify who the memory belongs to or describes: "AEVUM" (if it is Aevum's own personal action, preference, or experience), "USER" (if it is about the user), or "NPC" / "OTHER". Default is "USER".
+9. Importance, confidence, and emotional_weight must be numbers between 0.0 and 1.0.
 
 Return a valid JSON object matching:
-{"proposals": [{"category": "...", "content": "...", "importance": 0.5, "confidence": 0.9, "emotional_weight": 0.0}]}
+{"proposals": [{"category": "...", "subject_entity": "USER", "content": "...", "importance": 0.5, "confidence": 0.9, "emotional_weight": 0.0}]}
 """
 
 
@@ -163,6 +164,7 @@ class MemoryExtractionService:
         for prop in valid_proposals:
             candidate = await self._curation_service.create_candidate(
                 category=prop.category,
+                subject_entity=prop.subject_entity,
                 content=prop.content,
                 importance=prop.importance,
                 confidence=prop.confidence,

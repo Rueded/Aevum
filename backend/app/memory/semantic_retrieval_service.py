@@ -87,6 +87,9 @@ class SemanticMemoryRetrievalService:
         if query.categories:
             cat_values = [c.value if hasattr(c, "value") else str(c) for c in query.categories]
             stmt = stmt.where(MemoryRecord.category.in_(cat_values))
+        if query.subject_entities:
+            subj_values = [s.value if hasattr(s, "value") else str(s) for s in query.subject_entities]
+            stmt = stmt.where(MemoryRecord.subject_entity.in_(subj_values))
 
         rows = (await self._session.execute(stmt)).all()
         total_candidates = len(rows)

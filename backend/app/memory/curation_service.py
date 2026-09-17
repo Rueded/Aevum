@@ -24,6 +24,7 @@ from app.memory.models import (
     MemoryCandidateUpdate,
     MemoryCurationDecision,
     MemoryCurationReason,
+    MemorySubjectEntity,
 )
 from app.memory.service import _ensure_utc
 
@@ -77,29 +78,35 @@ class MemoryCurationService:
         emotional_weight: float = 0.0,
         source_type: MemoryCandidateSource = MemoryCandidateSource.MANUAL,
         candidate_id: str | None = None,
+        subject_entity: MemorySubjectEntity | None = None,
     ) -> MemoryCandidate:
         """Create and persist a new PENDING memory candidate."""
         stable_id = candidate_id or str(uuid.uuid4())
         now = utc_now()
 
         # Validate domain constraints
-        domain_cand = MemoryCandidate(
-            id=stable_id,
-            category=category,
-            content=content,
-            importance=importance,
-            confidence=confidence,
-            emotional_weight=emotional_weight,
-            status=MemoryCandidateStatus.PENDING,
-            source_type=source_type,
-            created_at=now,
-            updated_at=now,
-            version=1,
-        )
+        cand_kwargs: dict[str, object] = {
+            "id": stable_id,
+            "category": category,
+            "content": content,
+            "importance": importance,
+            "confidence": confidence,
+            "emotional_weight": emotional_weight,
+            "status": MemoryCandidateStatus.PENDING,
+            "source_type": source_type,
+            "created_at": now,
+            "updated_at": now,
+            "version": 1,
+        }
+        if subject_entity is not None:
+            cand_kwargs["subject_entity"] = subject_entity
+
+        domain_cand = MemoryCandidate(**cand_kwargs)
 
         record = MemoryCandidateRecord(
             id=domain_cand.id,
             category=domain_cand.category.value,
+            subject_entity=domain_cand.subject_entity.value,
             content=domain_cand.content,
             importance=domain_cand.importance,
             confidence=domain_cand.confidence,
@@ -169,6 +176,8 @@ class MemoryCurationService:
             "version": MemoryCandidateRecord.version + 1,
             "updated_at": now,
         }
+        if update_req.subject_entity is not None:
+            values_to_update["subject_entity"] = update_req.subject_entity.value
         if update_req.content is not None:
             values_to_update["content"] = update_req.content
         if update_req.importance is not None:
@@ -318,6 +327,7 @@ class MemoryCurationService:
             memory_record = MemoryRecord(
                 id=new_memory_id,
                 category=existing.category.value,
+                subject_entity=existing.subject_entity.value,
                 content=normalized_content,
                 importance=existing.importance,
                 confidence=existing.confidence,
@@ -368,6 +378,7 @@ class MemoryCurationService:
         domain_memory = Memory(
             id=new_memory_id,
             category=existing.category,
+            subject_entity=existing.subject_entity,
             content=normalized_content,
             importance=existing.importance,
             confidence=existing.confidence,
@@ -475,9 +486,16 @@ class MemoryCurationService:
         assert created is not None
         assert updated is not None
 
+        rec_subj = getattr(record, "subject_entity", None)
+        try:
+            subj_entity = MemorySubjectEntity(rec_subj) if rec_subj else MemorySubjectEntity.USER
+        except (ValueError, KeyError):
+            subj_entity = MemorySubjectEntity.USER
+
         return MemoryCandidate(
             id=record.id,
             category=MemoryCategory(record.category),
+            subject_entity=subj_entity,
             content=record.content,
             importance=record.importance,
             confidence=record.confidence,
@@ -502,6 +520,7 @@ async def create_memory_candidate(
     emotional_weight: float = 0.0,
     source_type: MemoryCandidateSource = MemoryCandidateSource.MANUAL,
     candidate_id: str | None = None,
+    subject_entity: MemorySubjectEntity | None = None,
 ) -> MemoryCandidate:
     """Convenience function to create a memory candidate."""
     service = MemoryCurationService(session)
@@ -513,6 +532,7 @@ async def create_memory_candidate(
         emotional_weight=emotional_weight,
         source_type=source_type,
         candidate_id=candidate_id,
+        subject_entity=subject_entity,
     )
 
 

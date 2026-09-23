@@ -124,3 +124,92 @@ This document records the foundational architectural decisions made for Project 
   * Changes are kept small, atomic, and thoroughly tested.
   * Strict phase boundaries prevent premature implementation of forward-phase components.
   * Every AI coding agent operates within bounded guidelines and architectural consensus.
+
+---
+
+## ADR-011: Governed Reality Pipeline (Phase 7D) — Freeze Record
+
+* **Status**: Accepted & Frozen (2026-09-23)
+* **Context**: The 7B.3-era `RealityBeliefEngine` performed evidence processing, candidate formation, and canonical state mutation in a single monolithic, unauditable method. This prevented clean boundary enforcement between observation, competition, choice, and promotion.
+* **Decision**: Replace `RealityBeliefEngine` with a layered, phase-gated governed reality pipeline across Phase 7D.1–7D.5. Each sub-phase is independently frozen before the next is designed.
+
+### Frozen Sub-Phases
+
+| Phase | Component | Status |
+|:---|:---|:---|
+| 7D.1 | `CandidateHypothesis` foundation (`candidate_models.py`, `candidate_repository.py`) | 🔒 FROZEN |
+| 7D.2 | Competition & Choice (`competition_service.py`, `choice_service.py`, `volatility_policy.py`) | 🔒 FROZEN |
+| 7D.3 | Reality Repair & Biography Promotion (`repair_service.py`, `biography_promotion_service.py`) | 🔒 FROZEN |
+| 7D.4 | Prompt Context Assembly (`reality_context_builder.py`, `reality_context_models.py`) | 🔒 FROZEN |
+| 7D.5 | CharacterEngine Integration (`reality_orchestration_service.py`, `evidence_classifier.py`, `world_facts_selector.py`) | 🔒 FROZEN |
+
+* **Consequences**:
+  * `CharacterEngine` now delegates per-turn governed reality to `RealityOrchestrationService` only.
+  * Legacy `RealityBeliefEngine` and `RealityPromotionService` (7B.3) are preserved but have no runtime dependency from the governed path.
+  * `RealityContextBuilder.build_context()` is a pure, read-only assembly function — no DB writes, no lifecycle mutations.
+
+---
+
+## ADR-012: Canonical Mutation Authority Chain
+
+* **Status**: Accepted & Frozen (2026-09-23)
+* **Context**: Without a strict mutation authority, multiple code paths could independently modify `character_core_facts`, leading to conflicting state and audit gaps.
+* **Decision**: Only `BiographyPromotionService` may call `CharacterCoreService.set_fact()`. This is enforced by architectural rule, AST audit, and GC test suite.
+
+### Authority Chain
+
+```
+User input signal
+    ↓
+EvidenceClassifier → CandidateHypothesis (7D.1)
+    ↓
+CandidateCompetitionService (7D.2)
+    ↓
+ChoiceSelectionService (7D.2)
+    ↓
+BiographyPromotionService.authorize_promotion() → PromotionAuthorizationToken (7D.3)
+    ↓
+CharacterCoreService.set_fact() → DB commit
+```
+
+* **No other path** in the 7D governed layer creates `PromotionAuthorizationToken` or calls `set_fact()`.
+* **Consequences**:
+  * Single auditable mutation point.
+  * `PromotionAuthorizationToken` serves as a typed capability proof that promotion was authorized via the correct channel.
+  * AST enforcement verified at every phase freeze.
+
+---
+
+## ADR-013: DB Failure vs. Empty State Semantic Boundary
+
+* **Status**: Accepted & Frozen (2026-09-23)
+* **Context**: An infrastructure failure querying candidate records must not be silently reinterpreted as "no candidates exist." These are two distinct epistemic states.
+* **Decision**: `CandidateRepository.get_all_active_candidates()` raises `CandidateRepositoryUnavailableError` on any DB exception. The orchestration service propagates this to `CharacterEngine`, which uses its pre-orchestration fail-closed path. An empty `[]` result (DB query succeeded, zero rows) is a valid normal state and must never be treated as infrastructure failure.
+* **Consequences**:
+  * GC-135 and GC-139 form a complementary test pair enforcing this boundary.
+  * Callers cannot accidentally treat "DB down" as "confirmed empty state."
+
+---
+
+## ADR-014: Legacy 7B.3 Module Retirement Policy
+
+* **Status**: Accepted (2026-09-23), Retirement Deferred
+* **Context**: Modules `RealityBeliefEngine` (`belief_engine.py`) and `RealityPromotionService` (`promotion_service.py`) are superseded by the 7D governed pipeline but still exist in the codebase.
+* **Decision**: These modules are preserved but disconnected from the governed path. Physical deletion is deferred to a future cleanup phase, to be executed after broader integration stability is confirmed. No 7D.5 (or later) code may import or depend on them.
+* **Consequences**:
+  * Reduces risk of accidental breakage during active development.
+  * A future ADR will govern their retirement.
+  * AST audit at each freeze checks that no governed-path file imports these modules.
+
+---
+
+## ADR-015: WorldFactsSelector — Lexical-Only Constraint
+
+* **Status**: Accepted (2026-09-23), Known Limitation Recorded
+* **Context**: The `WorldFactsSelector` must select objective world facts relevant to the current user turn without performing semantic retrieval or embedding lookups, which would introduce LLM dependency into the reality assembly pipeline.
+* **Decision**: Selection is strictly lexical: token-set intersection for Latin/single-char tokens, plus verbatim CJK alias substring match for multi-character Chinese phrases. No embedding, no NLP, no fallback to registry insertion order. Unmatched input returns `{}`.
+* **Known Limitation**: Very short CJK tokens (e.g., `"大学"`) used as aliases could produce false positives if added to `_ENTITY_ALIASES` in future. This is a 7D.6 candidate, not a current defect.
+* **Consequences**:
+  * Deterministic, auditable, zero-latency selection.
+  * Maximum 4 items returned, sorted deterministically by key.
+  * Only `STATIC_FACT` and `ENTITY_RELATION` kinds are eligible — `PLAUSIBILITY_RULE` and `TEMPORAL_RULE` are always excluded.

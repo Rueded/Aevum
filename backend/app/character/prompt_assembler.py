@@ -163,6 +163,29 @@ class ResponseContextAssembler:
             contract_lines.append("</behavioral_contract>")
             behavior_sections.append("\n".join(contract_lines))
 
+        # Phase 7B.2: Authoritative Behavior Plan & Negative Constraints
+        if context.behavior_plan:
+            bp = context.behavior_plan
+            plan_lines = [
+                "<behavior_plan>",
+                f"Primary Move: {bp.primary_move.value}",
+                f"Social Posture: {bp.posture.value}",
+                f"Target Warmth: {bp.target_warmth:.2f}",
+                f"Target Directness: {bp.target_directness:.2f}",
+            ]
+            if bp.conversation_hook:
+                plan_lines.append(f"Conversational Goal: {bp.conversation_hook}")
+            if bp.allowed_micro_actions:
+                plan_lines.append("Permitted Micro-Actions:")
+                for act in bp.allowed_micro_actions:
+                    plan_lines.append(f"- {act}")
+            if bp.forbidden_patterns:
+                plan_lines.append("Strictly Forbidden Patterns (Negative Constraints - DO NOT VIOLATE):")
+                for fp in bp.forbidden_patterns:
+                    plan_lines.append(f"- {fp}")
+            plan_lines.append("</behavior_plan>")
+            behavior_sections.append("\n".join(plan_lines))
+
         hints = "\n".join(f"- {hint}" for hint in behavior_ctx.behavioral_hints)
         behavior_sections.append(
             "<behavioral_guidance>\n"
@@ -184,6 +207,48 @@ class ResponseContextAssembler:
             "</output_contract>"
         )
 
+        # 5.7 Character Core & Governed Reality Blocks (Phase 7B.1 / Phase 7D.4)
+        governed_reality_blocks: list[str] = []
+        if context.governed_reality is not None:
+            from app.character.reality_context_builder import RealityContextBuilder
+            governed_reality_blocks = RealityContextBuilder.format_all_reality_blocks(context.governed_reality)
+        else:
+            core_block = ""
+            if context.core and context.core.facts:
+                core_lines = ["<character_core_facts>"]
+                for key, fact in sorted(context.core.facts.items()):
+                    lock_tag = " [LOCKED - MUST NOT ALTER]" if fact.is_locked else ""
+                    core_lines.append(f"- {fact.key}: {fact.value}{lock_tag}")
+                core_lines.append("</character_core_facts>")
+                core_block = "\n".join(core_lines)
+            if core_block:
+                governed_reality_blocks.append(core_block)
+
+        # 5.8 Character Bible Priors Block (Phase 7B.1)
+        bible_block = ""
+        if context.bible:
+            from app.character.bible_service import CharacterBibleService
+            b_guide = CharacterBibleService.format_behavioral_guidelines(context.bible)
+            r_guide = CharacterBibleService.format_reasoning_guidelines(context.bible)
+            bible_block = (
+                f"<character_bible_priors>\n"
+                f"{b_guide}\n\n"
+                f"{r_guide}\n"
+                f"</character_bible_priors>"
+            )
+
+        # 5.9 Contextual Bridge & Reality Repair Guidance (Phase 7B.3 fallback if not in governed_reality)
+        reality_repair_block = ""
+        if context.contradiction_resolution and not context.governed_reality:
+            res = context.contradiction_resolution
+            repair_lines = []
+            if res.contextual_bridge:
+                repair_lines.append(f"<contextual_bridge>\n{res.contextual_bridge}\n</contextual_bridge>")
+            if res.repair_guidance:
+                repair_lines.append(f"<reality_repair_guidance>\n{res.repair_guidance}\n</reality_repair_guidance>")
+            if repair_lines:
+                reality_repair_block = "\n".join(repair_lines)
+
         # Assemble system instructions list
         system_instructions: list[str] = [
             core_rules,
@@ -193,6 +258,12 @@ class ResponseContextAssembler:
             emotion_block,
             life_block,
         ]
+        if governed_reality_blocks:
+            system_instructions.extend(governed_reality_blocks)
+        if bible_block:
+            system_instructions.append(bible_block)
+        if reality_repair_block:
+            system_instructions.append(reality_repair_block)
         if personal_world_block:
             system_instructions.append(personal_world_block)
         if context.presence and context.presence.absence_guidance:

@@ -33,11 +33,21 @@ async_session_factory = async_sessionmaker(
 )
 
 
+def _safe_create_all(connection) -> None:
+    try:
+        Base.metadata.create_all(connection, checkfirst=True)
+    except Exception as e:
+        if "already exists" in str(e).lower():
+            pass
+        else:
+            raise
+
+
 async def init_db(engine_to_use: AsyncEngine | None = None) -> None:
     """Initialize database tables according to declarative metadata and migrate missing columns."""
     target_engine = engine_to_use or engine
     async with target_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_safe_create_all)
         await conn.run_sync(migrate_sqlite_schema)
 
 

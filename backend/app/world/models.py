@@ -1,6 +1,7 @@
 """Domain models for Personal World & Epistemic Grounding."""
 
 import enum
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -12,6 +13,7 @@ class FactEpistemicStatus(str, enum.Enum):
     PRIVATE = "PRIVATE"
     NONEXISTENT = "NONEXISTENT"
     UNKNOWN = "UNKNOWN"
+    UNVERIFIED = "UNVERIFIED"
 
 
 class BiographyFact(BaseModel):
@@ -40,6 +42,13 @@ class SocialContact(BaseModel):
     relationship: str
     traits: str
     status: str = "ACTIVE"
+    candidate_id: Optional[str] = None
+    role_template_id: Optional[str] = None
+    familiarity: float = 0.05
+    comfort: float = 0.10
+    respect: float = 0.50
+    trust: float = 0.10
+    first_met_at: Optional[datetime] = None
 
 
 class WorldFact(BaseModel):

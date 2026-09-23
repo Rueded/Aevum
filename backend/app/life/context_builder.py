@@ -1,5 +1,5 @@
 from typing import Sequence
-from app.life.models import LifeState, LifeEvent
+from app.life.models import LifeState, LifeEvent, LifeGoal
 from app.life.context_models import CharacterLifeContext
 
 class LifeContextBuilder:
@@ -9,7 +9,8 @@ class LifeContextBuilder:
     def build(
         cls,
         life_state: LifeState,
-        recent_events: Sequence[LifeEvent] = ()
+        recent_events: Sequence[LifeEvent] = (),
+        active_goals: Sequence[LifeGoal] = (),
     ) -> CharacterLifeContext:
         """Construct a CharacterLifeContext based on Aevum's current life data."""
         
@@ -20,13 +21,12 @@ class LifeContextBuilder:
         activity_summary = None
         guidance = []
         
-        if life_state.current_activity and life_state.current_activity.upper() != "REST":
+        if life_state.current_activity and life_state.current_activity.upper() not in ("REST", "IDLE"):
             activity_summary = f"Aevum is currently engaged in: {life_state.current_activity}."
             guidance.append(
                 "You may mention what you are currently doing if it naturally fits the conversation, "
                 "but do NOT force it or constantly say 'I am busy'. Let it serve as background flavor."
             )
-            # Add implicit availability guidance for non-REST activities
             guidance.append(
                 "Since you are engaged in an activity, your responses might reflect a focused or slightly occupied demeanor."
             )
@@ -48,11 +48,22 @@ class LifeContextBuilder:
                 "or what you've been up to, but do not hallucinate details beyond what is factual."
             )
 
+        # 4. Active personal goals
+        goals_summary = []
+        if active_goals:
+            for goal in active_goals:
+                goals_summary.append(f"Active goal: {goal.title} (Progress: {int(goal.progress * 100)}%)")
+            guidance.append(
+                "You have active long-term goals. You may naturally reference your interests or ongoing aspirations "
+                "if they fit the conversation, but do not recite them as a formal list."
+            )
+
         return CharacterLifeContext(
             current_activity_summary=activity_summary,
             current_location_summary=location_summary,
             recent_experience_summary=tuple(experience_summary),
-            life_guidance=tuple(guidance)
+            active_goals_summary=tuple(goals_summary),
+            life_guidance=tuple(guidance),
         )
     
     @classmethod
@@ -68,6 +79,11 @@ class LifeContextBuilder:
             lines.append("\nRecent Life Experiences:")
             for exp in ctx.recent_experience_summary:
                 lines.append(f"- {exp}")
+
+        if ctx.active_goals_summary:
+            lines.append("\nActive Life Goals:")
+            for goal in ctx.active_goals_summary:
+                lines.append(f"- {goal}")
                 
         lines.append("\nLife Behavioral Guidance:")
         for hint in ctx.life_guidance:

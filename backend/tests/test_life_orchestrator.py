@@ -241,15 +241,16 @@ async def test_multiple_plans_processed(test_session: AsyncSession):
 
     t1 = T_BASE - timedelta(minutes=10)
     t2 = T_BASE - timedelta(minutes=5)
-    end = T_BASE + timedelta(hours=2)
+    end2 = T_BASE + timedelta(hours=2)
 
-    await _create_plan(svc, "aevum", "Plan A", t1, end)
-    await _create_plan(svc, "aevum", "Plan B", t2, end)
+    await _create_plan(svc, "aevum", "Plan A", t1, t2)
+    await _create_plan(svc, "aevum", "Plan B", t2, end2)
 
     orchestrator = LifeSimulationOrchestrator(test_session)
-    result = await orchestrator.tick("aevum", T_BASE)
+    r1 = await orchestrator.tick("aevum", t1)
+    r2 = await orchestrator.tick("aevum", T_BASE)
 
-    assert result.plans_started >= 2
+    assert r1.plans_started + r2.plans_started >= 2
 
 
 # ─── Test 8: Multiple LifeEvents reach emotion integration ────────────
@@ -260,7 +261,8 @@ async def test_multiple_events_reach_emotion(test_session: AsyncSession):
     svc = LifeService(test_session)
     await svc.get_life_state("aevum")
 
-    # Create two activities that end before T_BASE
+    # Execute two activities sequentially that end before T_BASE
+    t_end1 = T_BASE - timedelta(minutes=10)
     await svc.create_activity(
         character_id="aevum",
         activity_type=LifeActivityType.STUDY,
@@ -268,8 +270,11 @@ async def test_multiple_events_reach_emotion(test_session: AsyncSession):
         description="Study",
         location="HOME",
         importance=0.7,
-        planned_end_at=T_BASE - timedelta(minutes=10),
+        planned_end_at=t_end1,
     )
+    orchestrator = LifeSimulationOrchestrator(test_session)
+    r1 = await orchestrator.tick("aevum", t_end1)
+
     await svc.create_activity(
         character_id="aevum",
         activity_type=LifeActivityType.READING,
@@ -279,13 +284,13 @@ async def test_multiple_events_reach_emotion(test_session: AsyncSession):
         importance=0.6,
         planned_end_at=T_BASE - timedelta(minutes=5),
     )
+    r2 = await orchestrator.tick("aevum", T_BASE)
 
-    orchestrator = LifeSimulationOrchestrator(test_session)
-    result = await orchestrator.tick("aevum", T_BASE)
-
-    assert result.life_events_created >= 2
+    total_life_events = r1.life_events_created + r2.life_events_created
+    total_emotion_events = r1.emotion_events_created + r2.emotion_events_created
+    assert total_life_events >= 2
     # Both completions have significance=0.5 which triggers emotion
-    assert result.emotion_events_created >= 2
+    assert total_emotion_events >= 2
 
 
 # ─── Test 9: EmotionState changes through existing pipeline ───────────

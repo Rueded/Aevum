@@ -8,6 +8,16 @@ This directory contains specifications, schemas, and design documents for Charac
 * **Boundaries & Autonomy**: Mechanisms enabling the character to decline requests, voice distinct opinions, and express personal limits.
 * **Persona Profiles**: Extensible configuration schemas for defining character personas.
 
+## Character Intelligence
+
+Phase 6.4 begins by defining observable acceptance criteria before changing runtime behavior. The [Human-Likeness Golden Conversation Suite](HUMAN_LIKENESS_GOLDEN_CONVERSATIONS.md) contains the canonical first twenty dialogue trajectories. It evaluates behavioral direction rather than requiring a particular generated sentence.
+
+The durable principle for this phase is:
+
+> **Application owns canonical reality; the LLM owns transient expression.**
+
+Core identity, hard boundaries, confirmed biography, and validated relationship state remain application-owned. Harmless wording, reactions, scene texture, and other non-persistent expression may be improvised. A generated claim may become a candidate for curation, but it never becomes canonical identity merely because it was spoken once.
+
 ## Phase 2.1: Character Foundation
 Phase 2.1 establishes the provider-independent, application-owned definition for Aevum.
 
@@ -72,5 +82,21 @@ Phase 2.3 establishes the provider-independent, application-owned mechanism thro
    - Zero LLM prompt injection or extraction.
    - Zero emotion dynamics, life scheduling, event loops, or relationship modifications.
 
+## Phase 7B.2: Desire, Relationship Contract & Behavior Planning
+Phase 7B.2 transforms Aevum from an automated prompt responder into an intentional character with internal psychological drives, relational permissions, structured social decision-making, and behavioral planning before language generation.
 
-
+### Core Architecture Components:
+1. **Desire & Need Engine (`app.character.desire_models`, `app.character.desire_service`)**:
+   - Differentiates ongoing task/focus (`current_focus`) from underlying psychological needs (`social_need`, `solitude_need`, `attention_availability`, `curiosity`, `boredom`, `energy`).
+   - Evaluates life activity, schedule, and fatigue into typed `CharacterDesireState`.
+2. **Relationship Contract & Hard Boundary Policy (`app.relationship.contract_models`, `app.relationship.contract_evaluator`)**:
+   - Evaluates multidimensional relationship metrics into categorical intimacy tiers (`STRANGER`, `ACQUAINTANCE`, `FAMILIAR`, `TRUSTED_FRIEND`, `CLOSE_CONFIDANT`) and dynamic permissions (`teasing_permission`, `vulnerability_depth`, `compromise_capacity`, `boundary_sensitivity`, `independence_weight`).
+   - Enforces immutable `HardBoundaryPolicy` invariants (third-party privacy, capability honesty, truthfulness) that intimacy can never bypass.
+3. **Social Intention Engine (`app.character.intention_models`, `app.character.social_intention_service`)**:
+   - Arbitrates Appraisal + Emotion + Contract + Desires into typed `SocialIntention` (`primary_move: BehaviorPrimitive`, `posture: SocialPosture`, `participation: ParticipationLevel`, `compromise_level`).
+   - Performs multi-state compromise synthesis:
+     $$\text{compromise\_level} = f(\text{contract.compromise\_capacity}, \text{desire.social\_need}, \text{emotion}, \text{request\_cost})$$
+4. **Behavior Planner & Decision Trace (`app.character.behavior_plan_models`, `app.character.behavior_planner`)**:
+   - Translates `SocialIntention` into `BehaviorPlan` (target warmth/directness, permitted micro-actions, negative constraints/forbidden patterns) and compiles an explainable `BehaviorDecisionTrace` exposed in `/character/debug`.
+5. **Golden Suite A Executable Invariants (`tests/test_golden_suite_a.py`)**:
+   - Fully automated and passing validation across all 12 Golden Social Behavior cases (GC-001 ~ GC-012).

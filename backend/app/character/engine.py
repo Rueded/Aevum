@@ -46,12 +46,34 @@ from app.memory.models import HybridMemoryResult, HybridMemoryRetrievalQuery, Me
 from app.relationship.context_builder import RelationshipContextBuilder
 from app.relationship.models import RelationshipState
 from app.relationship.service import RelationshipService
-from app.life.models import LifeState, LifeEvent
+from app.life.models import LifeState, LifeEvent, LifeGoalStatus
 from app.life.services import LifeService
 from app.life.context_builder import LifeContextBuilder
 from app.world.models import PersonalWorldContext
 from app.world.service import PersonalWorldService
 from app.character.appraisal import CharacterAppraisalEngine
+from app.character.bible_models import CharacterBible
+from app.character.bible_service import CharacterBibleService
+from app.character.core_models import CharacterCore
+from app.character.core_service import CharacterCoreService
+from app.character.reality_context_models import GovernedRealityContext
+from app.reality.ledger_models import RealityLedgerProjection
+from app.reality.ledger_service import RealityLedgerService
+from app.character.desire_models import CharacterDesireState
+from app.character.desire_service import DesireEvaluationEngine
+from app.relationship.contract_models import RelationshipContract
+from app.relationship.contract_evaluator import RelationshipContractEvaluator
+from app.character.intention_models import SocialIntention
+from app.character.social_intention_service import SocialIntentionService
+from app.character.behavior_plan_models import BehaviorDecisionTrace, BehaviorPlan
+from app.character.behavior_planner import BehaviorPlanner
+from app.reality.belief_models import BeliefClaim
+from app.reality.contradiction_models import ContradictionResolution
+from app.reality.promotion_models import PromotionDecision
+# RealityBeliefEngine (Phase 7B.3) removed from governed path in Phase 7D.5.
+# The module is preserved for reference but is no longer called here.
+# See: reality_orchestration_service.py for the replacement pipeline.
+
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +102,21 @@ class CharacterEngine:
         life_state: Optional[LifeState] = None,
         recent_events: Optional[Sequence[LifeEvent]] = None,
         personal_world: Optional[PersonalWorldContext] = None,
+        core: Optional[CharacterCore] = None,
+        bible: Optional[CharacterBible] = None,
+        ledger: Optional[RealityLedgerProjection] = None,
+        desire: Optional[CharacterDesireState] = None,
+        contract: Optional[RelationshipContract] = None,
+        social_intention: Optional[SocialIntention] = None,
+        behavior_plan: Optional[BehaviorPlan] = None,
+        decision_trace: Optional[BehaviorDecisionTrace] = None,
+        belief_claim: Optional[BeliefClaim] = None,
+        contradiction_resolution: Optional[ContradictionResolution] = None,
+        promotion_decision: Optional[PromotionDecision] = None,
+        prior_turn_slip: Optional[str] = None,
+        override_desire: Optional[str] = None,
+        context_notes: Optional[str] = None,
+        governed_reality: Optional[GovernedRealityContext] = None,
     ) -> CharacterResponseContext:
         """Gather all relevant domain contexts into a structured CharacterResponseContext.
 
@@ -184,8 +221,18 @@ class CharacterEngine:
                 recent_events = await life_service.list_events(character_id, limit=3)
             else:
                 recent_events = ()
+
+        active_goals = ()
+        if self._session is not None:
+            try:
+                life_service = LifeService(self._session)
+                all_goals = await life_service.list_goals(character_id)
+                active_goals = tuple(g for g in all_goals if g.status == LifeGoalStatus.ACTIVE)
+            except Exception as exc:
+                logger.warning("Active goals loading failed: %s", exc)
+                active_goals = ()
                 
-        life_ctx = LifeContextBuilder.build(life_state, recent_events)
+        life_ctx = LifeContextBuilder.build(life_state, recent_events, active_goals)
 
         # 6.7 Personal World & Epistemic context
         if personal_world is None:
@@ -204,6 +251,28 @@ class CharacterEngine:
             else:
                 personal_world = PersonalWorldContext()
 
+        # 6.8 Character Core and Bible Context (Phase 7B.1)
+        if core is None:
+            if self._session is not None:
+                try:
+                    core_service = CharacterCoreService(self._session)
+                    core = await core_service.get_core(character_id)
+                except Exception as exc:
+                    logger.warning("Character core loading failed: %s", exc)
+                    core = None
+
+        if bible is None:
+            bible = CharacterBibleService.get_bible()
+
+        if ledger is None:
+            if self._session is not None:
+                try:
+                    ledger_service = RealityLedgerService(self._session)
+                    ledger = await ledger_service.get_ledger(character_id)
+                except Exception as exc:
+                    logger.warning("Reality ledger loading failed: %s", exc)
+                    ledger = None
+
         # 7. Appraisal & Behavior synthesis
         turn_intention = CharacterAppraisalEngine.appraise(
             user_input=cleaned_user_input,
@@ -220,6 +289,89 @@ class CharacterEngine:
             intention=turn_intention,
         )
 
+        # 7.5 Phase 7B.2: Desire, Relationship Contract, Social Intention & Behavior Planning
+        if desire is None:
+            desire = DesireEvaluationEngine.evaluate(
+                current_activity=state_ctx.current_activity,
+                current_location=state_ctx.current_location,
+                energy=state_ctx.energy,
+                stress=state_ctx.stress,
+                social_energy=state_ctx.social_energy,
+                loneliness=state_ctx.loneliness,
+                mood=state_ctx.mood.value,
+                override_desire=override_desire,
+                context_notes=context_notes,
+            )
+
+        if contract is None:
+            contract = RelationshipContractEvaluator.evaluate(
+                relationship=relationship_state,
+                user_text=cleaned_user_input,
+                energy=state_ctx.energy,
+            )
+
+        if social_intention is None:
+            social_intention = SocialIntentionService.evaluate(
+                cleaned_user_input,
+                contract=contract,
+                desire=desire,
+                emotion_type=emotion_ctx.emotion_type.value,
+                emotion_intensity=emotion_ctx.intensity,
+                context_notes=context_notes,
+                core_facts=core.facts if core else None,
+            )
+
+        if behavior_plan is None:
+            behavior_plan, trace = BehaviorPlanner.plan(
+                cleaned_user_input,
+                intention=social_intention,
+                contract=contract,
+                desire=desire,
+            )
+            if decision_trace is None:
+                decision_trace = trace
+
+        # 7.6–7.7 Phase 7D.5: Governed Reality Orchestration
+        # Replaces Phase 7B.3 legacy RealityBeliefEngine dependency.
+        # INVARIANT: RealityBeliefEngine is NEVER called here or in any fallback path.
+        if governed_reality is None and core is not None:
+            from app.reality.reality_orchestration_service import RealityOrchestrationService
+            orchestration = RealityOrchestrationService(self._session)
+            try:
+                orch_result = await orchestration.run_turn(
+                    user_input=cleaned_user_input,
+                    core=core,
+                    memories=memories,
+                    character_id=character_id,
+                    current_location=getattr(life_ctx, "current_location", None)
+                    if life_ctx else None,
+                    prior_turn_slip=prior_turn_slip,
+                    bible=bible,
+                )
+                governed_reality = orch_result.governed_reality
+                # Back-fill legacy context fields for model compatibility (not rendered by assembler)
+                if contradiction_resolution is None:
+                    contradiction_resolution = orch_result.contradiction
+            except Exception as exc:
+                # Fail-closed: assemble sparse context from pre-orchestration canonical snapshot.
+                # `core` here is the snapshot loaded at step 6.8, before run_turn() was called.
+                # This is NOT a rollback — if promotion occurred inside run_turn() before the
+                # exception, that promotion remains durable in DB. The next turn will reload
+                # the updated canonical state.
+                # INVARIANT: RealityBeliefEngine is NEVER called here.
+                logger.error(
+                    "RealityOrchestrationService.run_turn() failed for character '%s': %s. "
+                    "Falling back to sparse canonical context (pre-orchestration snapshot). "
+                    "If biography promotion occurred before the failure, it remains durable in DB.",
+                    character_id, exc,
+                )
+                from app.character.reality_context_builder import RealityContextBuilder
+                governed_reality = RealityContextBuilder.build_context(
+                    character_id=character_id,
+                    core=core,      # pre-orchestration canonical snapshot — not a rollback
+                    memories=memories,
+                )
+
         return CharacterResponseContext(
             user_input=cleaned_user_input,
             character=char_ctx,
@@ -230,4 +382,17 @@ class CharacterEngine:
             behavior=behavior_ctx,
             life=life_ctx,
             personal_world=personal_world,
+            core=core,
+            bible=bible,
+            ledger=ledger,
+            desire=desire,
+            contract=contract,
+            social_intention=social_intention,
+            behavior_plan=behavior_plan,
+            decision_trace=decision_trace,
+            belief_claim=belief_claim,
+            contradiction_resolution=contradiction_resolution,
+            promotion_decision=promotion_decision,
+            governed_reality=governed_reality,
         )
+

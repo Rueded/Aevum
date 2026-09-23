@@ -175,9 +175,12 @@ class PersonalWorldService:
         ]
 
     async def list_social_contacts(self, character_id: str = "aevum") -> list[SocialContact]:
-        """List all social contacts for character."""
+        """List all canonical ACTIVE social contacts for character (Invariant 15.3)."""
         res = await self._session.execute(
-            select(CharacterSocialRecord).where(CharacterSocialRecord.character_id == character_id)
+            select(CharacterSocialRecord).where(
+                CharacterSocialRecord.character_id == character_id,
+                CharacterSocialRecord.status == "ACTIVE",
+            )
         )
         records = res.scalars().all()
         return [
@@ -188,6 +191,13 @@ class PersonalWorldService:
                 relationship=r.relationship,
                 traits=r.traits,
                 status=r.status,
+                candidate_id=getattr(r, "candidate_id", None),
+                role_template_id=getattr(r, "role_template_id", None),
+                familiarity=getattr(r, "familiarity", 0.05),
+                comfort=getattr(r, "comfort", 0.10),
+                respect=getattr(r, "respect", 0.50),
+                trust=getattr(r, "trust", 0.10),
+                first_met_at=getattr(r, "first_met_at", None),
             )
             for r in records
         ]

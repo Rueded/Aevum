@@ -61,6 +61,7 @@ class LifeActivity(BaseModel):
     """A discrete activity in the character's life."""
     id: str
     plan_id: Optional[str] = None
+    goal_id: Optional[str] = None
     character_id: str
     activity_type: LifeActivityType
     title: str
@@ -77,6 +78,7 @@ class LifePlan(BaseModel):
     """A planned action or intention."""
     id: str
     plan_id: Optional[str] = None
+    goal_id: Optional[str] = None
     character_id: str
     title: str
     description: str
@@ -110,5 +112,9 @@ class LifeGoal(BaseModel):
     status: LifeGoalStatus
     importance: float = Field(default=0.5, ge=0.0, le=1.0)
     progress: float = Field(default=0.0, ge=0.0, le=1.0)
+    progress_per_completion: float = Field(
+        ..., ge=0.01, le=1.0,
+        description="Factual progress increment awarded per completed linked activity."
+    )
     created_at: datetime
     updated_at: datetime

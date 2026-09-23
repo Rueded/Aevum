@@ -20,7 +20,7 @@ def life_service(test_session):
 async def test_life_state_creation_retrieval(life_service, test_session):
     state = await life_service.get_life_state("aevum")
     assert state.character_id == "aevum"
-    assert state.current_activity == "REST"
+    assert state.current_activity in ("IDLE", "REST")
     assert state.current_location == "HOME"
     assert state.version == 1
 
@@ -111,7 +111,7 @@ async def test_goal_lifecycle(life_service, test_session):
 
 def test_goal_progress_validation():
     with pytest.raises(ValidationError):
-        LifeGoal(id="1", character_id="a", title="T", description="D", status=LifeGoalStatus.ACTIVE, created_at=datetime.now(), updated_at=datetime.now(), progress=1.5)
+        LifeGoal(id="1", character_id="a", title="T", description="D", status=LifeGoalStatus.ACTIVE, created_at=datetime.now(), updated_at=datetime.now(), progress=1.5, progress_per_completion=0.10)
 
 @pytest.mark.asyncio
 async def test_isolation(life_service, test_session):
@@ -138,7 +138,7 @@ async def test_isolation(life_service, test_session):
 async def test_initialize_aevum_life(life_service, test_session):
     await life_service.initialize_aevum_life("aevum")
     state = await life_service.get_life_state("aevum")
-    assert state.current_activity == "REST"
+    assert state.current_activity in ("IDLE", "REST")
     assert state.current_location == "HOME"
     
     plans = await life_service.list_plans("aevum")

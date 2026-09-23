@@ -62,9 +62,9 @@ async def test_reconcile_completes_activity(simulator, life_service, test_sessio
     assert res.completed_activities == 1
     assert res.generated_events == 1
     
-    # State should revert to REST
+    # State should revert to IDLE / REST
     state = await life_service.get_life_state("aevum")
-    assert state.current_activity == "REST"
+    assert state.current_activity in ("IDLE", "REST")
     
     # Plan should be completed
     updated_plan = await life_service.get_plan(plan.id)

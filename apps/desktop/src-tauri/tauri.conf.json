@@ -5,7 +5,7 @@
   "identifier": "com.aevum.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": null,
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
@@ -22,6 +22,13 @@
     ],
     "security": {
       "csp": null
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["aevum"]
+      }
     }
   },
   "bundle": {

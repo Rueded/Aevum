@@ -42,7 +42,23 @@ from app.life.context_models import CharacterLifeContext
 from app.life.presence import PresenceState
 from app.relationship.models import RelationshipState
 from app.world.models import PersonalWorldContext
-from app.character.intention_models import SituationalStance, TurnIntention
+from app.character.bible_models import CharacterBible
+from app.character.core_models import CharacterCore
+from app.character.intention_models import (
+    BehaviorPrimitive,
+    SituationalStance,
+    SocialIntention,
+    SocialPosture,
+    TurnIntention,
+)
+from app.character.desire_models import CharacterDesireState
+from app.relationship.contract_models import RelationshipContract
+from app.character.behavior_plan_models import BehaviorDecisionTrace, BehaviorPlan
+from app.reality.ledger_models import RealityLedgerProjection
+from app.reality.belief_models import BeliefClaim
+from app.reality.contradiction_models import ContradictionResolution
+from app.reality.promotion_models import PromotionDecision
+from app.character.reality_context_models import GovernedRealityContext
 
 
 class CharacterDefinitionContext(BaseModel):
@@ -349,3 +365,16 @@ class CharacterResponseContext(BaseModel):
     life: CharacterLifeContext = Field(..., description="Current factual life context.")
     personal_world: Optional[PersonalWorldContext] = Field(default=None, description="Personal world and epistemic context.")
     presence: Optional[PresenceState] = Field(default=None, description="Current presence and absence dynamics.")
+    core: Optional[CharacterCore] = Field(default=None, description="Authoritative Character Core reality facts.")
+    bible: Optional[CharacterBible] = Field(default=None, description="Authoritative Character Bible behavioral and reasoning priors.")
+    ledger: Optional[RealityLedgerProjection] = Field(default=None, description="Reality Ledger multi-tier projection.")
+    desire: Optional[CharacterDesireState] = Field(default=None, description="Authoritative Character Desire & Need state.")
+    contract: Optional[RelationshipContract] = Field(default=None, description="Authoritative Relationship Contract.")
+    social_intention: Optional[SocialIntention] = Field(default=None, description="Authoritative Social Intention decision.")
+    behavior_plan: Optional[BehaviorPlan] = Field(default=None, description="Authoritative Behavior Plan.")
+    decision_trace: Optional[BehaviorDecisionTrace] = Field(default=None, description="Structured explainable decision trace.")
+    belief_claim: Optional[BeliefClaim] = Field(default=None, description="Authoritative active BeliefClaim under evaluation.")
+    contradiction_resolution: Optional[ContradictionResolution] = Field(default=None, description="Active contradiction resolution and repair strategy.")
+    promotion_decision: Optional[PromotionDecision] = Field(default=None, description="Active reality promotion policy decision.")
+    governed_reality: Optional[GovernedRealityContext] = Field(default=None, description="Authoritative Governed Reality Context (Phase 7D.4).")
+

@@ -17,6 +17,10 @@ class CharacterLifeContext(BaseModel):
         default_factory=tuple,
         description="Factual descriptions of recent LifeEvents."
     )
+    active_goals_summary: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description="Factual summaries of active LifeGoals and progress."
+    )
     life_guidance: tuple[str, ...] = Field(
         ...,
         description="Behavioral guidance generated from the current life state."

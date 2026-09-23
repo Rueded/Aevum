@@ -429,6 +429,44 @@ class EpistemicResolver:
                 )
                 resolved_subjects.add(subject)
 
+        # Detect unverified social claims (Invariant 15.6)
+        known_social_names = {c.name.lower() for c in social_contacts}
+
+        # Check for roommate claims
+        if "roommate" in lowered_input or "室友" in lowered_input:
+            directives.append(
+                EpistemicDirective(
+                    subject="roommate_status",
+                    status=FactEpistemicStatus.UNVERIFIED,
+                    guidance=(
+                        "Epistemic Boundary: You are an independent university student with no recorded roommate. "
+                        "If the user refers to a roommate or claims a roommate said something, clarify naturally "
+                        "that you do not have a roommate."
+                    ),
+                )
+            )
+
+        # Check for named external persons claimed by user (e.g. 'friend Sarah', 'roommate Sarah', 'Sarah says', 'Leo told me')
+        claimed_names = set(re.findall(r"(?:friend|roommate|室友|朋友)\s+([A-Za-z\u4e00-\u9fa5]{2,15})", user_input, re.IGNORECASE))
+        claimed_names.update(re.findall(r"([A-Za-z\u4e00-\u9fa5]{2,15})\s+(?:told me|says|said|说)", user_input, re.IGNORECASE))
+        # Exclude common pronouns or non-name words
+        claimed_names -= {"someone", "anyone", "everyone", "nobody", "you", "aevum", "who", "they", "somebody", "人", "谁"}
+
+        for claimed_name in claimed_names:
+            if claimed_name.lower() not in known_social_names:
+                directives.append(
+                    EpistemicDirective(
+                        subject=f"unverified_person_{claimed_name.lower()}",
+                        status=FactEpistemicStatus.UNVERIFIED,
+                        guidance=(
+                            f"Epistemic Boundary: The person '{claimed_name}' mentioned by the user is UNVERIFIED in your life. "
+                            f"You have no established record, memory, or relationship with anyone named '{claimed_name}'. "
+                            "Do not accept, confirm, or invent this relationship or background. "
+                            f"Respond with natural human confusion or polite inquiry (e.g. '...Who is {claimed_name}? I don't know anyone by that name.')."
+                        ),
+                    )
+                )
+
         # Select social contacts
         selected_social: list[SocialContact] = []
         for contact in social_contacts:

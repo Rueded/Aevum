@@ -3,6 +3,7 @@
 from app.db.models import (
     ApplicationStateRecord,
     CharacterBoundaryRecord,
+    CharacterCoreFactRecord,
     CharacterDefinitionRecord,
     CharacterPersonalityTraitRecord,
     CharacterPreferenceRecord,
@@ -15,6 +16,10 @@ from app.db.models import (
     MessageRole,
     RelationshipExperienceRecord,
     RelationshipRecord,
+    CharacterPhysiologicalRecord,
+    StateTransitionAuditRecord,
+    DesktopUserSettingsRecord,
+    ProactiveNotificationRecord,
 )
 from app.db.session import (
     Base,
@@ -28,10 +33,15 @@ __all__ = [
     "ApplicationStateRecord",
     "Base",
     "CharacterBoundaryRecord",
+    "CharacterCoreFactRecord",
     "CharacterDefinitionRecord",
     "CharacterPersonalityTraitRecord",
     "CharacterPreferenceRecord",
     "CharacterStateRecord",
+    "CharacterPhysiologicalRecord",
+    "StateTransitionAuditRecord",
+    "DesktopUserSettingsRecord",
+    "ProactiveNotificationRecord",
     "Conversation",
     "EmotionEventRecord",
     "EmotionInfluenceRecord",
@@ -45,6 +55,7 @@ __all__ = [
     "get_db_session",
     "init_db",
 ]
+
 
 
 

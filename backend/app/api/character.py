@@ -26,6 +26,11 @@ from app.relationship.context_builder import (
     synthesize_relationship_summary,
 )
 from app.relationship.service import RelationshipService
+from app.character.desire_service import DesireEvaluationEngine
+from app.relationship.contract_evaluator import RelationshipContractEvaluator
+from app.character.social_intention_service import SocialIntentionService
+from app.character.behavior_planner import BehaviorPlanner
+from app.reality.history_service import RealityHistoryService
 
 router = APIRouter(prefix="/character", tags=["Character"])
 
@@ -118,6 +123,8 @@ class CharacterDebugResponse(BaseModel):
     raw_emotion: dict[str, Any]
     total_memories: int
     total_events: int
+    decision_trace: dict[str, Any] | None = None
+    reality_history: list[dict[str, Any]] | None = None
 
 
 @router.get(
@@ -333,4 +340,41 @@ async def get_character_debug(
         },
         total_memories=len(all_memories),
         total_events=len(all_events),
+        decision_trace=BehaviorPlanner.plan(
+            "idle",
+            intention=SocialIntentionService.evaluate(
+                "idle",
+                contract=RelationshipContractEvaluator.evaluate(
+                    relationship=rel_state,
+                    energy=char_state.energy,
+                ),
+                desire=DesireEvaluationEngine.evaluate(
+                    current_activity=char_state.current_activity,
+                    current_location=char_state.current_location,
+                    energy=char_state.energy,
+                    stress=char_state.stress,
+                    social_energy=char_state.social_energy,
+                    loneliness=char_state.loneliness,
+                    mood=char_state.mood.value,
+                ),
+            ),
+            contract=RelationshipContractEvaluator.evaluate(
+                relationship=rel_state,
+                energy=char_state.energy,
+            ),
+            desire=DesireEvaluationEngine.evaluate(
+                current_activity=char_state.current_activity,
+                current_location=char_state.current_location,
+                energy=char_state.energy,
+                stress=char_state.stress,
+                social_energy=char_state.social_energy,
+                loneliness=char_state.loneliness,
+                mood=char_state.mood.value,
+            ),
+        )[1].model_dump(),
+        reality_history=[
+            r.model_dump()
+            for r in (await RealityHistoryService(db).get_history("aevum"))
+        ] if await RealityHistoryService(db).get_history("aevum") else None,
     )
+

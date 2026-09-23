@@ -20,6 +20,24 @@ from app.character.state_models import (
     CharacterState,
     CharacterStateUpdate,
 )
+from app.character.bible_models import (
+    BehavioralPriors,
+    CharacterBible,
+    Flaws,
+    ReasoningPriors,
+)
+from app.character.bible_service import (
+    CharacterBibleService,
+    create_canonical_character_bible,
+)
+from app.character.core_models import CharacterCore
+from app.character.core_service import (
+    AevumCanonicalNotDirectlyEditableError,
+    CandidateNotEditableError,
+    CharacterCoreService,
+    FactLockedError,
+    SystemBaselineImmutableError,
+)
 from app.character.engine import (
     CharacterEngine,
 )
@@ -47,7 +65,14 @@ from app.character.state_service import (
 )
 
 __all__ = [
+    "AevumCanonicalNotDirectlyEditableError",
+    "BehavioralPriors",
     "Boundary",
+    "CandidateNotEditableError",
+    "CharacterBible",
+    "CharacterBibleService",
+    "CharacterCore",
+    "CharacterCoreService",
     "CharacterDefinition",
     "CharacterDefinitionConflictError",
     "CharacterDefinitionContext",
@@ -64,11 +89,15 @@ __all__ = [
     "CharacterStateContext",
     "CharacterStateService",
     "CharacterStateUpdate",
+    "FactLockedError",
+    "Flaws",
     "Personality",
     "Preference",
     "PreferenceSentiment",
+    "ReasoningPriors",
     "ResponseContextAssembler",
     "ResponseGenerator",
+    "SystemBaselineImmutableError",
     "apply_character_state_update",
     "assemble_response_llm_context",
     "create_initial_aevum_definition",

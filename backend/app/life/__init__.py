@@ -17,6 +17,19 @@ from app.life.context_models import CharacterLifeContext
 from app.life.context_builder import LifeContextBuilder
 from app.life.emotion_integrator import LifeEmotionIntegrator
 from app.life.orchestrator import LifeSimulationOrchestrator, LifeSimulationTickResult
+from app.life.activity_templates import (
+    ActivityGroundingPolicy,
+    ActivityTemplate,
+    CANONICAL_ACTIVITY_TEMPLATES,
+    get_template_by_id,
+)
+from app.life.activity_utility import (
+    ActivitySelectionDecision,
+    ActivityUtilityBreakdown,
+    ActivityUtilityEvaluator,
+    HardEligibilityGate,
+)
+from app.life.activity_selector import AutonomousActivitySelector
 
 __all__ = [
     "LifeState",
@@ -39,4 +52,13 @@ __all__ = [
     "LifeEmotionIntegrator",
     "LifeSimulationOrchestrator",
     "LifeSimulationTickResult",
+    "ActivityGroundingPolicy",
+    "ActivityTemplate",
+    "CANONICAL_ACTIVITY_TEMPLATES",
+    "get_template_by_id",
+    "ActivitySelectionDecision",
+    "ActivityUtilityBreakdown",
+    "ActivityUtilityEvaluator",
+    "HardEligibilityGate",
+    "AutonomousActivitySelector",
 ]

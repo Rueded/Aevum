@@ -10,6 +10,7 @@ interface ChatViewProps {
   error: string | null;
   onRetry?: () => void;
   characterName: string;
+  highlightedMessageId?: string | null;
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({
@@ -21,17 +22,28 @@ export const ChatView: React.FC<ChatViewProps> = ({
   error,
   onRetry,
   characterName,
+  highlightedMessageId,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom on new messages or generation change
+  // Auto-scroll to bottom on new messages or generation change (unless highlighting a specific message)
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (!highlightedMessageId && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isGenerating]);
+  }, [messages, isGenerating, highlightedMessageId]);
+
+  // Scroll to highlighted message when requested via deep link
+  useEffect(() => {
+    if (highlightedMessageId) {
+      const el = document.getElementById(`msg-${highlightedMessageId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+  }, [highlightedMessageId]);
 
   // Adjust textarea height dynamically
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -99,7 +111,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
           messages.map((msg) => {
             const isUser = msg.role === "user";
             return (
-              <div key={msg.id} className={`message-row ${isUser ? "user-row" : "companion-row"}`}>
+              <div
+                key={msg.id}
+                id={`msg-${msg.id}`}
+                className={`message-row ${isUser ? "user-row" : "companion-row"} ${
+                  highlightedMessageId === msg.id ? "highlighted-message" : ""
+                }`}
+              >
                 {!isUser && <div className="bubble-avatar">A</div>}
                 <div className={`message-bubble ${isUser ? "user-bubble" : "companion-bubble"}`}>
                   <div className="message-header-small">

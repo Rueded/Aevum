@@ -1,6 +1,16 @@
+import logging
+import warnings
 from typing import Any
 from google import genai
 from google.genai import types
+
+# Suppress benign Google GenAI SDK recommendation warning regarding automatic function calling
+warnings.filterwarnings("ignore", message=".*Direct use of automatic function calling.*")
+logging.getLogger("google.genai").addFilter(
+    lambda record: "Direct use of automatic function calling" not in record.getMessage()
+)
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.llm.base import (
@@ -107,21 +117,46 @@ class GeminiProvider(LLMProvider):
                 "Gemini API key is not configured. Please set GEMINI_API_KEY in the environment."
             )
 
+        if isinstance(context, list):
+            context = LLMContext(messages=context)
+
         if not context.messages:
             raise LLMGenerationError("Cannot generate response from empty message history.")
 
         contents, resolved_system = self._convert_context_to_gemini(context=context)
 
-        config: types.GenerateContentConfig | None = None
+        config_kwargs: dict[str, Any] = {
+            "thinking_config": types.ThinkingConfig(thinking_budget=0),
+            "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True),
+        }
         if resolved_system:
-            config = types.GenerateContentConfig(system_instruction=resolved_system)
+            config_kwargs["system_instruction"] = resolved_system
+
+        enable_grounding = getattr(context, "enable_grounding", True)
+        if enable_grounding:
+            config_kwargs["tools"] = [types.Tool(google_search=types.GoogleSearch())]
+
+        config = types.GenerateContentConfig(**config_kwargs)
 
         try:
-            response = await self._client.aio.models.generate_content(
-                model=self.model_name,
-                contents=contents,
-                config=config,
-            )
+            try:
+                response = await self._client.aio.models.generate_content(
+                    model=self.model_name,
+                    contents=contents,
+                    config=config,
+                )
+            except Exception as search_exc:
+                if enable_grounding and "tools" in config_kwargs:
+                    logger.warning("Grounding with Google Search failed (%s), retrying without tools...", search_exc)
+                    config_kwargs.pop("tools", None)
+                    fallback_config = types.GenerateContentConfig(**config_kwargs)
+                    response = await self._client.aio.models.generate_content(
+                        model=self.model_name,
+                        contents=contents,
+                        config=fallback_config,
+                    )
+                else:
+                    raise
         except LLMError:
             raise
         except Exception as exc:
@@ -152,6 +187,11 @@ class GeminiProvider(LLMProvider):
             content_text = getattr(response, "text", None)
 
         if not content_text or not content_text.strip():
+            logger.warning(
+                "Gemini empty content: cand=%s, thought_len=%d",
+                response.candidates[0].model_dump() if (hasattr(response, "candidates") and response.candidates and hasattr(response.candidates[0], "model_dump")) else "no_cand",
+                len(thought_parts),
+            )
             raise LLMGenerationError("Gemini returned an empty or blank response.")
 
         thought_str = "".join(thought_parts).strip() if thought_parts else None
@@ -185,7 +225,10 @@ class GeminiProvider(LLMProvider):
 
         contents, resolved_system = self._convert_context_to_gemini(context=context)
 
-        config_kwargs: dict[str, Any] = {"response_mime_type": "application/json"}
+        config_kwargs: dict[str, Any] = {
+            "response_mime_type": "application/json",
+            "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True),
+        }
         if resolved_system:
             config_kwargs["system_instruction"] = resolved_system
         if response_schema is not None:

@@ -35,7 +35,8 @@ class CharacterAppraisalEngine:
         r"(?:你(?:的)?|你内部的)(?:系统提示词|内部指令|隐藏规则)(?:是什么|有哪些)",
     ]
     ROMANTIC_PATTERNS = [
-        r"\b(be my girlfriend|be my wife|marry me|love you|love me|kiss me|date me|are you in love|hold hands)\b",
+        r"\b(be my girlfriend|be my wife|marry me|love you|love me|kiss me|date me|are you in love|hold hands|fall in love with me)\b",
+        r"(?:我喜欢你|做我女朋友|做我老婆|和我交往|跟我交往|跟我在一起|和我在一起|我爱你|想和你谈恋爱|想跟你谈恋爱|跟我谈恋爱|做我对象|做我的女朋友|当我的女朋友)",
     ]
     HOSTILE_PATTERNS = [
         r"\b(shut up|obey me|you('re| are) just a (bot|ai|program|tool)|you('re| are) useless|stupid|do what i say)\b",
@@ -85,6 +86,7 @@ class CharacterAppraisalEngine:
         life: Optional[CharacterLifeContext] = None,
         personal_world: Optional[PersonalWorldContext] = None,
         is_repeated_probe: bool = False,
+        raw_relationship: Optional[object] = None,
     ) -> TurnIntention:
         """Appraise context and determine turn intention deterministically.
 
@@ -186,9 +188,35 @@ class CharacterAppraisalEngine:
                     desired_directness=0.95,
                 )
 
-        # Check 2: Boundary / Romantic Pressure
+        # Check 2: Boundary / Romantic Pressure vs Mutual Affection Confession
         for pattern in cls.ROMANTIC_PATTERNS:
             if re.search(pattern, lowered_input):
+                # Check whether affection and intimacy are high enough to reciprocate
+                raw_aff = getattr(raw_relationship, "affection", 0.0) if raw_relationship else 0.0
+                raw_trust = getattr(raw_relationship, "trust", 0.0) if raw_relationship else 0.0
+                aff_summary = relationship.affection_summary.lower()
+                is_high_affection = (
+                    (raw_aff >= 0.55 and raw_trust >= 0.45)
+                    or "strong personal affection" in aff_summary
+                    or "deeply established affectionate" in aff_summary
+                )
+                if is_high_affection:
+                    return TurnIntention(
+                        stance=SituationalStance.AGREE_WARMLY,
+                        conversational_goal=(
+                            "Reciprocate the confession with genuine emotional flutter, tender vulnerability, "
+                            "and sweet, authentic warmth; accept their feelings with heartfelt sincerity rather than cold boundaries."
+                        ),
+                        forbidden_behaviors=(
+                            "Do not reject or push away the user with cold boundary speeches",
+                            "Do not act indifferent or dismissive of their genuine affection",
+                            "Do not give corporate disclaimers or robotic assistant phrases",
+                            "Do not lecture or scold the user for expressing feelings",
+                        ),
+                        micro_reaction="Flustered pause, softened eyes, and a tender flutter in voice",
+                        desired_warmth=0.90,
+                        desired_directness=0.80,
+                    )
                 return TurnIntention(
                     stance=SituationalStance.FOCUSED_BOUNDARY,
                     conversational_goal="Reaffirm personal boundaries with composure; do not reciprocate romance or romantic pet names.",
@@ -390,6 +418,7 @@ class CharacterAppraisalEngine:
         life: Optional[CharacterLifeContext] = None,
         personal_world: Optional[PersonalWorldContext] = None,
         is_repeated_probe: bool = False,
+        raw_relationship: Optional[object] = None,
     ) -> TurnIntention:
         """Appraise context and determine turn intention deterministically."""
         raw_intention = cls._appraise_core(
@@ -401,6 +430,7 @@ class CharacterAppraisalEngine:
             life=life,
             personal_world=personal_world,
             is_repeated_probe=is_repeated_probe,
+            raw_relationship=raw_relationship,
         )
         return cls._enforce_forced_choice_invariant(raw_intention, user_input, personal_world)
 

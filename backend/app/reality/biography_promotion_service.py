@@ -16,6 +16,7 @@ import logging
 from typing import Any, Optional
 import uuid
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.character.core_models import CharacterCore
@@ -144,14 +145,16 @@ class BiographyPromotionService:
         timeline_ok = True
         timeline_reason = "Chronological timeline is plausible."
         if candidate.slot_name == "education.year":
-            age = 20
+            age = 21
             pre_u = "STPM"
             if "identity.age" in core.facts:
                 age = int(core.facts["identity.age"].value)
             if "education.pre_u" in core.facts:
                 pre_u = str(core.facts["education.pre_u"].value)
             try:
-                yr = int(candidate.proposed_value)
+                val_raw = str(candidate.proposed_value)
+                digits = "".join(ch for ch in val_raw if ch.isdigit())
+                yr = int(digits) if digits else int(val_raw)
                 res = TimelineValidator.validate_academic_year(age=age, pre_u_pathway=pre_u, academic_year=yr)
                 timeline_ok = res.is_valid
                 timeline_reason = res.reason
@@ -200,22 +203,36 @@ class BiographyPromotionService:
 
         # ---------------------------------------------------------------------
         # GATE 6: CANDIDATE_COMPETITION
-        # Minimum 2 viable candidates required (no single-candidate self-promotion)
+        # Minimum 2 viable candidates required for autonomous open-slot inference.
+        # EXEMPTION: Authoritative revision/supersession of an existing canonical fact.
         # ---------------------------------------------------------------------
-        num_candidates = competition_candidate_count or len(choice_decision.candidate_ids_considered)
-        if num_candidates < self._policy.min_viable_candidates:
-            _record_gate(
-                PromotionGateType.GATE_6_CANDIDATE_COMPETITION,
-                False,
-                f"Candidate competition requires at least {self._policy.min_viable_candidates} viable alternatives; found {num_candidates}.",
-                {"candidate_count": num_candidates, "min_required": self._policy.min_viable_candidates},
-            )
-        else:
+        is_auth_revision = bool(
+            (candidate.selection_metadata and candidate.selection_metadata.get("is_authoritative_revision"))
+            or candidate.supersedes_id
+        )
+        existing_canonical = core.facts.get(candidate.slot_name)
+        if is_auth_revision and existing_canonical is not None:
             _record_gate(
                 PromotionGateType.GATE_6_CANDIDATE_COMPETITION,
                 True,
-                f"Candidate competition requirement satisfied with {num_candidates} alternatives.",
+                f"Candidate is an authorized revision superseding existing canonical fact '{candidate.slot_name}'; open-slot plurality waived.",
+                {"candidate_count": 1, "is_authoritative_revision": True},
             )
+        else:
+            num_candidates = competition_candidate_count or len(choice_decision.candidate_ids_considered)
+            if num_candidates < self._policy.min_viable_candidates:
+                _record_gate(
+                    PromotionGateType.GATE_6_CANDIDATE_COMPETITION,
+                    False,
+                    f"Candidate competition requires at least {self._policy.min_viable_candidates} viable alternatives; found {num_candidates}.",
+                    {"candidate_count": num_candidates, "min_required": self._policy.min_viable_candidates},
+                )
+            else:
+                _record_gate(
+                    PromotionGateType.GATE_6_CANDIDATE_COMPETITION,
+                    True,
+                    f"Candidate competition requirement satisfied with {num_candidates} alternatives.",
+                )
 
         # ---------------------------------------------------------------------
         # GATE 7: EXPLICIT_CHOICE
@@ -533,30 +550,8 @@ class BiographyPromotionService:
         prev_fact = core.facts.get(candidate.slot_name)
         prev_val = prev_fact.value if prev_fact else None
 
-        # Step 5: Singularity Canonical Mutation Boundary (enforced via token)
-        await self._core_service.set_fact(
-            character_id=character_id,
-            fact_key=candidate.slot_name,
-            value=candidate.proposed_value,
-            source=FactSource.AEVUM_INFERRED,
-            authority=FactAuthority.AEVUM_CANONICAL,
-            status=FactStatus.CANONICAL,
-            explanation=(
-                f"Autonomous biography promotion via choice '{choice_decision.decision_id}' "
-                f"under policy '{self._policy.policy_version}'"
-            ),
-            confidence=candidate.plausibility.composite_plausibility_score,
-            allow_canonical_reconciliation=True,
-            authorization_token=auth_result.token,
-        )
-
-        # Step 6: Candidate Lifecycle Transition -> SUPERSEDED (Phase 7D.1 remains frozen)
-        await self._candidate_repo.update_candidate_lifecycle(
-            candidate_id=candidate.candidate_id,
-            state=CandidateLifecycleState.SUPERSEDED,
-        )
-
-        # Step 7: Persist authoritative CharacterBiographyPromotionRecord (Enforcing UniqueConstraint)
+        # Step 5 to 7: Unified Atomic Transaction Boundary (Decision B.1 — 7D.6 Architecture Gate)
+        # Atomicity belongs strictly to BiographyPromotionService.promote_candidate().
         promo_record = BiographyPromotionRecord(
             promotion_id=str(uuid.uuid4()),
             character_id=character_id,
@@ -574,21 +569,71 @@ class BiographyPromotionService:
             is_idempotent_replay=False,
             created_at=_utc_now(),
         )
+
         try:
+            # Step 5: Singularity Canonical Mutation Boundary (auto_commit=False, staged via flush)
+            await self._core_service.set_fact(
+                character_id=character_id,
+                fact_key=candidate.slot_name,
+                value=candidate.proposed_value,
+                source=FactSource.AEVUM_INFERRED,
+                authority=FactAuthority.AEVUM_CANONICAL,
+                status=FactStatus.CANONICAL,
+                explanation=(
+                    f"Autonomous biography promotion via choice '{choice_decision.decision_id}' "
+                    f"under policy '{self._policy.policy_version}'"
+                ),
+                confidence=candidate.plausibility.composite_plausibility_score,
+                allow_canonical_reconciliation=True,
+                authorization_token=auth_result.token,
+                auto_commit=False,
+            )
+
+            # Step 6: Candidate Lifecycle Transition -> SUPERSEDED (staged via flush)
+            await self._candidate_repo.update_candidate_lifecycle(
+                candidate_id=candidate.candidate_id,
+                state=CandidateLifecycleState.SUPERSEDED,
+            )
+
+            # Step 7: Persist authoritative CharacterBiographyPromotionRecord (staged via flush)
             await self._candidate_repo.save_biography_promotion(promo_record)
+
+            # Single atomic commit for Steps 5, 6, and 7
             await self._session.commit()
-        except Exception:
+
+        except IntegrityError as exc:
             await self._session.rollback()
+            # Strict Idempotent Replay Validation (Decision B.1 - 7D.6 Amendment 1):
+            # Only treat as idempotent replay if ALL conditions are satisfied:
+            # 1. Concurrent promotion record exists in DB
+            # 2. candidate_id strictly matches
+            # 3. character_id strictly matches
+            # 4. Canonical fact in character_core_facts already matches this promotion's proposed value
+            # 5. Promotion record semantic consistency is verified
             existing_promo = await self._candidate_repo.get_biography_promotion_by_candidate(
                 candidate_id=candidate.candidate_id,
                 character_id=character_id,
             )
-            if existing_promo is not None:
-                logger.info(
-                    "Concurrent promotion race detected for candidate '%s'; returning safe idempotent replay.",
-                    candidate.candidate_id,
-                )
-                return existing_promo.model_copy(update={"is_idempotent_replay": True})
+            if (
+                existing_promo is not None
+                and existing_promo.candidate_id == candidate.candidate_id
+                and existing_promo.character_id == character_id
+            ):
+                core_check = await self._core_service.get_core(character_id)
+                current_fact = core_check.facts.get(candidate.slot_name)
+                if current_fact is not None and current_fact.value == candidate.proposed_value:
+                    logger.info(
+                        "Concurrent promotion race safely reconciled for candidate '%s' (slot '%s'); returning idempotent replay.",
+                        candidate.candidate_id,
+                        candidate.slot_name,
+                    )
+                    return existing_promo.model_copy(update={"is_idempotent_replay": True})
+
+            # Non-identical integrity collisions are strictly re-raised
+            raise exc
+
+        except Exception:
+            await self._session.rollback()
             raise
 
         # Step 8: Record append-only revision in RealityHistoryService (Gate 13)

@@ -390,11 +390,10 @@ async def test_message_with_relationship_signals_updates_state(
     # Verify updated relationship
     updated_state = await rel_service.get_relationship_state()
 
-    # APPRECIATION increases trust and comfort
+    # APPRECIATION increases trust, comfort, and bounded affection
     assert updated_state.trust > initial_state.trust
     assert updated_state.comfort > initial_state.comfort
-    # Affection MUST NOT be modified by ordinary interaction signals!
-    assert updated_state.affection == initial_state.affection
+    assert updated_state.affection > initial_state.affection
 
 
 @pytest.mark.asyncio

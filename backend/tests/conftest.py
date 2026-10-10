@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from app.core.config import settings
 from app.db.session import Base, get_db_session
 from app.llm import (
     ChatMessage,
@@ -15,6 +16,9 @@ from app.llm import (
     get_llm_provider,
 )
 from app.main import app
+
+# Ensure tests run strictly in test environment (ADR-021 & Rule 7)
+settings.environment = "test"
 
 # In-memory SQLite async database engine for testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

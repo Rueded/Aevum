@@ -152,6 +152,7 @@ class CharacterCoreService:
         confidence: float = 1.0,
         allow_canonical_reconciliation: bool = False,
         authorization_token: Optional[PromotionAuthorizationToken] = None,
+        auto_commit: bool = True,
     ) -> CoreFactItem:
         """Create or update a fact with strict schema validation and authority checking."""
         await self._ensure_initialized(character_id)
@@ -225,7 +226,10 @@ class CharacterCoreService:
             )
             self._session.add(record)
 
-        await self._session.commit()
+        if auto_commit:
+            await self._session.commit()
+        else:
+            await self._session.flush()
         return self._record_to_domain(record)
 
     async def lock_fact(self, character_id: str, fact_key: str) -> CoreFactItem:

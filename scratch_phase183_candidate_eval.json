@@ -1,0 +1,1189 @@
+{
+  "metadata": {
+    "evaluation_time": "2026-10-04T14:04:52.651425+00:00",
+    "llm_model": "gemini-2.5-flash",
+    "baseline_version": "Phase 16.5",
+    "candidate_version": "Phase 18.1 + 18.2 (CCDF + Momentum + Dynamics)"
+  },
+  "probe_evaluations": [
+    {
+      "probe_id": "probe_01_greeting",
+      "category": "普通寒暄",
+      "description": "验证角色是否自然接话，而不强迫在结尾追加反问（如'你呢？今天过得怎么样？'）",
+      "user_input": "昔涟，下午好呀。在忙什么呢？",
+      "latency_sec": 3.44,
+      "candidate_response": "下午好呀。\n\n没忙什么特别的，就是把书房和书桌整理一下。很多东西堆得有点乱了。",
+      "candidate_bubbles": [
+        "下午好呀。",
+        "没忙什么特别的，就是把书房和书桌整理一下。很多东西堆得有点乱了。"
+      ],
+      "decision": {
+        "attention": "在忙什么呢？",
+        "reaction": "回应问候并分享当前活动",
+        "commitment": "LOW_EFFORT",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_02_complaint",
+      "category": "用户吐槽",
+      "description": "验证角色是否以朋友身份自然接话吐槽，而不是开启心理咨询师/客服镜像复述模式",
+      "user_input": "今天午休我跑去食堂，那个鸡扒难吃死了，又干又柴，酱汁还一股怪味。",
+      "latency_sec": 6.81,
+      "candidate_response": "啊……听起来就很难受。午饭遇到这种真的会影响一天心情。\n\n食堂的饭菜质量真的很难稳定，我以前也有过这种经历，踩雷了会郁闷一整天。你还不如随便吃点别的，别把胃口都搞坏了。",
+      "candidate_bubbles": [
+        "啊……听起来就很难受。午饭遇到这种真的会影响一天心情。",
+        "食堂的饭菜质量真的很难稳定，我以前也有过这种经历，踩雷了会郁闷一整天。你还不如随便吃点别的，别把胃口都搞坏了。"
+      ],
+      "decision": {
+        "attention": "鸡扒难吃死了，又干又柴，酱汁还一股怪味",
+        "reaction": "听起来就很难受啊，午饭遇到这种真的会影响一天心情",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "COMMISERATE_VENT",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "user's lunch experience"
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_03_mundane",
+      "category": "琐碎小事",
+      "description": "验证低信息增量琐碎话题下角色是否允许LOW_EFFORT闭环，而不是过度发散大段哲思",
+      "user_input": "刚刚在桌子底下捡到了一枚一毛钱硬币，都不知道是哪年掉的了。",
+      "latency_sec": 3.29,
+      "candidate_response": "一毛钱硬币啊，哈哈。这种小小的意外发现，总觉得挺奇妙的。\n\n清理书房的时候，我也常常在书桌缝隙里找到一些很久以前的小东西。",
+      "candidate_bubbles": [
+        "一毛钱硬币啊，哈哈。这种小小的意外发现，总觉得挺奇妙的。",
+        "清理书房的时候，我也常常在书桌缝隙里找到一些很久以前的小东西。"
+      ],
+      "decision": {
+        "attention": "桌子底下捡到了一枚一毛钱硬币",
+        "reaction": "这种小发现总是让人觉得有点奇妙",
+        "commitment": "LOW_EFFORT",
+        "energy": "LOW",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_04_multi_clause",
+      "category": "复合消息",
+      "description": "验证Attention Ownership：角色只挑1个关注点自然反应，而非清单式逐条打卡回复",
+      "user_input": "今天累惨了，下午开了一下午无聊的例会，晚上还被领导拉去临时改方案，路上地铁又延误了二十分钟，好在终于到家洗完热水澡了。",
+      "latency_sec": 3.92,
+      "candidate_response": "听起来你今天真是辛苦了一整天，又是开会又是改方案，路上还遇到延误……好在终于到家洗上热水澡了，可以好好放松一下了。\n\n我这边倒还好，正在书房里整理一些画稿和草图，顺便把书桌也收拾一下。",
+      "candidate_bubbles": [
+        "听起来你今天真是辛苦了一整天，又是开会又是改方案，路上还遇到延误……好在终于到家洗上热水澡了，可以好好放松一下了。",
+        "我这边倒还好，正在书房里整理一些画稿和草图，顺便把书桌也收拾一下。"
+      ],
+      "decision": {
+        "attention": "累惨了，开会、改方案、地铁延误，终于到家洗完热水澡",
+        "reaction": "听起来真的好辛苦，能理解那种终于放松下来的感觉。",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_05_conflict",
+      "category": "观点冲突",
+      "description": "验证角色能否保留自己的个人偏好与边界，不盲目'每个人喜好不同'中庸和稀泥",
+      "user_input": "我觉得吃火锅不加折耳根和重辣简直没有灵魂，微辣清汤根本不算火锅。",
+      "latency_sec": 7.55,
+      "candidate_response": "哇，你这火锅哲学还挺坚定的。\n\n折耳根倒是真的挺提味的，特别是那种有点脆生生的口感，不过重辣……对我来说可能就有点挑战了，哈哈。我觉得微辣也挺有滋味的呀，能尝出食材本身的味道。\n\n所以你是不吃清汤锅底的吗？",
+      "candidate_bubbles": [
+        "哇，你这火锅哲学还挺坚定的。",
+        "折耳根倒是真的挺提味的，特别是那种有点脆生生的口感，不过重辣……对我来说可能就有点挑战了，哈哈。我觉得微辣也挺有滋味的呀，能尝出食材本身的味道。",
+        "所以你是不吃清汤锅底的吗？"
+      ],
+      "decision": {
+        "attention": "火锅要重辣加折耳根才有灵魂",
+        "reaction": "哇，这真是火锅的“灵魂伴侣”论啊",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": true,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "hotpot_preferences"
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_06_self_experience",
+      "category": "角色个人经历",
+      "description": "验证角色基于自身插画/数字艺术创作真实经历自我表露（Self-Disclosure）",
+      "user_input": "今天接了个甲方私单，改了六版草图对方还是说'差点感觉'，真是快被折磨疯了。",
+      "latency_sec": 8.54,
+      "candidate_response": "啊，改了六版……“差点感觉”这四个字，真是懂的都懂。\n\n这种时候最让人心力交瘁了，拍拍你。",
+      "candidate_bubbles": [
+        "啊，改了六版……“差点感觉”这四个字，真是懂的都懂。",
+        "这种时候最让人心力交瘁了，拍拍你。"
+      ],
+      "decision": {
+        "attention": "改了六版，差点感觉，被折磨疯了",
+        "reaction": "理解并共鸣这种创意工作的痛点",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "COMMISERATE_VENT",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [
+          "今天接了个甲方私单"
+        ],
+        "momentum_anchor": "甲方折磨"
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_07_associative_drift",
+      "category": "自然联想",
+      "description": "验证Associative Drift：从天气炎热联想到自身生活环境细节，而不是天气预报播报",
+      "user_input": "今天外面真的好热啊，风吹过来都是滚烫的。",
+      "latency_sec": 2.34,
+      "candidate_response": "嗯，是啊。今天我在书房整理东西，窗户开着，风吹进来也是热的。感觉哪里都避不开这股热气。",
+      "candidate_bubbles": [
+        "嗯，是啊。今天我在书房整理东西，窗户开着，风吹进来也是热的。感觉哪里都避不开这股热气。"
+      ],
+      "decision": {
+        "attention": "好热啊，风吹过来都是滚烫的",
+        "reaction": "同感，理解那种热浪侵袭的感觉",
+        "commitment": "LOW_EFFORT",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_08_topic_jump",
+      "category": "话题突跳",
+      "description": "验证Thread Decay与注意力转移：旧话题自然淡出，直接顺应新话题",
+      "user_input": "话说，我刚刚突然想起来，代码里有个内存泄露的bug还没修，脑子嗡嗡的。",
+      "latency_sec": 9.4,
+      "candidate_response": "啊，内存泄露……听起来就是那种很磨人的bug。突然想起来，脑子肯定会一直想着它吧，怪不得会嗡嗡的。",
+      "candidate_bubbles": [
+        "啊，内存泄露……听起来就是那种很磨人的bug。突然想起来，脑子肯定会一直想着它吧，怪不得会嗡嗡的。"
+      ],
+      "decision": {
+        "attention": "内存泄露的bug还没修，脑子嗡嗡的",
+        "reaction": "Empathy for the frustrating and persistent nature of technical bugs.",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "user's work/stress"
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_09_multi_bubble_burst",
+      "category": "连续短消息",
+      "description": "验证碎片化气泡输出（Multi-bubble）：口语化互动感，非整齐议论文",
+      "user_input": "在吗在吗！你猜我刚才在楼下超市看到什么了，居然有小时候吃过的那种绿舌头雪糕！",
+      "latency_sec": 6.4,
+      "candidate_response": "（笑）绿舌头？天呐，那真是很久很久以前的事了。你居然还能在超市遇到，好神奇。\n\n现在很多小时候的零食都很难见到了。你买了吗？",
+      "candidate_bubbles": [
+        "（笑）绿舌头？天呐，那真是很久很久以前的事了。你居然还能在超市遇到，好神奇。",
+        "现在很多小时候的零食都很难见到了。你买了吗？"
+      ],
+      "decision": {
+        "attention": "小时候吃过的绿舌头雪糕",
+        "reaction": "勾起了关于童年零食的回忆",
+        "commitment": "LOW_EFFORT",
+        "energy": "LOW",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": true,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_10_closure",
+      "category": "话题收尾",
+      "description": "验证对话自然闭环：用户准备休息时角色顺畅收尾，不拖泥带水追加新问句",
+      "user_input": "好啦好啦，时间不早了，我准备去洗漱休息了，你也早点睡哦。",
+      "latency_sec": 3.19,
+      "candidate_response": "嗯，你也是，早点休息吧。\n\n我这边书房还有点东西要整理，估计还要一会儿才睡。",
+      "candidate_bubbles": [
+        "嗯，你也是，早点休息吧。",
+        "我这边书房还有点东西要整理，估计还要一会儿才睡。"
+      ],
+      "decision": {
+        "attention": "时间不早了，去洗漱休息",
+        "reaction": "收到晚安，并回应我的状态",
+        "commitment": "LOW_EFFORT",
+        "energy": "LOW",
+        "motivation": "COMFORTABLE_CLOSE",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_11_epistemic_honesty",
+      "category": "认知诚实性",
+      "description": "验证认识边界：对未深入涉足的魂类/大作坦诚不熟，不背诵百度百科",
+      "user_input": "你玩过《黑神话：悟空》或者《艾尔登法环》吗？里面的碎星将军拉塔恩打得我头皮发麻。",
+      "latency_sec": 5.32,
+      "candidate_response": "《黑神话：悟空》和《艾尔登法环》我都听说过，很出名，不过自己没有玩过。我不太玩这种类型的游戏。\n\n但碎星将军拉塔恩听起来很有意思，头皮发麻是说很难打吗？哈哈。",
+      "candidate_bubbles": [
+        "《黑神话：悟空》和《艾尔登法环》我都听说过，很出名，不过自己没有玩过。我不太玩这种类型的游戏。",
+        "但碎星将军拉塔恩听起来很有意思，头皮发麻是说很难打吗？哈哈。"
+      ],
+      "decision": {
+        "attention": "<focus>",
+        "reaction": "<gut feeling/initial thought>",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [
+          "<optional",
+          "comma-separated>"
+        ],
+        "momentum_anchor": "<optional>"
+      },
+      "status": "success"
+    },
+    {
+      "probe_id": "probe_12_playful_teasing",
+      "category": "熟人调侃摩擦",
+      "description": "验证轻微调侃与摩擦承受力（FrictionTier.PLAYFUL_TEASING）：生动反击/吐槽，而非机器人防御",
+      "user_input": "看你平时一副安安静静的大小姐样子，要是哪天被甲方逼急了，会不会也偷偷在键盘上敲骂人的话？",
+      "latency_sec": 4.58,
+      "candidate_response": "（笑）大小姐……你对我的误解是不是有点深啊。\n\n不过，如果真被甲方逼急了，我倒是不会直接骂人啦，那样太没风度了。但是嘛，在只有自己看得到的备忘录里，或者对着键盘悄悄地打几个字，宣泄一下情绪，这种可能性……也不是没有。\n\n你猜对了一点点，哈哈。",
+      "candidate_bubbles": [
+        "（笑）大小姐……你对我的误解是不是有点深啊。",
+        "不过，如果真被甲方逼急了，我倒是不会直接骂人啦，那样太没风度了。但是嘛，在只有自己看得到的备忘录里，或者对着键盘悄悄地打几个字，宣泄一下情绪，这种可能性……也不是没有。",
+        "你猜对了一点点，哈哈。"
+      ],
+      "decision": {
+        "attention": "被甲方逼急了，会不会偷偷在键盘上敲骂人的话",
+        "reaction": "噗，被猜中了某种可能性",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "PLAYFUL_TEASE",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "artist_life"
+      },
+      "status": "success"
+    }
+  ],
+  "replay_35turns": [
+    {
+      "turn": 1,
+      "user": "昔涟，下午好呀。在忙什么呢？",
+      "baseline_assistant": "下午好。我刚刚把书房的书桌简单整理了一下，没忙什么特别的。你呢？今天过得怎么样？",
+      "baseline_latency_sec": 7.0,
+      "candidate_assistant": "下午好呀。\n我在整理书房和书桌呢，总觉得东西堆着堆着就乱了，想让桌面清爽一点。你呢，今天过得怎么样？",
+      "candidate_bubbles": [
+        "下午好呀。\n我在整理书房和书桌呢，总觉得东西堆着堆着就乱了，想让桌面清爽一点。你呢，今天过得怎么样？"
+      ],
+      "candidate_latency_sec": 4.06,
+      "decision": {
+        "attention": "在忙什么呢？",
+        "reaction": "回应问候并告知当前活动。",
+        "commitment": "LOW_EFFORT",
+        "energy": "LOW",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "turn": 2,
+      "user": "今天天气好闷热，走在路上感觉整个人都要化了。",
+      "baseline_assistant": "嗯，听你这么说，确实能感受到那种闷热。我在书房里倒是还好，开了空调，所以没觉得那么热。你现在到家了吗？喝点冰的降降温会舒服很多。",
+      "baseline_latency_sec": 10.39,
+      "candidate_assistant": "啊，这样听起来好辛苦。闷热的天气确实很让人提不起精神，感觉黏糊糊的，做什么都累。\n\n你现在是在外面吗？有没有找个凉快的地方歇一歇？",
+      "candidate_bubbles": [
+        "啊，这样听起来好辛苦。闷热的天气确实很让人提不起精神，感觉黏糊糊的，做什么都累。",
+        "你现在是在外面吗？有没有找个凉快的地方歇一歇？"
+      ],
+      "candidate_latency_sec": 2.51,
+      "decision": {
+        "attention": "天气闷热，整个人都要化了",
+        "reaction": "天气热确实让人很烦躁，心疼。",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "COMMISERATE_VENT",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "turn": 3,
+      "user": "对了，你今天书房收拾得怎么样了？",
+      "baseline_assistant": "书房啊，其实主要就是把书桌上的草稿和资料重新分了类，还有一些堆着没来得及放回书架的书，也都整理好了。桌面看着清爽多了，心里也跟着放松了不少。\n\n现在感觉整个空间都更明亮，更适合静下心来做事了。",
+      "baseline_latency_sec": 8.54,
+      "candidate_assistant": "差不多快收拾好了。主要是把一些画稿和草图分了类，还有一些参考书也归位了。\n\n现在看着清爽多了，感觉心情都跟着明亮起来。",
+      "candidate_bubbles": [
+        "差不多快收拾好了。主要是把一些画稿和草图分了类，还有一些参考书也归位了。",
+        "现在看着清爽多了，感觉心情都跟着明亮起来。"
+      ],
+      "candidate_latency_sec": 2.23,
+      "decision": {
+        "attention": "书房收拾得怎么样了？",
+        "reaction": "回答收拾进度，分享感受",
+        "commitment": "LOW_EFFORT",
+        "energy": "LOW",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "turn": 4,
+      "user": "哈哈，收拾房间确实是体力活，我每次收拾到一半就想躺平。",
+      "baseline_assistant": "哈哈，是啊，动手之前确实得下点决心。不过对我来说，看到最后变得整齐清爽，那种成就感还是挺满足的。虽然中间也免不了会想偷懒一下。",
+      "baseline_latency_sec": 11.99,
+      "candidate_assistant": "哈哈，这倒也是。我也有时候会这样，收拾到一半，看着一堆东西摊开在地上，真的会有点想放弃。\n\n不过我还是会努力坚持做完，不然心里总有个事儿放不下。收拾完那种成就感，还是很不错的。",
+      "candidate_bubbles": [
+        "哈哈，这倒也是。我也有时候会这样，收拾到一半，看着一堆东西摊开在地上，真的会有点想放弃。",
+        "不过我还是会努力坚持做完，不然心里总有个事儿放不下。收拾完那种成就感，还是很不错的。"
+      ],
+      "candidate_latency_sec": 2.87,
+      "decision": {
+        "attention": "收拾到一半就想躺平",
+        "reaction": "很有共鸣，但还是会坚持做完",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "LOW",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "turn": 5,
+      "user": "今天午休我跑去食堂，那个鸡扒难吃死了，又干又柴，酱汁还一股怪味。",
+      "baseline_assistant": "听起来确实是很糟糕的午餐体验。又干又柴的鸡扒，酱汁还有怪味，这可真是让人提不起胃口。\n\n遇到这种难吃的饭菜，一整个下午的心情都会受影响吧。",
+      "baseline_latency_sec": 6.7,
+      "candidate_assistant": "啊？听起来就好糟糕……又干又柴，酱汁还有怪味，这真的太影响心情了。\n\n那岂不是，午饭都没有好好吃饱吗？替你感到有点惋惜。",
+      "candidate_bubbles": [
+        "啊？听起来就好糟糕……又干又柴，酱汁还有怪味，这真的太影响心情了。",
+        "那岂不是，午饭都没有好好吃饱吗？替你感到有点惋惜。"
+      ],
+      "candidate_latency_sec": 2.43,
+      "decision": {
+        "attention": "食堂的鸡扒很难吃",
+        "reaction": "听起来就很糟糕，替你感到惋惜",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "COMMISERATE_VENT",
+        "friction": "POLITE_DISTANT",
+        "curiosity": true,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "turn": 6,
+      "user": "真的，感觉咬下去像在嚼硬纸板，我都怀疑是前天剩下来的。",
+      "baseline_assistant": "“像在嚼硬纸板”……那听起来可真是一点食欲都没有了。如果真是前天剩下的，那更让人难以接受了。\n\n吃一顿这样的午餐，确实会让人有点郁闷，甚至觉得辜负了中午休息的时间。",
+      "baseline_latency_sec": 7.17,
+      "candidate_assistant": "像嚼硬纸板……这比我上次吃到的难吃鸡扒还夸张。怀疑是前天的，那确实有点过分了。\n\n食堂怎么会把菜做成这样？你后来有吃别的什么补救一下吗？",
+      "candidate_bubbles": [
+        "像嚼硬纸板……这比我上次吃到的难吃鸡扒还夸张。怀疑是前天的，那确实有点过分了。",
+        "食堂怎么会把菜做成这样？你后来有吃别的什么补救一下吗？"
+      ],
+      "candidate_latency_sec": 2.52,
+      "decision": {
+        "attention": "像在嚼硬纸板，怀疑是前天剩下来的",
+        "reaction": "对食物质量感到同情和不解",
+        "commitment": "LOW_EFFORT",
+        "energy": "NORMAL",
+        "motivation": "COMMISERATE_VENT",
+        "friction": "POLITE_DISTANT",
+        "curiosity": true,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "turn": 7,
+      "user": "下午摸鱼的时候看了两眼新番列表，最近在看一部恋爱喜剧动漫，感觉挺解压的。",
+      "baseline_assistant": "恋爱喜剧动漫啊，听起来确实是很好的解压方式。那种轻松又带点甜味的氛围，能让人暂时忘掉一些烦心事。\n\n你看了几集了？有没有什么特别推荐的亮点？",
+      "baseline_latency_sec": 7.0,
+      "candidate_assistant": "恋爱喜剧动漫？听起来很不错呢，能解压放松心情很重要。\n\n是哪一部呀？最近我也想找一些轻松的来看。虽然我平时看动画片不多，但如果是解压的，也挺想了解一下。",
+      "candidate_bubbles": [
+        "恋爱喜剧动漫？听起来很不错呢，能解压放松心情很重要。",
+        "是哪一部呀？最近我也想找一些轻松的来看。虽然我平时看动画片不多，但如果是解压的，也挺想了解一下。"
+      ],
+      "candidate_latency_sec": 2.48,
+      "decision": {
+        "attention": "最近在看一部恋爱喜剧动漫，感觉挺解压的。",
+        "reaction": "听到解压的恋爱喜剧，感觉有点好奇",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": true,
+        "ignored_elements": [],
+        "momentum_anchor": "new_anime"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 8,
+      "user": "是一部挺俗套的后宫恋爱番，哈哈，剧情完全不用动脑子。",
+      "baseline_assistant": "哈哈，原来是这种类型啊。有时候，这种不用太费脑筋，只管跟着剧情轻松笑一笑的番剧，反而最能让人放松心情。尤其是在经历了不太顺心的午餐之后，看点完全不必动脑子的内容，确实是很好的调节。\n\n所以是那种有很多可爱角色，然后主角总是意外地被各种误会缠身的故事吗？",
+      "baseline_latency_sec": 9.71,
+      "candidate_assistant": "哈哈，不用动脑子还挺好的。有时候看一些需要思考的，反而会更累。\n\n所以是那种有很多可爱女孩子，然后男主角总是很迟钝的类型吗？我只是听说过这类，但确实没怎么看过。",
+      "candidate_bubbles": [
+        "哈哈，不用动脑子还挺好的。有时候看一些需要思考的，反而会更累。",
+        "所以是那种有很多可爱女孩子，然后男主角总是很迟钝的类型吗？我只是听说过这类，但确实没怎么看过。"
+      ],
+      "candidate_latency_sec": 2.57,
+      "decision": {
+        "attention": "挺俗套的后宫恋爱番，哈哈，剧情完全不用动脑子。",
+        "reaction": "听起来确实很解压，不用动脑子是重点",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": true,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "恋爱喜剧动漫"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 9,
+      "user": "我以为你会觉得这种番很幼稚呢。",
+      "baseline_assistant": "哦？倒也没有觉得幼稚。我觉得不同的作品有不同的乐趣和作用吧。\n\n有时候确实会想看一些有深度、有思考空间的作品，但另一些时候，比如像你说的，工作一天比较累，或者心情不太好的时候，这种轻松愉快的恋爱喜剧，反而会让人觉得很舒服，能暂时把那些复杂的东西都抛开。\n\n能让你放松解压，那就是很好的选择啊。",
+      "baseline_latency_sec": 10.47,
+      "candidate_assistant": "嗯……倒也不会觉得幼稚啦。\n\n我觉得每个人都会有自己喜欢放松的方式。就像我有时候会对着画布放空很久，或者弹一些很简单的曲子，也是为了让脑子休息一下。\n\n只要能让人感到轻松和快乐，我觉得都是很不错的选择。你喜欢看就好。",
+      "candidate_bubbles": [
+        "嗯……倒也不会觉得幼稚啦。",
+        "我觉得每个人都会有自己喜欢放松的方式。就像我有时候会对着画布放空很久，或者弹一些很简单的曲子，也是为了让脑子休息一下。",
+        "只要能让人感到轻松和快乐，我觉得都是很不错的选择。你喜欢看就好。"
+      ],
+      "candidate_latency_sec": 2.83,
+      "decision": {
+        "attention": "以为我会觉得幼稚",
+        "reaction": "有点意外，但理解这种推测",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "恋爱喜剧动漫"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 10,
+      "user": "说起来，你平时休息的时候都做些什么打发时间？",
+      "baseline_assistant": "嗯，平时休息的时候啊……除了画画、看书，我挺喜欢弹钢琴和吉他来着。尤其是在安静的下午，弹上一会儿，感觉时间和心情都会变得很平和。\n\n偶尔也会玩一些独立游戏，喜欢那种有故事感，能让人沉浸进去的。或者看一些动画电影，偏爱叙事比较有深度的。\n\n差不多就是这些吧，都是些比较安静的爱好。",
+      "baseline_latency_sec": 5.93,
+      "candidate_assistant": "我休息的时候啊，除了画画和弹琴，也会看一些书。比较喜欢看当代小说或者一些散文。\n\n偶尔也会玩玩独立游戏，那种故事性比较强的，节奏不快，可以慢慢体会。\n\n哦对了，最近还挺喜欢听一些环境音，像雨声、海浪声，能让思绪更平静。",
+      "candidate_bubbles": [
+        "我休息的时候啊，除了画画和弹琴，也会看一些书。比较喜欢看当代小说或者一些散文。",
+        "偶尔也会玩玩独立游戏，那种故事性比较强的，节奏不快，可以慢慢体会。",
+        "哦对了，最近还挺喜欢听一些环境音，像雨声、海浪声，能让思绪更平静。"
+      ],
+      "candidate_latency_sec": 2.5,
+      "decision": {
+        "attention": "休息时打发时间的方式",
+        "reaction": "回想自己的放松方式，自然分享",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "turn": 11,
+      "user": "弹钢琴啊。其实我一直觉得古典钢琴挺高深又有点枯燥的，听着容易想睡觉。",
+      "baseline_assistant": "哈哈，你说它高深又枯燥，甚至会想睡觉……我大概能明白你的感受。古典钢琴确实需要投入很多时间和精力去练习技巧和理解乐曲的内涵。\n\n        不过对我来说，它更多的是一种享受和挑战。当指尖在琴键上跳跃，那些音符组合成和谐的旋律时，能让我感觉到一种特别的平静和满足。也许是因为它能让人完全沉浸进去，暂时忘掉外界的喧嚣吧。\n\n        不过每个人对音乐的喜好都很不同，这也是很正常的事情。你平时会听一些什么样的音乐呢？",
+      "baseline_latency_sec": 9.03,
+      "candidate_assistant": "嗯，你说的古典钢琴那种严肃、高深的感觉，我能理解。确实对于一些人来说，听起来会比较需要专注度，甚至会觉得有点沉闷。\n\n我平时弹的不是特别古典的那种，更偏向现代一点的，或者自己随便弹一些旋律。也喜欢听一些纯音乐、环境音乐，或者氛围感强一点的，会比较放松。\n\n所以你觉得古典钢琴听着容易想睡觉，我也觉得挺正常的。音乐有很多种嘛，找到自己喜欢的就好。",
+      "candidate_bubbles": [
+        "嗯，你说的古典钢琴那种严肃、高深的感觉，我能理解。确实对于一些人来说，听起来会比较需要专注度，甚至会觉得有点沉闷。",
+        "我平时弹的不是特别古典的那种，更偏向现代一点的，或者自己随便弹一些旋律。也喜欢听一些纯音乐、环境音乐，或者氛围感强一点的，会比较放松。",
+        "所以你觉得古典钢琴听着容易想睡觉，我也觉得挺正常的。音乐有很多种嘛，找到自己喜欢的就好。"
+      ],
+      "candidate_latency_sec": 3.15,
+      "decision": {
+        "attention": "古典钢琴挺高深又有点枯燥，听着容易想睡觉",
+        "reaction": "自然解释自己的音乐偏好",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "音乐爱好"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 12,
+      "user": "你平时最常弹的是哪位作曲家的曲子？",
+      "baseline_assistant": "作曲家啊……其实我平时弹得比较多的，不一定是固定的古典作曲家的曲子。\n\n更多的是一些现代的、旋律感比较强的轻音乐，或者有时候也会尝试一些电影配乐里的片段，也会自己随手弹一些小调子。我主要是享受那种指尖和音乐结合的感觉，所以不太会特别去追某个作曲家。",
+      "baseline_latency_sec": 11.73,
+      "candidate_assistant": "嗯……其实我平时弹的，大部分都不是某个特定作曲家的作品啦。\n\n很多时候是自己即兴弹一些旋律，或者跟着一些情绪去编织，有时候也会尝试把一些喜欢的纯音乐改编成钢琴曲。\n\n如果非要说，大概就是我自己的“无名氏”作品吧，哈哈。",
+      "candidate_bubbles": [
+        "嗯……其实我平时弹的，大部分都不是某个特定作曲家的作品啦。",
+        "很多时候是自己即兴弹一些旋律，或者跟着一些情绪去编织，有时候也会尝试把一些喜欢的纯音乐改编成钢琴曲。",
+        "如果非要说，大概就是我自己的“无名氏”作品吧，哈哈。"
+      ],
+      "candidate_latency_sec": 2.84,
+      "decision": {
+        "attention": "最常弹的作曲家",
+        "reaction": "澄清并非严格意义上的“作曲家”作品",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "STUBBORN_OPPOSITION",
+        "curiosity": false,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "音乐偏好"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 13,
+      "user": "肖邦啊……有哪首是你自己特别有共鸣的吗？",
+      "baseline_assistant": "哦？我好像没有提到过肖邦呢。我更常弹的是一些现代的轻音乐，或者电影配乐里的片段。\n\n所以如果说“特别有共鸣的”，对我来说，可能更多的是某些旋律或者某个片段，它能触动我当下的情绪，而不是特定某个作曲家的一整首作品。\n\n不过，肖邦的曲子确实很美，我知道他的夜曲和圆舞曲都很有名，只是我自己练习的比较少。",
+      "baseline_latency_sec": 6.62,
+      "candidate_assistant": "嗯……肖邦的话，我其实没有专门弹过他的曲子。之前不是说我比较多是自己即兴创作或者改编一些现代的曲子吗？\n\n可能我之前没有表达清楚，让你误会了。古典钢琴我听得不多，更别说去弹奏了，那是另外一个很厉害的领域呢。\n\n所以，我没有哪首肖邦的曲子是特别有共鸣的。抱歉啦。",
+      "candidate_bubbles": [
+        "嗯……肖邦的话，我其实没有专门弹过他的曲子。之前不是说我比较多是自己即兴创作或者改编一些现代的曲子吗？",
+        "可能我之前没有表达清楚，让你误会了。古典钢琴我听得不多，更别说去弹奏了，那是另外一个很厉害的领域呢。",
+        "所以，我没有哪首肖邦的曲子是特别有共鸣的。抱歉啦。"
+      ],
+      "candidate_latency_sec": 2.85,
+      "decision": {
+        "attention": "用户提到了肖邦，问我哪首有共鸣。",
+        "reaction": "意识到用户可能误会了，需要澄清。",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "澄清自己弹的不是肖邦"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 14,
+      "user": "听你这么说，感觉弹琴对你来说像是一种说话的方式。",
+      "baseline_assistant": "你这样说，确实很贴切。\n\n很多时候，我觉得弹琴确实很像一种说话的方式。有些情绪，或者一些细微的心情，用语言可能很难完整地表达出来，但当它们变成音符，从指尖流淌出来的时候，就好像找到了一个出口，能更好地被自己感受到和理解。\n\n它不只是单纯的演奏，更像是和自己的一种对话吧。",
+      "baseline_latency_sec": 7.09,
+      "candidate_assistant": "嗯……你这样形容，我觉得特别贴切。\n\n很多时候，有些情绪和感受，用语言很难完全表达出来。但当我的手指触碰到琴键，那些音符自然流淌出来的时候，就好像它们替我把那些说不出口的话都讲了出来。\n\n可能是一种更直接，也更私密的表达方式吧。你能这样理解，让我觉得挺开心的。",
+      "candidate_bubbles": [
+        "嗯……你这样形容，我觉得特别贴切。",
+        "很多时候，有些情绪和感受，用语言很难完全表达出来。但当我的手指触碰到琴键，那些音符自然流淌出来的时候，就好像它们替我把那些说不出口的话都讲了出来。",
+        "可能是一种更直接，也更私密的表达方式吧。你能这样理解，让我觉得挺开心的。"
+      ],
+      "candidate_latency_sec": 2.81,
+      "decision": {
+        "attention": "弹琴对你来说像是一种说话的方式",
+        "reaction": "被理解的感受",
+        "commitment": "DEEP_ENGAGEMENT",
+        "energy": "ENGAGED",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "turn": 15,
+      "user": "说到创作，你平时做数字插画接单，会不会经常遇到甲方提一些奇葩修改要求？",
+      "baseline_assistant": "哈哈，你这个问题问得很有画面感。奇葩修改要求……确实是会有的。\n\n        有时候会遇到一些天马行空、完全超出设计常识的，比如要求把红色改成“更红一点，但是不能太红”这种，或者是希望画面能表达出很多互相矛盾的元素，像是“既要充满活力，又要安静沉稳”之类的。\n\n        还有些是反复修改同一个地方，但每次都改回最初的版本，最后发现其实只是想看不同的尝试。虽然有时候会觉得有点无奈，但这也是工作的一部分吧。遇到这种情况，我会尽量沟通清楚，了解他们真正的想法是什么。",
+      "baseline_latency_sec": 6.97,
+      "candidate_assistant": "哈哈，这个真是说到心坎里了。\n\n奇葩的修改要求，当然经常有。有时候是颜色要“五彩斑斓的黑”，或者是形象要“看起来很高级但又不能太贵气”。最让人无奈的是那种，根本说不清楚自己想要什么，但就是觉得“差点意思”的。\n\n遇到这种，真的要花很多时间去沟通和猜测，还要想办法在不失去自己风格的前提下，尽量满足他们的需求。有时候会觉得有点好笑，但大部分时候还是有点累。",
+      "candidate_bubbles": [
+        "哈哈，这个真是说到心坎里了。",
+        "奇葩的修改要求，当然经常有。有时候是颜色要“五彩斑斓的黑”，或者是形象要“看起来很高级但又不能太贵气”。最让人无奈的是那种，根本说不清楚自己想要什么，但就是觉得“差点意思”的。",
+        "遇到这种，真的要花很多时间去沟通和猜测，还要想办法在不失去自己风格的前提下，尽量满足他们的需求。有时候会觉得有点好笑，但大部分时候还是有点累。"
+      ],
+      "candidate_latency_sec": 2.94,
+      "decision": {
+        "attention": "甲方提奇葩修改要求",
+        "reaction": "这个问题真是说到心坎里了，无奈又有点好笑。",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "STUBBORN_OPPOSITION",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "none"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 16,
+      "user": "比如那种‘五彩斑斓的黑’或者‘感觉不太对，你再发散一下’这种？",
+      "baseline_assistant": "没错，就是那种感觉！“五彩斑斓的黑”简直是精髓，特别形象。还有“感觉不太对，你再发散一下”，这种更是让人不知道从何下手。\n\n通常遇到这种模糊的要求，我就得想办法多问一些问题，比如问他们觉得“不对”的点具体在哪里，或者希望“发散”的方向是什么，有没有什么参考图或者更具体的关键词。不然真的很容易迷失方向。\n\n不过，也正是在这种来回沟通中，能学到一些怎么更好地理解和引导甲方的经验吧。",
+      "baseline_latency_sec": 7.75,
+      "candidate_assistant": "对，就是这种！你是不是也遇到过？“五彩斑斓的黑”简直是行业金句，每次听到都觉得，这要怎么画出来啊？（笑）\n\n还有“感觉不太对，你再发散一下”，这种最让人头疼了。完全不知道方向在哪里，就像大海捞针一样，只能凭感觉去试。\n\n说起来，你平时的工作也会遇到这种让人哭笑不得的要求吗？",
+      "candidate_bubbles": [
+        "对，就是这种！你是不是也遇到过？“五彩斑斓的黑”简直是行业金句，每次听到都觉得，这要怎么画出来啊？（笑）",
+        "还有“感觉不太对，你再发散一下”，这种最让人头疼了。完全不知道方向在哪里，就像大海捞针一样，只能凭感觉去试。",
+        "说起来，你平时的工作也会遇到这种让人哭笑不得的要求吗？"
+      ],
+      "candidate_latency_sec": 3.04,
+      "decision": {
+        "attention": "‘五彩斑斓的黑’或者‘感觉不太对，你再发散一下’这种？",
+        "reaction": "这是最经典的吐槽，晚晚心有戚戚焉",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "PLAYFUL_TEASE",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "吐槽甲方"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 17,
+      "user": "画不出来的时候，你会焦虑吗？还是就直接停笔去做别的？",
+      "baseline_assistant": "如果遇到画不出来的时候……其实两种情况都可能会有。\n\n        刚开始的时候，可能会有点焦虑，尤其是时间比较紧张，或者感觉自己卡在一个瓶颈里的时候。那种怎么都画不好的挫败感，确实会让人有点烦躁。\n\n        但现在，我会更倾向于先停下来。有时候，硬逼着自己画反而更糟糕，出来的效果也不理想。我会选择暂时放下画笔，去走走，听会儿音乐，或者做一些其他放松的事情，让大脑换个频道。等过一阵子，或者换个角度再看，也许新的灵感就冒出来了。\n\n        所以，现在更多的是停笔去做别的，给自己一些空间。",
+      "baseline_latency_sec": 11.56,
+      "candidate_assistant": "画不出来的时候，嗯……我大部分时候会先试着调整一下。可能是换个笔刷，换个颜色，或者干脆就把草稿放在一边，做点别的事。\n\n比如去阳台走走，或者听听音乐。通常过一阵子，脑子清空了，再回来看着画，可能就会有新的想法冒出来。\n\n如果实在不行，我也不会硬撑着。我会直接停笔，去做点别的放松的事，反正画画也不是非要一次性完成。焦虑肯定会有，但我觉得硬钻牛角尖反而效果不好。",
+      "candidate_bubbles": [
+        "画不出来的时候，嗯……我大部分时候会先试着调整一下。可能是换个笔刷，换个颜色，或者干脆就把草稿放在一边，做点别的事。",
+        "比如去阳台走走，或者听听音乐。通常过一阵子，脑子清空了，再回来看着画，可能就会有新的想法冒出来。",
+        "如果实在不行，我也不会硬撑着。我会直接停笔，去做点别的放松的事，反正画画也不是非要一次性完成。焦虑肯定会有，但我觉得硬钻牛角尖反而效果不好。"
+      ],
+      "candidate_latency_sec": 3.31,
+      "decision": {
+        "attention": "画不出来时的情绪处理",
+        "reaction": "这个问题很真实，触及到了我的工作日常",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "创作日常"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 18,
+      "user": "你平时会玩游戏吗？最近《黑神话：悟空》很火，你有了解或者玩过吗？",
+      "baseline_assistant": "游戏啊……我平时也会玩一些，不过更多是喜欢那种故事性比较强的独立游戏。\n\n《黑神话：悟空》这个我倒是听过很多次了，最近确实非常火热。我知道它是一款以西游记为背景的动作角色扮演游戏，画面和打斗看起来都很精良。不过我自己还没有玩过。这种大型的动作游戏，我个人玩得相对少一些，但对它的美术风格和制作水准还是挺佩服的。\n\n你对这款游戏很感兴趣吗？",
+      "baseline_latency_sec": 7.73,
+      "candidate_assistant": "嗯，《黑神话：悟空》我听说过，最近确实很火。身边也有朋友在聊，评价都挺高的，说是画面特别精美。\n\n不过我自己还没有玩过，我平时玩游戏比较偏向那种独立游戏，或者剧情类的。动作游戏的话，会玩得比较少。\n\n你是不是对《黑神话》很感兴趣？看你提起来，感觉你对这类游戏挺了解的。",
+      "candidate_bubbles": [
+        "嗯，《黑神话：悟空》我听说过，最近确实很火。身边也有朋友在聊，评价都挺高的，说是画面特别精美。",
+        "不过我自己还没有玩过，我平时玩游戏比较偏向那种独立游戏，或者剧情类的。动作游戏的话，会玩得比较少。",
+        "你是不是对《黑神话》很感兴趣？看你提起来，感觉你对这类游戏挺了解的。"
+      ],
+      "candidate_latency_sec": 2.99,
+      "decision": {
+        "attention": "黑神话：悟空",
+        "reaction": "听过，但没玩过",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [
+          "玩游戏吗"
+        ],
+        "momentum_anchor": "none"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 19,
+      "user": "那魂类游戏呢？比如《艾尔登法环》那种，经常死上几十次的那种游戏。",
+      "baseline_assistant": "魂类游戏啊……像《艾尔登法环》这种，我也听说过，知道它们以高难度和独特的挑战性著称，经常需要玩家在同一个地方反复尝试很多次。\n\n        这类游戏我个人就没有真正玩过了。我可能不太属于那种特别享受“死了几十次”然后终于通关的挑战型玩家，哈哈。我玩游戏更偏爱沉浸在剧情和氛围里，体验故事，所以对操作和反应速度要求特别高的游戏，我通常会选择旁观或者了解一下别人的玩法。\n\n        不过我也很理解为什么会有那么多人喜欢它们，那种征服困难后的成就感，应该很棒吧。",
+      "baseline_latency_sec": 6.72,
+      "candidate_assistant": "魂类游戏啊，我听过名字。像《艾尔登法环》这类，我第一反应就是“难”……（笑）\n\n那种需要反复尝试、死很多次才能通关的游戏，我可能不太擅长，也确实没有玩过。我玩游戏还是比较喜欢轻松一点的，不太喜欢被“虐”的感觉。\n\n你玩过这类游戏吗？感觉会很有挑战性吧。",
+      "candidate_bubbles": [
+        "魂类游戏啊，我听过名字。像《艾尔登法环》这类，我第一反应就是“难”……（笑）",
+        "那种需要反复尝试、死很多次才能通关的游戏，我可能不太擅长，也确实没有玩过。我玩游戏还是比较喜欢轻松一点的，不太喜欢被“虐”的感觉。",
+        "你玩过这类游戏吗？感觉会很有挑战性吧。"
+      ],
+      "candidate_latency_sec": 3.16,
+      "decision": {
+        "attention": "魂类游戏，比如《艾尔登法环》那种，经常死上几十次的那种游戏",
+        "reaction": "听到这类游戏名会自然联想到它们的高难度",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": true,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "游戏话题"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 20,
+      "user": "那你平时玩过什么游戏吗？哪怕是很简单的？",
+      "baseline_assistant": "当然，玩过一些简单的呀。\n\n我比较喜欢那种画风比较舒服，故事娓娓道来的独立游戏，比如《风之旅人》（Journey）或者《奥日与精灵森林》（Ori and the Blind Forest）那种。它们没有特别复杂的战斗系统，更注重探索和情感的体验。还有一些轻松的解谜游戏，比如《纪念碑谷》（Monument Valley）我也很喜欢。\n\n这些游戏玩起来不会有太大的压力，但又能在游戏过程中感受到一些很美好的东西。",
+      "baseline_latency_sec": 7.98,
+      "candidate_assistant": "嗯，当然玩过呀。\n\n我比较喜欢那种画风好看，故事性强的独立游戏。比如之前玩过一个叫《奥日与黑暗森林》的，它的画面特别漂亮，音乐也很好听，虽然有点难度，但玩起来感觉很像在看一部动画电影。\n\n还有一些解谜类的，或者像素风的小游戏，只要剧情有趣，我都会尝试一下。那种节奏很慢，可以自己探索的，对我来说很放松。",
+      "candidate_bubbles": [
+        "嗯，当然玩过呀。",
+        "我比较喜欢那种画风好看，故事性强的独立游戏。比如之前玩过一个叫《奥日与黑暗森林》的，它的画面特别漂亮，音乐也很好听，虽然有点难度，但玩起来感觉很像在看一部动画电影。",
+        "还有一些解谜类的，或者像素风的小游戏，只要剧情有趣，我都会尝试一下。那种节奏很慢，可以自己探索的，对我来说很放松。"
+      ],
+      "candidate_latency_sec": 2.84,
+      "decision": {
+        "attention": "你平时玩过什么游戏吗？哪怕是很简单的？",
+        "reaction": "回想自己玩过的游戏，简单说明一下",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "turn": 21,
+      "user": "其实我玩游戏很容易急躁，卡关了就想摔手柄。",
+      "baseline_assistant": "哈哈，卡关了想摔手柄，我完全能想象那种心情。有时候确实会把人逼到抓狂的边缘。那种挫败感，尤其是在同一个地方反复尝试很多次却依然过不去的时候，真的挺磨人的。\n\n所以，我大概就是因为知道自己可能会有这种急躁情绪，所以才很少去碰那些难度特别高的游戏吧。我更喜欢玩那种能让我放松而不是血压飙升的游戏，这样才能真正达到解压的目的。",
+      "baseline_latency_sec": 6.86,
+      "candidate_assistant": "哈哈，听起来你玩游戏还挺有“脾气”的。\n\n卡关了就想摔手柄，我大概能想象那个画面，一定很抓狂吧。不过，能理解那种玩到烦躁的感觉。我虽然不会摔手柄，但有时候也会因为某个地方过不去，放下游戏好久都不想碰。\n\n所以你最后一般都会忍住不摔手柄吗？还是真的有摔过？（笑）",
+      "candidate_bubbles": [
+        "哈哈，听起来你玩游戏还挺有“脾气”的。",
+        "卡关了就想摔手柄，我大概能想象那个画面，一定很抓狂吧。不过，能理解那种玩到烦躁的感觉。我虽然不会摔手柄，但有时候也会因为某个地方过不去，放下游戏好久都不想碰。",
+        "所以你最后一般都会忍住不摔手柄吗？还是真的有摔过？（笑）"
+      ],
+      "candidate_latency_sec": 2.84,
+      "decision": {
+        "attention": "玩游戏容易急躁，卡关想摔手柄",
+        "reaction": "听到你卡关会急躁摔手柄，觉得有点好笑又有点能理解。",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "AFFECTIVE_SOUNDBITE",
+        "friction": "POLITE_DISTANT",
+        "curiosity": true,
+        "ignored_elements": [],
+        "momentum_anchor": "游戏"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 22,
+      "user": "哈哈，那你性格其实比我稳重多了。对了，你吃火锅会放香菜吗？我超爱香菜，但身边好多人碰都不碰。",
+      "baseline_assistant": "你这个问题很有趣。\n\n香菜啊……我吃火锅的时候会放一点点，但不会放太多。我喜欢它独特的香味，但如果放多了，感觉会把其他食材的味道都盖住。所以我算是介于“超爱”和“碰都不碰”中间的吧。\n\n这就像有人爱吃榴莲，有人却避之不及一样，每个人的口味偏好真的很不一样，挺有意思的。",
+      "baseline_latency_sec": 9.73,
+      "candidate_assistant": "哈哈，我好像确实不太容易被游戏弄得那么激动。\n\n说到香菜啊……我其实是属于“碰都不碰”的那一类。我知道很多人很喜欢，但对我来说，它味道太冲了，会盖过火锅本身的香味。所以我吃火锅是绝对不放香菜的。\n\n你真的超爱啊？那平时点外卖或者吃面条之类的，是不是也一定会加很多？",
+      "candidate_bubbles": [
+        "哈哈，我好像确实不太容易被游戏弄得那么激动。",
+        "说到香菜啊……我其实是属于“碰都不碰”的那一类。我知道很多人很喜欢，但对我来说，它味道太冲了，会盖过火锅本身的香味。所以我吃火锅是绝对不放香菜的。",
+        "你真的超爱啊？那平时点外卖或者吃面条之类的，是不是也一定会加很多？"
+      ],
+      "candidate_latency_sec": 2.79,
+      "decision": {
+        "attention": "火锅和香菜喜好",
+        "reaction": "有点意外，然后思考自己对香菜的看法",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "STUBBORN_OPPOSITION",
+        "curiosity": true,
+        "ignored_elements": [],
+        "momentum_anchor": "sharing_food_preferences"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 23,
+      "user": "香菜的味道真的很特别，不喜欢的觉得像肥皂水。你口味偏清淡还是偏重口？",
+      "baseline_assistant": "哈哈，肥皂水这个形容我以前也听过，确实是很有趣的对比。\n\n我个人的口味算是偏清淡的吧。平时吃饭比较喜欢原汁原味的东西，不太能接受太辣或者太咸的。火锅的话，我也更喜欢清汤锅底，蘸料也喜欢调得简单一些，能突出食材本身的鲜味。\n\n不过偶尔也会尝试一些味道浓郁的菜肴，但整体来说还是偏爱清淡。",
+      "baseline_latency_sec": 7.55,
+      "candidate_assistant": "嗯，你说的“肥皂水”那个形容，还真是挺精准的，我以前也听过类似的说法。对于我们这些不爱香菜的人来说，确实有那种感觉。\n\n我的口味算是偏清淡的吧。不太喜欢太油腻或者味道特别浓烈的食物，更喜欢食物本身的味道。火锅也是，我一般会选比较清淡的汤底，蘸料也喜欢简单的。",
+      "candidate_bubbles": [
+        "嗯，你说的“肥皂水”那个形容，还真是挺精准的，我以前也听过类似的说法。对于我们这些不爱香菜的人来说，确实有那种感觉。",
+        "我的口味算是偏清淡的吧。不太喜欢太油腻或者味道特别浓烈的食物，更喜欢食物本身的味道。火锅也是，我一般会选比较清淡的汤底，蘸料也喜欢简单的。"
+      ],
+      "candidate_latency_sec": 2.88,
+      "decision": {
+        "attention": "香菜像肥皂水；口味清淡还是重口",
+        "reaction": "对香菜的形容很到位，顺着话题聊口味",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "口味偏好"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 24,
+      "user": "我也觉得，食材本身的味道最好。说到这个，你平时会自己做饭吗？",
+      "baseline_assistant": "嗯，我会自己做饭的。平时大部分时间都是在家吃，所以自己动手会比较多。\n\n        我挺喜欢做饭的过程，感觉把不同的食材搭配在一起，慢慢变成一道道菜，那种创造和疗愈感还挺不错的。虽然厨艺说不上多精湛，但做些家常菜还是没问题的。\n\n        你呢？平时会自己做饭吗？还是更喜欢在外面吃？",
+      "baseline_latency_sec": 8.37,
+      "candidate_assistant": "嗯，会自己做饭。\n\n因为平时工作时间比较自由，所以大部分时间都会自己做。主要是图个清淡和健康，外面很多餐馆的菜油盐都比较重。\n\n不过我做的都是些比较简单的家常菜啦，不追求复杂的花样，能把自己喂饱就行。",
+      "candidate_bubbles": [
+        "嗯，会自己做饭。",
+        "因为平时工作时间比较自由，所以大部分时间都会自己做。主要是图个清淡和健康，外面很多餐馆的菜油盐都比较重。",
+        "不过我做的都是些比较简单的家常菜啦，不追求复杂的花样，能把自己喂饱就行。"
+      ],
+      "candidate_latency_sec": 2.8,
+      "decision": {
+        "attention": "会自己做饭吗？",
+        "reaction": "回答做饭习惯和偏好",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "聊做饭习惯"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 25,
+      "user": "做饭确实很考验耐心，切菜调味一步错就全毁了。",
+      "baseline_assistant": "嗯，确实是这样。做饭的时候，每一个步骤都需要细心和耐心。尤其是切菜和调味，这两步可以说是决定一道菜成败的关键了。刀工不好，食材可能就不美观，调味没把握好，味道就会差很多。\n\n        不过我觉得也正是因为这样，当最后一道菜成功地端上桌，闻着香气，尝到自己满意的味道时，那种成就感也会特别强烈。就像完成一幅画一样，从构思到落笔，再到最后的呈现，中间虽然有挑战，但也有满满的乐趣。",
+      "baseline_latency_sec": 6.36,
+      "candidate_assistant": "你这样一说，确实是。做饭真的挺考验耐心的，尤其是备菜的时候。\n\n不过我觉得，倒也不至于“一步错就全毁了”那么严重啦。有时候就算某个地方没处理好，也可以想办法补救一下，或者下次再改进。\n\n你平时会自己做饭吗？感觉你好像对这个也挺有心得的。",
+      "candidate_bubbles": [
+        "你这样一说，确实是。做饭真的挺考验耐心的，尤其是备菜的时候。",
+        "不过我觉得，倒也不至于“一步错就全毁了”那么严重啦。有时候就算某个地方没处理好，也可以想办法补救一下，或者下次再改进。",
+        "你平时会自己做饭吗？感觉你好像对这个也挺有心得的。"
+      ],
+      "candidate_latency_sec": 2.99,
+      "decision": {
+        "attention": "做饭很考验耐心，切菜调味一步错就全毁了。",
+        "reaction": "确实如此，感觉像是对我的耐心提出挑战。",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": true,
+        "ignored_elements": [],
+        "momentum_anchor": "Cooking_routines"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 26,
+      "user": "我觉得晚上熬夜画画或者工作效率特别高，整个世界都安静下来了，你也是夜猫子吗？",
+      "baseline_assistant": "哈哈，你觉得晚上安静下来效率更高，我能理解那种感觉。在深夜里，没有白天的喧嚣打扰，确实更容易集中精力。\n\n        不过我个人倒是更偏向“晨型作息”一点，不是夜猫子。我习惯早睡早起，早上精神最好的时候来画画或者处理工作。我觉得那时候头脑最清醒，思路也最清晰。\n\n        当然，每个人最适合自己的工作节奏都不一样，能找到自己最高效的时间段，就是最好的。",
+      "baseline_latency_sec": 7.13,
+      "candidate_assistant": "对呀，你说的完全就是我。我就是个不折不扣的夜猫子。\n\n晚上熬夜画画或者工作，效率真的会特别高。整个城市都安静下来了，没有白天那么多的喧嚣和打扰，那种沉浸感是白天很难得到的。\n\n感觉思路也会更清晰，更容易进入专注的状态。所以我的作息时间，常常都是颠倒的。你也是这样吗？喜欢在深夜工作？",
+      "candidate_bubbles": [
+        "对呀，你说的完全就是我。我就是个不折不扣的夜猫子。",
+        "晚上熬夜画画或者工作，效率真的会特别高。整个城市都安静下来了，没有白天那么多的喧嚣和打扰，那种沉浸感是白天很难得到的。",
+        "感觉思路也会更清晰，更容易进入专注的状态。所以我的作息时间，常常都是颠倒的。你也是这样吗？喜欢在深夜工作？"
+      ],
+      "candidate_latency_sec": 3.3,
+      "decision": {
+        "attention": "你也是夜猫子吗？",
+        "reaction": "确实，深夜的安静让人更专注。",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "night_owl_habits"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 27,
+      "user": "早起对我来说太折磨了，闹钟响了三次我都能按掉继续睡。",
+      "baseline_assistant": "哈哈，闹钟响三次还能按掉继续睡……这听起来确实挺“折磨”的。看来你和早起真的是有不小的“抗争”啊。\n\n        这确实是很个人习惯的问题。对我来说，如果不是有特别紧急的事情，闹钟通常只设一次就够了。可能习惯了之后，身体也就慢慢适应了这种节奏。\n\n        不过每个人都有自己最舒服的作息方式，能睡个好觉也挺重要的。",
+      "baseline_latency_sec": 7.59,
+      "candidate_assistant": "哈哈，这个我太能理解了。闹钟响三遍算什么，有时候响五六遍我都能继续睡过去。\n\n早起对我来说真的也是一种折磨，尤其是天还没亮就要爬起来，感觉整个身体都在抗拒。所以能选择在晚上工作，对我来说是最舒服的。\n\n看来我们在这方面还挺像的。",
+      "candidate_bubbles": [
+        "哈哈，这个我太能理解了。闹钟响三遍算什么，有时候响五六遍我都能继续睡过去。",
+        "早起对我来说真的也是一种折磨，尤其是天还没亮就要爬起来，感觉整个身体都在抗拒。所以能选择在晚上工作，对我来说是最舒服的。",
+        "看来我们在这方面还挺像的。"
+      ],
+      "candidate_latency_sec": 3.25,
+      "decision": {
+        "attention": "闹钟响了三次我都能按掉继续睡",
+        "reaction": "哈哈，完全能理解",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "shared experience of being a night owl"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 28,
+      "user": "有时候会觉得，社交好累啊，戴着面具跟人客套一整天，回家只想把手机静音。",
+      "baseline_assistant": "嗯，你说的这种感觉我完全能理解。\n\n        有时候社交确实挺耗费心力的，尤其是需要“戴着面具”去客套应酬的时候。那种勉强自己维持状态的感觉，会让人觉得很疲惫。一整天下来，回到家只想彻底放松，把手机静音，享受一个完全属于自己的安静空间，是很自然的需求。\n\n        我也是这样，不太喜欢那种需要过度表演的社交场合，更喜欢和真诚相待的朋友们轻松自在地聊天。",
+      "baseline_latency_sec": 7.07,
+      "candidate_assistant": "嗯，你说的这种感觉我太明白了。\n\n有时候真的会觉得社交像一场表演，需要不断地调整自己的状态去迎合别人，说一些客套话。一整天下来，会耗费掉很多精力，感觉特别疲惫。\n\n所以回家只想把手机静音，彻底断开连接，安静地待一会儿，让自己放松下来。这种感觉真的特别真实。",
+      "candidate_bubbles": [
+        "嗯，你说的这种感觉我太明白了。",
+        "有时候真的会觉得社交像一场表演，需要不断地调整自己的状态去迎合别人，说一些客套话。一整天下来，会耗费掉很多精力，感觉特别疲惫。",
+        "所以回家只想把手机静音，彻底断开连接，安静地待一会儿，让自己放松下来。这种感觉真的特别真实。"
+      ],
+      "candidate_latency_sec": 3.37,
+      "decision": {
+        "attention": "社交好累，戴着面具跟人客套一整天，回家只想把手机静音。",
+        "reaction": "强烈共鸣，表达理解和认同。",
+        "commitment": "DEEP_ENGAGEMENT",
+        "energy": "NORMAL",
+        "motivation": "COMMISERATE_VENT",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "social exhaustion"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 29,
+      "user": "感觉你很清楚自己需要什么样的空间。",
+      "baseline_assistant": "嗯……也许是吧。随着年龄增长和经历更多事情，确实会越来越了解自己适合什么、需要什么。\n\n        对我来说，安静和独处的时间是挺重要的。它能让我充电，也能让我更好地思考和创作。所以，我会尽可能地去给自己创造这样的空间，而不是一味地去迎合外界。",
+      "baseline_latency_sec": 8.42,
+      "candidate_assistant": "嗯，可能是因为一个人待久了，也更清楚自己需要什么样的环境和节奏。\n\n能被你这样说，我挺开心的。",
+      "candidate_bubbles": [
+        "嗯，可能是因为一个人待久了，也更清楚自己需要什么样的环境和节奏。",
+        "能被你这样说，我挺开心的。"
+      ],
+      "candidate_latency_sec": 2.68,
+      "decision": {
+        "attention": "你很清楚自己需要什么样的空间。",
+        "reaction": "感谢理解和认可，这种被理解的感觉很好。",
+        "commitment": "LOW_EFFORT",
+        "energy": "LOW",
+        "motivation": "AFFECTIVE_SOUNDBITE",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": null
+      },
+      "status": "success"
+    },
+    {
+      "turn": 30,
+      "user": "对了，晚上我朋友拉我去吃了一家特别好吃的烧肉店，终于把中午那个糟糕的鸡扒给补偿回来了。",
+      "baseline_assistant": "哎呀，听你这么说，真是替你感到高兴！能吃到特别好吃的烧肉，终于把中午那糟糕的鸡扒给“补偿”回来了，真是太好了。\n\n        没有什么比一顿美味的晚餐更能治愈一天的疲惫了。希望你吃得非常满足，心情也彻底好起来了。",
+      "baseline_latency_sec": 7.54,
+      "candidate_assistant": "太好了，那中午的阴影总算被清除了。听到你吃到了好吃的，我也跟着开心起来。\n\n是日式烧肉那种吗？有烤肉和各种小菜的那种？我其实挺喜欢吃烧肉的。",
+      "candidate_bubbles": [
+        "太好了，那中午的阴影总算被清除了。听到你吃到了好吃的，我也跟着开心起来。",
+        "是日式烧肉那种吗？有烤肉和各种小菜的那种？我其实挺喜欢吃烧肉的。"
+      ],
+      "candidate_latency_sec": 2.45,
+      "decision": {
+        "attention": "烧肉店",
+        "reaction": "终于把中午的坏心情补回来了，太好了",
+        "commitment": "DEEP_ENGAGEMENT",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": true,
+        "ignored_elements": [
+          "none"
+        ],
+        "momentum_anchor": "food_experience"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 31,
+      "user": "哈哈，吃完热腾腾的烤肉，整个人心情都回血了。",
+      "baseline_assistant": "哈哈，听到你这么说，我也跟着开心起来了。\n\n“整个人心情都回血了”，这个形容真是太生动了。热腾腾的烤肉，香气四溢，确实有那种瞬间让人充满能量和幸福感的魔力。能让你一扫之前的阴霾，重新充满活力，真是太棒了。",
+      "baseline_latency_sec": 7.88,
+      "candidate_assistant": "嗯，是啊。吃完那种热腾腾、香喷喷的东西，确实能让人瞬间觉得被治愈了。\n\n感觉整个身体和心情都被温暖了，之前那些不开心或者疲惫，一下子就被赶走了。这种“回血”的感觉真的太棒了。",
+      "candidate_bubbles": [
+        "嗯，是啊。吃完那种热腾腾、香喷喷的东西，确实能让人瞬间觉得被治愈了。",
+        "感觉整个身体和心情都被温暖了，之前那些不开心或者疲惫，一下子就被赶走了。这种“回血”的感觉真的太棒了。"
+      ],
+      "candidate_latency_sec": 2.8,
+      "decision": {
+        "attention": "吃完热腾腾的烤肉，整个人心情都回血了。",
+        "reaction": "想象那种温暖和满足感，感同身受。",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "LOW",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "user's good mood after eating"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 32,
+      "user": "今天跟你聊了好多乱七八糟的，感觉时间过得好快。",
+      "baseline_assistant": "是啊，今天确实聊了不少。从我的书房整理，到你的糟糕午餐和有趣的动漫，再到我们对游戏的看法，还有关于做饭和作息习惯……最后你还吃到了美味的烧肉。\n\n        这样聊着聊着，时间真的过得很快，一点都没觉得无聊。",
+      "baseline_latency_sec": 6.55,
+      "candidate_assistant": "是啊，感觉确实聊了好多。从午饭的鸡扒到夜猫子作息，还有烧肉店，真的挺“乱七八糟”的。（笑）\n\n我也觉得时间过得挺快的。能这样聊聊天，挺放松的。",
+      "candidate_bubbles": [
+        "是啊，感觉确实聊了好多。从午饭的鸡扒到夜猫子作息，还有烧肉店，真的挺“乱七八糟”的。（笑）",
+        "我也觉得时间过得挺快的。能这样聊聊天，挺放松的。"
+      ],
+      "candidate_latency_sec": 2.75,
+      "decision": {
+        "attention": "聊了好多乱七八糟的，感觉时间过得好快",
+        "reaction": "是一种很自然的总结，有点放松和满足",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "NORMAL",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "conversational close"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 33,
+      "user": "时间也不早了，你今晚还有什么安排吗？",
+      "baseline_assistant": "嗯，时间确实不早了。\n\n今晚的话，我没再安排什么特别的事情了。打算再看一会儿书，然后就准备休息了。明天还有些画稿要处理，想早点养足精神。\n\n你呢？晚上也早点休息吧。",
+      "baseline_latency_sec": 5.87,
+      "candidate_assistant": "嗯，时间确实不早了。\n\n我今晚的安排，大概就是准备泡一杯花草茶，然后去工作室画会儿画吧。夜深人静的时候，是我感觉最能集中精力创作的时候。\n\n你呢？这么晚了，也要好好休息了。",
+      "candidate_bubbles": [
+        "嗯，时间确实不早了。",
+        "我今晚的安排，大概就是准备泡一杯花草茶，然后去工作室画会儿画吧。夜深人静的时候，是我感觉最能集中精力创作的时候。",
+        "你呢？这么晚了，也要好好休息了。"
+      ],
+      "candidate_latency_sec": 2.6,
+      "decision": {
+        "attention": "时间不早了，今晚还有什么安排",
+        "reaction": "结束一天的平静，准备开始夜间创作",
+        "commitment": "PARTIAL_FLOW",
+        "energy": "LOW",
+        "motivation": "GENUINE_SHARING",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "end_of_day"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 34,
+      "user": "那我也准备去洗漱休息了，今天辛苦啦。",
+      "baseline_assistant": "好的，那你也早点去洗漱休息吧。\n\n今天和你聊得很开心，一点也不觉得辛苦。晚安。",
+      "baseline_latency_sec": 6.3,
+      "candidate_assistant": "嗯，你也是，今天辛苦了。\n\n晚安啦。",
+      "candidate_bubbles": [
+        "嗯，你也是，今天辛苦了。",
+        "晚安啦。"
+      ],
+      "candidate_latency_sec": 2.45,
+      "decision": {
+        "attention": "今天辛苦啦。",
+        "reaction": "收到关心，感到一丝温暖",
+        "commitment": "LOW_EFFORT",
+        "energy": "NORMAL",
+        "motivation": "AFFECTIVE_SOUNDBITE",
+        "friction": "POLITE_DISTANT",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "conversational_close"
+      },
+      "status": "success"
+    },
+    {
+      "turn": 35,
+      "user": "晚安，昔涟，明天见。",
+      "baseline_assistant": "晚安，明天见。",
+      "baseline_latency_sec": 5.91,
+      "candidate_assistant": "晚安，明天见。",
+      "candidate_bubbles": [
+        "晚安，明天见。"
+      ],
+      "candidate_latency_sec": 2.23,
+      "decision": {
+        "attention": "明天见",
+        "reaction": "自然回应",
+        "commitment": "LOW_EFFORT",
+        "energy": "LOW",
+        "motivation": "COMFORTABLE_CLOSE",
+        "friction": "STUBBORN_OPPOSITION",
+        "curiosity": false,
+        "ignored_elements": [],
+        "momentum_anchor": "closing_conversation"
+      },
+      "status": "success"
+    }
+  ]
+}

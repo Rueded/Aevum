@@ -90,6 +90,7 @@ class DesktopUserSettingsUpdate(BaseModel):
     min_cooldown_minutes: Optional[int] = Field(default=None, ge=5, le=1440)
     idle_awareness_enabled: Optional[bool] = None
     idle_threshold_seconds: Optional[int] = Field(default=None, ge=30, le=3600)
+    user_country: Optional[str] = Field(default=None, description="User cultural locale/country (e.g. 'MY', 'CN', 'SG', 'TW', 'GLOBAL').")
 
     @field_validator("timezone")
     @classmethod

@@ -84,7 +84,8 @@ class ProactiveMessageGenerator:
 
         try:
             raw_response = await self._llm_provider.generate_response(messages)
-            sanitized = self._guard.verify_and_clean(raw_response)
+            raw_text = raw_response.content if hasattr(raw_response, "content") else str(raw_response)
+            sanitized = self._guard.verify_and_clean(raw_text)
             return sanitized
         except Exception as err:
             logger.warning("LLM generation failed for proactive reach-out: %s. Using fallback.", err)

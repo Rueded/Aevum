@@ -362,9 +362,9 @@ class CandidateRepository:
             quarantine_reason=record.quarantine_reason,
             supersedes_id=record.supersedes_id,
             superseded_by_id=record.superseded_by_id,
-            created_at=record.created_at,
-            updated_at=record.updated_at,
-            stale_at=record.stale_at,
+            created_at=record.created_at.replace(tzinfo=timezone.utc) if record.created_at and record.created_at.tzinfo is None else record.created_at,
+            updated_at=record.updated_at.replace(tzinfo=timezone.utc) if record.updated_at and record.updated_at.tzinfo is None else record.updated_at,
+            stale_at=record.stale_at.replace(tzinfo=timezone.utc) if record.stale_at and record.stale_at.tzinfo is None else record.stale_at,
             selection_metadata=meta_dict,
         )
 

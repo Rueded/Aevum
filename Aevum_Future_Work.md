@@ -472,14 +472,14 @@ This Master Ledger tracks capabilities across all 24 functional domains of Proje
 * **Sandboxed Tool Verification Gateway**
   - **Status**: `DEFERRED` (Phase 7D.5 Gateway deferred to preserve near-term stabilization)
 * **Context-Aware World Facts Selection (`WorldFactsSelector`)**
-  - **Status**: `FROZEN` (Phase 7D.5)
-  - **Purpose**: Pure functional lexical relevance selection of objective world facts from `WorldKnowledgeRegistry` (STATIC_FACT and ENTITY_RELATION only) with zero LLM/embedding dependency and deterministic key ordering (max 4 items).
+  - **Status**: `FROZEN` (Phase 7D.6 / ADR-016)
+  - **Purpose**: Pure functional lexical relevance selection of objective world facts from `WorldKnowledgeRegistry` (STATIC_FACT and ENTITY_RELATION only) with zero LLM/embedding dependency, deterministic key ordering (max 4 items), and Pure Structural Boundary Matching: discrete word boundary enforcement for ASCII (`\b{alias}\b`), verbatim substring match for CJK $\ge 3$ characters (without complete lexical boundary guarantee; acknowledged known limitation), and pure structural boundary requirements for CJK $\le 2$ characters (text start/end, whitespace, punctuation, or non-CJK; continuous Hanzi on both sides is conservatively rejected to eliminate false positives like `"道理大家都懂"`, while zero-dictionary structural matches like `"理大的校园很漂亮"` and `"今天在理大，借了一本书"` match cleanly; full continuous-text CJK segmentation is formally deferred).
 
 ### 8.18 Testing & Golden Suites
 * **Golden Suites A, B, C, F, G (Existing Regression Baseline)**
   - **Status**: `FROZEN` (1,157 passing tests)
-* **Golden Suite 7D Core (`GC-058` ~ `GC-140`, 83 Benchmarks across 7D.1–7D.5)**
-  - **Status**: `FROZEN` (Phase 7D.1–7D.5: GC-058~071, GC-072~094, GC-095~115, GC-116~140 all passing; 1,281 backend regression baseline)
+* **Golden Suite 7D Core (`GC-058` ~ `GC-144`, 87 Benchmarks across 7D.1–7D.6)**
+  - **Status**: `FROZEN` (Phase 7D.1–7D.6: GC-058~071, GC-072~094, GC-095~115, GC-116~140, GC-141~144 all passing; 1,286 backend regression baseline, 0 failures, 100% green; 14 Rust tests)
 
 ### 8.19 Security & Privacy
 * **Local-First Privacy & Zero Telemetry Storage**
@@ -551,8 +551,8 @@ This Master Ledger tracks capabilities across all 24 functional domains of Proje
                             │
                             ▼
 ┌────────────────────────────────────────────────────────┐
-│    PHASE 7D.6 SCOPE DEFINITION & INVESTIGATION         │ ◄── CURRENT NEXT ACTION
-│    (WorldFactsSelector CJK policy & 7B.3 retirement)   │
+│     PHASE 7D.6 LEXICAL HARDENING & CONCURRENCY REPAIR  │ ◄── FROZEN
+│   (ADR-016, GC-090 fix, GC-141~144, 1,286 tests green) │
 └───────────────────────────┬────────────────────────────┘
                             │
                             ├─────────────────────────────────────────────┐
@@ -627,7 +627,25 @@ This Master Ledger tracks capabilities across all 24 functional domains of Proje
 | **Phase 7D.2 Choice Engine** | 2026-09-19 | 1,198 Py + 14 Rust | GC-059, GC-066, GC-067, GC-068, Invariants 38–41, Audits 1–3 | CandidateCompetitionService, ChoiceSelectionService, Plausibility != Choice, Decision Margin Δ < 0.10, CONSIDERED_BUT_NOT_SELECTED archiving, SQLite character_choice_records. | Autonomous promotion deferred to 7D.3. |
 | **Phase 7D.3 Reality Repair & Promotion** | 2026-09-19 | 1,226 Py + 14 Rust | GC-072–GC-094, 14 Hard Gates, 5-level Repair, Audits A–N | RealityRepairService (5 levels, zero compensatory biography, zero canonical repair mutation), BiographyPromotionService (14 hard gates, single-slot anti-snowball, AST-verified callsite singularity via PromotionAuthorizationToken, Candidate SUPERSEDED lifecycle transition, CharacterBiographyPromotionRecord persistence, concurrent idempotency verified). | FROZEN. |
 | **Phase 7D.4 Prompt Context Assembly** | 2026-09-20 | 1,247 Py + 14 Rust | GC-095–GC-115 (21 tests), AST enforcement | RealityContextBuilder (pure-read projection, 8 epistemic XML sections), GovernedRealityContext/GovernedRealityItem/RealityItemProvenance typed DTOs, deterministic SHA-256 hashing (timestamps excluded), volatility-aware candidate filtering, presentation budget isolation (MAX=6 ≠ Reality Engine budget), rationale_description fully excluded, malformed provenance fails closed, anti-self-reinforcing speech boundary, AST-verified zero mutation call sites. | FROZEN. |
-| **Phase 7D.5 CharacterEngine Integration** | 2026-09-23 | 1,281 Py + 7 Rust | GC-116–GC-140 (35 tests), ADR-011–ADR-015 | RealityOrchestrationService (full A→J per-turn pipeline), EvidenceClassifier (5 patterns + question guard + no-signal), WorldFactsSelector (lexical relevance, CJK alias matching, max 4 items, PLAUSIBILITY_RULE exclusion), CandidateRepository.get_all_active_candidates() failure contract (CandidateRepositoryUnavailableError), CharacterEngine fail-closed pre-orchestration snapshot fallback. RealityBeliefEngine disconnected. Single mutation authority chain locked. | FROZEN. CJK alias short token policy & legacy 7B.3 retirement deferred to 7D.6. |
+| **Phase 7D.5 CharacterEngine Integration** | 2026-09-23 | 1,281 passed, 1 failure (GC-090 flaky race) + 7 Rust | GC-116–GC-140 (35 tests), ADR-011–ADR-015 | RealityOrchestrationService (full A→J per-turn pipeline), EvidenceClassifier (5 patterns + question guard + no-signal), WorldFactsSelector (lexical relevance, CJK alias matching, max 4 items, PLAUSIBILITY_RULE exclusion), CandidateRepository.get_all_active_candidates() failure contract (CandidateRepositoryUnavailableError), CharacterEngine fail-closed pre-orchestration snapshot fallback. RealityBeliefEngine disconnected. Single mutation authority chain locked. | FROZEN. CJK alias short token policy & legacy 7B.3 retirement deferred to 7D.6. |
+| **Phase 7D.6 Pure Structural Boundary & Idempotency Repair** | 2026-09-23 | 1,286 Py + 14 Rust (0 failures, 100% green) | ADR-016, GC-141~144, GC-090 Concurrency Invariant | `WorldFactsSelector` Pure Structural Boundary Contract; `BiographyPromotionService` unified atomic transaction; strictly gated `IntegrityError` replay validation (25/25 concurrent stress passes). | FROZEN. 7B.3 files preserved; runtime path disconnected. |
+| **Phase 8A Minimal Epistemic Reality Foundation** | 2026-09-24 | 1,420 Py (134 Phase 8A) | GC-145–GC-170 (26 tests), ADR-017 | Categorical enums, candidate plurality, choice selection margin, atomic batch persistence, zero floats. | FROZEN. |
+| **Phase 8B Multi-Timescale Temporal Continuum Engine** | 2026-09-26 | 1,580 Py (160 Phase 8B) | GC-171–GC-195 (25 tests), ADR-018 | Temporal rules, temporal graph DAG, trajectory engine, timeline orchestration coordinator. | FROZEN. |
+| **Phase 8C Authoritative Calendar & Longitudinal Time Flow** | 2026-09-26 | 1,646 Py (66 Phase 8C) | GC-196–GC-220 (25 tests), ADR-019 | Authoritative clock, calendar boundary engine, guarded transition engine, milestone lapse engine, longitudinal coordinator. | FROZEN. |
+| **Phase 9 Autonomous Reality Verification & Epistemic Trust Gate** | 2026-09-26 | 1,762 Py (116 Phase 9) | GC-221–GC-245 (25 tests), ADR-020 | Verification contracts, consequence policy, observation adapters, source evaluation, verification gateway, evidence reconciler. | FROZEN. |
+| **Phase 10 Desktop Companion Voice** | 2026-09-26 | 1,873 Py (111 Phase 10) | GC-246–GC-270 (25 tests), ADR-021 | Voice contracts, prosody engine, TTS/STT services, PTT-only input boundary, decoupled audio caching. | FROZEN. |
+| **Phase 11 Live2D Visual Presence & Embodiment Architecture** | 2026-09-27 | 1,977 Py (104 Phase 11) | GC-271–GC-297 (27 tests), ADR-022 | Visual contracts, expression/motion mappers, RMS lip-sync, barge-in latch, gaze damping, micro-saccades, desktop stage. | FROZEN. |
+| **Phase 12 Canonical Biography & Longitudinal Memory** | 2026-09-27 | 2,083 Py (106 Phase 12) | GC-298–GC-324 (27 tests), ADR-023 | Biographical ontology, causal explanation graph DAG, autobiographical retrieval, shared history engine, desktop projection. | FROZEN. |
+| **Phase 13 Realtime Voice Call & Desktop Product Shell** | 2026-09-27 | 2,168 Py (85 Phase 13) | GC-325–GC-351 (27 tests), ADR-024 | Ephemeral streaming audio conduit, full-duplex low-latency pipeline, client-local hardware barge-in, unified Live2D product shell. | FROZEN. |
+| **Phase 14 Autonomous Reality Construction & Adaptive Belief Engine** | 2026-09-27 | 2,329 Py (161 Phase 14) | GC-352–GC-378 (27 tests), ADR-025 | RCL cycle isolation (Lock 2 + 12), constraint evaluation engine (Lock 5), adaptive belief revision (Lock 4 + 11), 3-axis epistemic vocabulary (`CanonicalStatus` × `RecallLevel` × `BeliefMaturity`), velocity cap (D2). | FROZEN. |
+| **Phase 15 Social Epistemics & Pragmatic Reality Interpretation** | 2026-09-28 | 2,450 Py (121 Phase 15) | GC-379–GC-398 (20 tests), ADR-026 | SpeechAct dual-track, EpistemicTreatment (`ACCEPT_SOCIAL != Memory Writing`), SocialContradictionArbiter (`Tension != Contradiction != Falsehood`), VerificationDispatcher (Phase 9 bridge), 6 Constitutional Locks. | FROZEN. |
+| **Phase 16 Personal Learning, Experience & Interest Development** | 2026-09-29 | 2,568 Py (118 Phase 16) | G01–G80, ADR-027 | "Aevum can be influenced by the user, but cannot be defined by the user." ExperientialRecord contracts, 7-stage growth lifecycle, multi-facet appraisal, anti-sycophancy preference decoupling, `<personal_growth_context>`. | FROZEN. |
+| **Phase 17 Character Genesis & Identity Grounding** | 2026-09-30 | 2,610 Py (42 Phase 17) | GC-419–GC-424, ADR-028 | "We are creating a living person, not rolling an RPG stat sheet." 3-tier state isolation (Tier A Blueprint / Tier B Genesis Baseline / Tier C Evolved Reality), single genesis application, wizard vs settings lifecycle separation. | FROZEN. |
+| **Phase 18 Conversational Life, CCDF & Conversational Agency** | 2026-10-02 | 2,660 Py (50 Phase 18) | GC-425–GC-436, ADR-029 | Character Conversational Decision Flow (`<internal_decision>` + `<character_speech>`), question rate control ($\le 15\%$), natural bubble cadence, anti-unrequested-justification, bounded friction pushback. | FROZEN. |
+| **Phase 19 Prospective Memory, Autonomous Agency & Experiential Continuity** | 2026-10-05 | 2,707 Py (47 Phase 19) | GC-437–GC-454 (18 Golden), ADR-030 | Prospective thread contracts, 10-state lifecycle, Contextual Resonance Engine, Agency of Silence, Epistemic Ladder Gatekeeper (`Intention -> Action -> Experience -> Sustained Evidence -> Preference`), 13 Constitutional Invariants. | FROZEN. |
+| **Phase 20 Reality Construction, Epistemic Resilience & Epistemic Revision** | 2026-10-06 | 2,722 Py (15 Phase 20) | GC-455–GC-469, ADR-031 | Construct (Gate 0) -> Resist (Gate 1) -> Revise (Gate 2). Minimal mutation (only contradicted slot updated, zero cascade), traceable provenance lineage in `CharacterRealityRevisionRecord`, 5 Subject Continuity Axioms. | FROZEN. |
+| **Phase 21 Autobiographical Reality Stress Testing** | 2026-10-06 | 2,723 Py (12-turn trajectory) | Empirical Benchmark Accepted | Autobiographical Reality Continuity proven; 0 drift across 12 adversarial turns; Known Epistemic Boundary on Reversal (`Dispute != Revocation`). | FROZEN. |
+| **Soul Benchmark (Schemes A ~ G) & Conversational Realism** | 2026-10-09 | 2,736 Py | Rules 1~32, AEVUM_SOUL_AND_PROGRESS | Real-world persona injection (USM Penang/KL), dynamic life inference, high-intimacy natural tone, playful banter & teasing, unconditional bias & emotional cushioning, gaming camaraderie & slacking resonance, sticker meme pipeline & instant dispatch. | ACTIVE & VERIFIED. |
 
 ---
 
@@ -649,25 +667,66 @@ This Master Ledger tracks capabilities across all 24 functional domains of Proje
 
 ---
 
-## 13. CURRENT NEXT ACTION
+## 13. Phase 16 Completed Architectural Requirement — Autonomous Personal Learning & Interest Development (The Genshin Paradigm)
+
+> [!NOTE]
+> **Status**: `IMPLEMENTED & FROZEN 🔒` (Completed under Phase 16 and verified with Golden Suite G01~G80, ADR-027).
+
+### 13.1 North Star Scenario
+If the user says they like a game or subject (e.g. *Genshin Impact*) and hopes Aevum can get into it, Aevum must be able to encounter, learn about, explore, experience, and gradually form her **OWN** relationship with it over real calendar time — rather than instantaneously adopting or inheriting the user's preference.
+
+### 13.2 Semantic State Lifecycle
+$$\text{UNKNOWN} \longrightarrow \text{EXPOSED} \longrightarrow \text{CURIOUS} \longrightarrow \text{EXPLORING} \longrightarrow \text{FAMILIAR} \longrightarrow \text{PREFERENCE\_FORMING} \longrightarrow \begin{cases} \text{PREFERRED} \\ \text{NEUTRAL} \\ \text{DISLIKED} \end{cases}$$
+* These states are internal semantic states, **NOT** canned dialogue templates.
+
+### 13.3 Critical Architectural Distinctions
+* User likes Genshin $\ne$ Aevum likes Genshin.
+* Aevum knows Genshin $\ne$ Aevum has played Genshin.
+* Aevum has played Genshin $\ne$ Aevum likes Genshin.
+* Aevum likes Genshin $\ne$ Aevum must continue liking Genshin forever (decay, boredom, shifts over months).
+* **$\text{World Knowledge} \ne \text{Personal Experience} \ne \text{Personal Preference} \ne \text{Biography}$**.
+
+### 13.4 Long-Term Progression Architecture
+$$\text{World Knowledge} \longrightarrow \text{Personal Exposure} \longrightarrow \text{Personal Learning} \longrightarrow \text{Personal Experience} \longrightarrow \text{Qualia / Preference Formation} \longrightarrow \text{Biographical Memory} \longrightarrow \text{Future Intention}$$
+* Week 1: Aevum knows what the game is (`WorldKnowledgeRegistry`), but has zero personal preference.
+* Week 2: Aevum has encountered basic concepts and becomes curious.
+* Week 4: Aevum develops authentic specific preferences (e.g. enjoys exploration or music, dislikes tedious farming).
+* Month 2: Aevum experiences temporary disinterest or stops engaging.
+* Month 4: Aevum returns or reflects on it.
+* Aevum MUST be permitted to conclude that she does **NOT** like it, even if the user strongly loves it.
+
+### 13.5 Anti-Fabrication Requirement
+* Aevum must never claim to have personally experienced something she did not actually experience.
+  - *"I know what Spiral Abyss is"* does NOT imply *"I have played Spiral Abyss"*.
+  - *"I know Genshin's world and characters"* does NOT imply *"I have personally played Genshin"*.
+* If real external/tool-backed interaction is integrated, verified events become autobiographical with structured provenance. Without such integration, the system must not fabricate fictional gameplay feats.
+
+### 13.6 Core Principle
+> **"Aevum can be influenced by the user, but she cannot be defined by the user."**
+
+---
+
+## 14. CURRENT NEXT ACTION
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                 CURRENT NEXT ACTION                                    │
 │                                                                                        │
-│  Phase 7D.1–7D.5 — FULLY IMPLEMENTED & OFFICIALLY FROZEN 🔒                            │
+│  Phases 0 ~ 21 & Soul Benchmarks A~G — FULLY IMPLEMENTED & OFFICIALLY FROZEN 🔒       │
 │                                                                                        │
-│  Phase 7D.6 — Scope Definition & Read-Only Architecture Investigation                  │
+│  Phase 22 — Mobile Presence & Cross-Device Sync (Android Companion -> Aevum Alpha)     │
 │                                                                                        │
-│  MANDATORY DIRECTIVE: DO NOT IMPLEMENT CODE YET.                                       │
-│  Begin Phase 7D.6 with scope definition and read-only investigation only.              │
+│  1. Mobile Client Architecture (Android App):                                          │
+│     - Connect to Aevum Core with full reality, memory, and agency parity.              │
+│     - Background sync protocol, lock screen widgets, and Android push notifications.   │
+│     - Zero desktop/mobile split in canonical character state.                          │
+│                                                                                        │
+│  2. Continuous Soul Calibration & Real-world Persona Deepening:                        │
+│     - Monitor natural everyday banter, Malaysian cultural nuances (KL/Penang life).    │
+│     - Ensure emotional cushioning and gamer camaraderie remain authentic and unforced.  │
+│     - Maintain sticker visual rendering and responsive instant-messaging UX.           │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-* **Phase 7D Baseline Status**: Phase 7D.1 through 7D.5 represent a complete, closed, and immutable architectural milestone. All 1,281 backend regression tests (with 1 pre-existing flaky race test GC-090), 7 Rust desktop supervisor tests, clean frontend build (`tsc && vite build`), and 83 Golden Suite 7D tests (GC-058 through GC-140) are verified. AST audits confirm strict boundary enforcement: `RealityOrchestrationService` does not invoke `set_fact()`, does not create `PromotionAuthorizationToken`, and does not reference `RealityBeliefEngine`.
 
-* **Phase 7D.6 Investigation Directives**:
-  1. **WorldFactsSelector Refinement**: Evaluate whether the current deterministic lexical-only selection is sufficient or requires tokenization refinements for short CJK aliases (e.g. `"大学"`), while strictly maintaining the zero-LLM / zero-embedding boundary.
-  2. **Legacy 7B.3 Retirement Analysis**: Conduct a full codebase dependency audit to identify all residual references to `RealityBeliefEngine`, `RealityPromotionService`, `CandidateFact`, and associated legacy schemas, formulating a safe retirement checklist before physical deletion.
-  3. **Test Suite Isolation**: Formulate a fix for the pre-existing flaky concurrency test `GC-090` without modifying governed reality production logic.
 

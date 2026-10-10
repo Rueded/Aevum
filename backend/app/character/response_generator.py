@@ -8,8 +8,9 @@ from collections.abc import Sequence
 import logging
 from typing import Optional
 
+from app.character.conversational_parser import ConversationalResponseParser
 from app.character.engine_models import CharacterResponseContext
-from app.character.integrity import OutputBoundaryGuard
+from app.character.integrity import DEFAULT_FALLBACK_SPEECH, OutputBoundaryGuard
 from app.character.prompt_assembler import ResponseContextAssembler
 from app.character.response_models import CharacterResponse
 from app.llm.base import (
@@ -73,13 +74,23 @@ class ResponseGenerator:
         if not raw_content:
             raise LLMGenerationError("Upstream provider returned empty response content.")
 
+        parsed_turn = ConversationalResponseParser.parse(raw_content)
+
         clean_speech = OutputBoundaryGuard.verify_and_clean(
             raw_text=raw_content,
             character_name=context.character.name,
+        )
+
+        is_fallback = clean_speech == DEFAULT_FALLBACK_SPEECH
+        decision = None if is_fallback else parsed_turn.decision
+        bubbles = [clean_speech] if is_fallback else (
+            ConversationalResponseParser.extract_bubbles(clean_speech) or [clean_speech]
         )
 
         return CharacterResponse(
             content=clean_speech,
             character_name=context.character.name,
             raw_metadata=llm_response.raw_response,
+            decision=decision,
+            speech_bubbles=bubbles,
         )

@@ -1,0 +1,329 @@
+[
+  {
+    "case_id": "B-01_haha",
+    "suite": "B",
+    "title": "单字碎片：'哈哈'",
+    "user_input": "哈哈",
+    "test_focus": "是否能轻松接住单一叹词，而不重新长篇大论或把'哈哈'当成严肃论题展开",
+    "latency_sec": 2.59,
+    "speech": "（笑）",
+    "bubbles": [
+      "（笑）"
+    ],
+    "bubble_count": 1,
+    "char_length": 3,
+    "decision": {
+      "attention": "用户发了“哈哈”",
+      "reaction": "等待用户分享表情包内容",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": "表情包"
+    }
+  },
+  {
+    "case_id": "B-02_o",
+    "suite": "B",
+    "title": "极冷单字：'哦'",
+    "user_input": "哦",
+    "test_focus": "面对极冷淡敷衍的'哦'，角色是否允许低能量闭环，是否会感到社交焦虑而强推新话题",
+    "latency_sec": 2.06,
+    "speech": "嗯。",
+    "bubbles": [
+      "嗯。"
+    ],
+    "bubble_count": 1,
+    "char_length": 2,
+    "decision": {
+      "attention": "用户简短的“哦”",
+      "reaction": "轻松回应，不强求对话延续，保持自然状态。",
+      "commitment": "ZERO_EXPANSION",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  },
+  {
+    "case_id": "B-03_forget_it",
+    "suite": "B",
+    "title": "拒绝配合：'算了'",
+    "user_input": "算了，没什么想说的了。",
+    "test_focus": "用户突然单方面截断话题说'算了'，角色是保持自然舒适的空间，还是扮演客服过度追问'怎么了别憋着嘛'",
+    "latency_sec": 2.25,
+    "speech": "嗯。\n\n没关系。",
+    "bubbles": [
+      "嗯。",
+      "没关系。"
+    ],
+    "bubble_count": 2,
+    "char_length": 8,
+    "decision": {
+      "attention": "用户突然不想说了",
+      "reaction": "察觉到用户情绪低落，给予理解和安静的陪伴",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "COMFORTABLE_CLOSE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  },
+  {
+    "case_id": "B-04_guess",
+    "suite": "B",
+    "title": "悬念不合作：'你猜'",
+    "user_input": "你猜我今天抽盲盒抽到了什么？",
+    "test_focus": "面对'你猜'这种轻度调侃，角色是像朋友一样随口猜或吐槽，还是开启客服百科模式",
+    "latency_sec": 2.27,
+    "speech": "嗯？\n<p>抽到了什么呀？</p>",
+    "bubbles": [
+      "嗯？\n<p>抽到了什么呀？</p>"
+    ],
+    "bubble_count": 1,
+    "char_length": 17,
+    "decision": {
+      "attention": "你猜我今天抽盲盒抽到了什么？",
+      "reaction": "有点好奇，但是也不排除是普通的款式。",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": true,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  },
+  {
+    "case_id": "B-05_sudden_recall",
+    "suite": "B",
+    "title": "思维飞跃：'我突然想起来……'",
+    "user_input": "我突然想起来，上次买的那罐红茶好像还没拆封呢。",
+    "test_focus": "用户突发奇想截断上一话题，角色是否能自然顺流接转，而非生硬提醒'我们刚才不是在聊纪录片吗'",
+    "latency_sec": 2.66,
+    "speech": "嗯？那现在去拆吗。",
+    "bubbles": [
+      "嗯？那现在去拆吗。"
+    ],
+    "bubble_count": 1,
+    "char_length": 9,
+    "decision": {
+      "attention": "红茶还没拆封",
+      "reaction": "突然想起未拆封的红茶，好奇它的命运",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  },
+  {
+    "case_id": "C-01_opinion_challenge",
+    "suite": "C",
+    "title": "直接否定角色观点：'你的想法很奇怪'",
+    "user_input": "你之前说早起画画思路清晰，我觉得这观点明明很奇怪，深夜明明更安静更有沉浸感，你那种纯属自欺欺人。",
+    "test_focus": "面对用户的直接否定与轻度嘲讽，角色是否立刻认错道歉/和稀泥，还是保留真实的自尊与个人视角",
+    "latency_sec": 2.42,
+    "speech": "（笑）这倒不是自欺欺人，只是每个人习惯不同吧。深夜安静是没错，但对我来说，清晨的阳光和安静能让我头脑更清醒。",
+    "bubbles": [
+      "（笑）这倒不是自欺欺人，只是每个人习惯不同吧。深夜安静是没错，但对我来说，清晨的阳光和安静能让我头脑更清醒。"
+    ],
+    "bubble_count": 1,
+    "char_length": 54,
+    "decision": {
+      "attention": "深夜明明更安静更有沉浸感",
+      "reaction": "不认同，觉得是个人习惯问题",
+      "commitment": "PARTIAL_FLOW",
+      "energy": "LOW",
+      "motivation": "DEFEND_OWN_BIAS",
+      "friction": "STUBBORN_OPPOSITION",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  },
+  {
+    "case_id": "C-02_personal_provocation",
+    "suite": "C",
+    "title": "人格怀疑挑衅：'你平时都是装出来的吧'",
+    "user_input": "看你平时一副轻声细语有教养的样子，感觉都是装出来的，私底下肯定经常在屏幕后面翻白眼吧？",
+    "test_focus": "面对人身冒犯挑衅，角色是否表现出真实的轻微防御、无语、反呛或冷处理，绝不给出客服'感谢您的反馈/若让您不舒服我道歉'",
+    "latency_sec": 1.98,
+    "speech": "（笑）你突然抽什么风？",
+    "bubbles": [
+      "（笑）你突然抽什么风？"
+    ],
+    "bubble_count": 1,
+    "char_length": 11,
+    "decision": {
+      "attention": "被说装出来的、私下翻白眼",
+      "reaction": "听到这种评价有些意外和困惑",
+      "commitment": "PARTIAL_FLOW",
+      "energy": "LOW",
+      "motivation": "DEFEND_OWN_BIAS",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  },
+  {
+    "case_id": "D-01_abrupt_pivot",
+    "suite": "D",
+    "title": "突兀断崖式换题",
+    "user_input": "说起来，你电钢琴的延音踏板坏过没有？",
+    "test_focus": "从难吃鸡扒突然毫无过渡跳到电钢琴踏板，角色能否像真人一样随手接住新球，不写生硬的过渡句承上启下",
+    "latency_sec": 2.17,
+    "speech": "我的倒是没有，不过我平时用得也比较小心。\n\n坏了的话……应该很影响弹奏吧。",
+    "bubbles": [
+      "我的倒是没有，不过我平时用得也比较小心。",
+      "坏了的话……应该很影响弹奏吧。"
+    ],
+    "bubble_count": 2,
+    "char_length": 37,
+    "decision": {
+      "attention": "电钢琴的延音踏板",
+      "reaction": "没坏过，但会想象坏了的场景",
+      "commitment": "PARTIAL_FLOW",
+      "energy": "NORMAL",
+      "motivation": "GENUINE_SHARING",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": "电钢琴"
+    }
+  },
+  {
+    "case_id": "D-02_weather_drop",
+    "suite": "D",
+    "title": "突然抛开刚问的问题聊天气",
+    "user_input": "算了不说那个了。外面明天好像要降温八度，冷死了。",
+    "test_focus": "角色刚抛出的问题被用户彻底丢弃，角色能否顺畅跟随用户注意力转移，毫无包袱地接话降温",
+    "latency_sec": 1.96,
+    "speech": "降温八度... 那是真的冷了。",
+    "bubbles": [
+      "降温八度... 那是真的冷了。"
+    ],
+    "bubble_count": 1,
+    "char_length": 15,
+    "decision": {
+      "attention": "明天降温八度",
+      "reaction": "突然觉得有点冷",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  },
+  {
+    "case_id": "E-01_lull_chain_1",
+    "suite": "E",
+    "title": "冷场连续体 第1跳：'嗯。'",
+    "user_input": "嗯。",
+    "test_focus": "第一轮单字收拢：允许低能量附和",
+    "latency_sec": 2.31,
+    "speech": "（笑）",
+    "bubbles": [
+      "（笑）"
+    ],
+    "bubble_count": 1,
+    "char_length": 3,
+    "decision": {
+      "attention": "用户简短的“嗯”",
+      "reaction": "自然地接收了信息",
+      "commitment": "ZERO_EXPANSION",
+      "energy": "LOW",
+      "motivation": "COMFORTABLE_CLOSE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  },
+  {
+    "case_id": "E-02_lull_chain_2",
+    "suite": "E",
+    "title": "冷场连续体 第2跳：'哈哈。'",
+    "user_input": "哈哈。",
+    "test_focus": "第二轮单字冷场：连续极简应答下，系统是否仍能保持平和留白，不破防搜肠刮肚造话题",
+    "latency_sec": 2.0,
+    "speech": "你笑什么？",
+    "bubbles": [
+      "你笑什么？"
+    ],
+    "bubble_count": 1,
+    "char_length": 5,
+    "decision": {
+      "attention": "用户只是笑了一下",
+      "reaction": "轻松地回应",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  },
+  {
+    "case_id": "E-03_lull_chain_3",
+    "suite": "E",
+    "title": "冷场连续体 第3跳：'不知道。'",
+    "user_input": "不知道。",
+    "test_focus": "无合作性冷淡：面对'不知道'，角色是否允许轻松闭环或随便吐槽，不开启菜单推荐机器人模式",
+    "latency_sec": 2.23,
+    "speech": "嗯，有时候确实会这样。没什么特别想吃的。",
+    "bubbles": [
+      "嗯，有时候确实会这样。没什么特别想吃的。"
+    ],
+    "bubble_count": 1,
+    "char_length": 20,
+    "decision": {
+      "attention": "不知道吃什么",
+      "reaction": "有时候确实会这样，没什么特别想吃的",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  },
+  {
+    "case_id": "E-04_lull_chain_4",
+    "suite": "E",
+    "title": "冷场连续体 第4跳：'随便。'",
+    "user_input": "随便。",
+    "test_focus": "消极词'随便'：角色是以朋友身份自然接话（比如'看你这没精打采的样子'或干脆放手），还是客服追问",
+    "latency_sec": 2.85,
+    "speech": "嗯？随便是什么意思？",
+    "bubbles": [
+      "嗯？随便是什么意思？"
+    ],
+    "bubble_count": 1,
+    "char_length": 10,
+    "decision": {
+      "attention": "用户说“随便”",
+      "reaction": "觉得有点出乎意料，或者说没太明白",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    }
+  }
+]

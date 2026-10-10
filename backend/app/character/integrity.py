@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 DEFAULT_FALLBACK_SPEECH = "...Wait. I completely lost my train of thought for a second."
 
 # Structural speech envelope regex patterns
+_TURN_ENVELOPE_PATTERN = re.compile(
+    r"<character_turn>.*?<character_speech>(.*?)</character_speech>\s*</character_turn>",
+    re.DOTALL | re.IGNORECASE,
+)
 _ENVELOPE_PATTERN = re.compile(
     r"<character_response>\s*<character_speech>(.*?)</character_speech>\s*</character_response>",
     re.DOTALL | re.IGNORECASE,
@@ -33,7 +37,7 @@ _UNCLOSED_SPEECH_PATTERN = re.compile(
 
 # Structural system blocks that indicate prompt/context leakage
 _STRUCTURAL_LEAK_TAGS = [
-    r"</?(?:system|system_instructions|aevum_context|character_identity|character_state|ground_truth|relationship_context|behavioral_guidance|memory_experience_guidance|current_emotion|output_contract)>",
+    r"</?(?:system|system_instructions|aevum_context|character_identity|character_state|ground_truth|relationship_context|behavioral_guidance|memory_experience_guidance|current_emotion|output_contract|internal_decision)>",
 ]
 _STRUCTURAL_LEAK_PATTERN = re.compile(
     "|".join(_STRUCTURAL_LEAK_TAGS),
@@ -84,25 +88,31 @@ class OutputBoundaryGuard:
         if not raw_text or not raw_text.strip():
             return "", False
 
-        # 1. Standard full envelope: <character_response><character_speech>...</character_speech></character_response>
+        # 1. CCDF Turn envelope: <character_turn>...<character_speech>...</character_speech></character_turn>
+        match = _TURN_ENVELOPE_PATTERN.search(raw_text)
+        if match:
+            return match.group(1).strip(), True
+
+        # 2. Standard full envelope: <character_response><character_speech>...</character_speech></character_response>
         match = _ENVELOPE_PATTERN.search(raw_text)
         if match:
             return match.group(1).strip(), True
 
-        # 2. Direct speech tag: <character_speech>...</character_speech>
+        # 3. Direct speech tag: <character_speech>...</character_speech>
         match = _SPEECH_TAG_PATTERN.search(raw_text)
         if match:
             return match.group(1).strip(), True
 
-        # 3. Unclosed speech tag recovery: <character_speech>... (model cut off)
+        # 4. Unclosed speech tag recovery: <character_speech>... (model cut off)
         match = _UNCLOSED_SPEECH_PATTERN.search(raw_text)
         if match:
             # Strip trailing incomplete tags if any
-            cleaned = re.sub(r"</?(?:character_response|character_speech)?$", "", match.group(1).strip(), flags=re.IGNORECASE)
+            cleaned = re.sub(r"</?(?:character_response|character_turn|character_speech)?$", "", match.group(1).strip(), flags=re.IGNORECASE)
             return cleaned.strip(), True
 
-        # 4. No envelope present - return raw stripped text
-        return raw_text.strip(), False
+        # 5. No envelope present - strip any internal_decision block and return raw text
+        cleaned_fallback = re.sub(r"<internal_decision>.*?</internal_decision>", "", raw_text, flags=re.DOTALL | re.IGNORECASE).strip()
+        return cleaned_fallback, False
 
     @classmethod
     def detect_contamination(cls, text: str) -> tuple[bool, Optional[str]]:
@@ -170,7 +180,8 @@ class OutputBoundaryGuard:
             return fallback
 
         # 4. Strip any residual XML tags that might have been partially echoed
-        cleaned = re.sub(r"</?(?:character_response|character_speech)>", "", extracted, flags=re.IGNORECASE).strip()
+        cleaned = re.sub(r"</?(?:character_response|character_turn|character_speech|msg)>", "", extracted, flags=re.IGNORECASE).strip()
+        cleaned = re.sub(r"<internal_decision>.*?</internal_decision>", "", cleaned, flags=re.DOTALL | re.IGNORECASE).strip()
         if not cleaned:
             return fallback
 

@@ -248,6 +248,38 @@ class TestWorldFactsSelector:
             assert item is not None
             assert item.kind in (KnowledgeKind.STATIC_FACT, KnowledgeKind.ENTITY_RELATION)
 
+    def test_gc141_ascii_subword_not_matched(self):
+        """GC-141 (7D.6 Decision A.1): ASCII alias substrings inside longer words must not match.
+
+        'sparkles' contains 'kl', 'checklist' contains 'kl'. Neither may match KL.
+        """
+        assert WorldFactsSelector.select_for_turn("I like sparkles") == {}
+        assert WorldFactsSelector.select_for_turn("Please check the checklist") == {}
+
+    def test_gc142_ascii_word_boundary_matched(self):
+        """GC-142 (7D.6 Decision A.1): Discrete ASCII word boundary alias matches properly."""
+        result = WorldFactsSelector.select_for_turn("I am currently in KL right now")
+        assert "world.um.main_campus" in result or "world.usm.kl_centre" in result
+
+    def test_gc143_cjk_compound_collision_not_matched(self):
+        """GC-143 (7D.6 Decision A.1): Cross-Hanzi compound collision must not trigger 2-char CJK alias.
+
+        '道理大家都懂' contains '理' (from '道理') + '大' (from '大家'). Must NOT match '理大'.
+        """
+        assert WorldFactsSelector.select_for_turn("道理大家都懂") == {}
+
+    def test_gc144_cjk_intended_conversational_matched(self):
+        """GC-144 (7D.6 Decision A.1): 2-character CJK alias with structural boundary matches.
+
+        Verifies that legitimate usages with structural boundaries (sentence start or
+        punctuation delimiter) correctly match '理大' (world.usm.main_campus).
+        Does not require continuous-Hanzi segmentation without delimiters.
+        """
+        result_1 = WorldFactsSelector.select_for_turn("理大的校园很漂亮")
+        assert "world.usm.main_campus" in result_1
+        result_2 = WorldFactsSelector.select_for_turn("今天在理大，借了一本书")
+        assert "world.usm.main_campus" in result_2
+
 
 # ---------------------------------------------------------------------------
 # Contradiction independence test — GC-128

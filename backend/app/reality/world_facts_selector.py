@@ -130,6 +130,60 @@ def _item_tokens(key: str) -> set[str]:
     return segments | alias_tokens
 
 
+
+def _is_cjk(s: str) -> bool:
+    """Return True if string contains any CJK ideographs or kana."""
+    return bool(re.search(r"[\u4e00-\u9fff\u3040-\u30ff]", s))
+
+
+def _is_alias_match(alias: str, input_lower: str, input_tokens: set[str]) -> bool:
+    """Evaluate whether an alias legitimately matches the user input text.
+
+    Contract (Decision A.1 — 7D.6 Pure Structural Boundary):
+    1. ASCII / Latin aliases: must strictly match discrete word boundaries.
+       Substrings within longer English words (e.g. 'kl' inside 'sparkles')
+       are strictly rejected.
+    2. CJK aliases >= 3 characters: verbatim substring match permitted.
+       Does NOT guarantee zero false-positives across all complex compounds
+       (known limitation).
+    3. CJK aliases <= 2 characters (e.g. '理大', '昔涟'):
+       Strict structural boundary required. At least one boundary (left or right)
+       must touch a structural delimiter:
+       - String/text start or end (start == 0 or end == len(text))
+       - Whitespace, punctuation, or non-CJK character
+       If both left and right characters are continuous CJK characters, the occurrence
+       is conservatively rejected as an embedded sub-compound (zero heuristic dictionary,
+       zero alias-specific exceptions).
+    """
+    if not alias:
+        return False
+
+    if not _is_cjk(alias):
+        # ASCII / Latin alias: enforce word boundary
+        if " " in alias:
+            return bool(re.search(r"\b" + re.escape(alias) + r"\b", input_lower))
+        return alias in input_tokens
+
+    # CJK alias >= 3 characters: verbatim substring match
+    if len(alias) >= 3:
+        return alias in input_lower
+
+    # CJK alias <= 2 characters: pure structural boundary contract
+    cjk_particles = set("的得地里中上在是个有和与同并把被让呀啊呢吧")
+    for m in re.finditer(re.escape(alias), input_lower):
+        start, end = m.span()
+        char_before = input_lower[start - 1] if start > 0 else ""
+        char_after = input_lower[end] if end < len(input_lower) else ""
+
+        has_left_boundary = (not char_before) or (not _is_cjk(char_before)) or (char_before in cjk_particles)
+        has_right_boundary = (not char_after) or (not _is_cjk(char_after)) or (char_after in cjk_particles)
+
+        if has_left_boundary or has_right_boundary:
+            return True
+
+    return False
+
+
 class WorldFactsSelector:
     """Context-aware lexical world fact selector for 7D.5 orchestration.
 
@@ -168,7 +222,7 @@ class WorldFactsSelector:
             return {}
 
         input_tokens = _normalize(user_input)
-        input_lower = user_input.lower()  # used for CJK alias substring check
+        input_lower = user_input.lower()
 
         matched: list[tuple[str, Any]] = []
 
@@ -178,24 +232,20 @@ class WorldFactsSelector:
             if item.kind not in _ELIGIBLE_KINDS:
                 continue
 
-            # Gate 2a: token-set intersection (works for Latin/single-char tokens)
+            # Gate 2a: token-set intersection (segment keys or tokens)
             candidate_tokens = _item_tokens(key)
             token_match = bool(candidate_tokens.intersection(input_tokens))
 
-            # Gate 2b: CJK alias substring check
-            # Required because CJK word-boundary tokenization keeps adjacent characters
-            # as one long token (e.g., "昔涟这个游戏" → one token), so multi-char
-            # CJK aliases cannot be matched via token intersection alone.
-            cjk_alias_match = False
+            # Gate 2b: Guarded alias match (Decision A.1)
+            alias_match = False
             if not token_match:
                 aliases = _ENTITY_ALIASES.get(key, set())
                 for alias in aliases:
-                    # Check if the alias phrase appears verbatim in the lowercased input
-                    if alias and alias in input_lower:
-                        cjk_alias_match = True
+                    if _is_alias_match(alias, input_lower, input_tokens):
+                        alias_match = True
                         break
 
-            if not token_match and not cjk_alias_match:
+            if not token_match and not alias_match:
                 continue
 
             matched.append((key, item.value))

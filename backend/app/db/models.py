@@ -877,6 +877,9 @@ class LifeStateRecord(Base):
     current_activity: Mapped[str] = mapped_column(String(100), nullable=False)
     current_location: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="ACTIVE")
+    active_contingency_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    active_contingency_title: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    contingency_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 class LifeActivityRecord(Base):
     """Represents a discrete activity in the character's life."""
@@ -1158,6 +1161,7 @@ class DesktopUserSettingsRecord(Base):
     min_cooldown_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=120)
     idle_awareness_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     idle_threshold_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
+    user_country: Mapped[str] = mapped_column(String(32), nullable=False, default="MY", server_default="MY")
     dnd_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(
@@ -1303,3 +1307,28 @@ class CharacterBiographyPromotionRecord(Base):
     provenance_references_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     authorization_code: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+
+class CharacterDeceptionGrievanceRecord(Base):
+    """Represents persistent cognitive grievance record for deception verification and confrontation.
+
+    Tracks cross-turn hoaxes, confessions, and background verification findings.
+    Lifecycle: SUSPECTED -> VERIFYING -> VERIFIED_DECEPTION -> CONFRONTED -> RECONCILING -> RESOLVED.
+    """
+
+    __tablename__ = "character_deception_grievances"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    character_id: Mapped[str] = mapped_column(String(36), nullable=False, default="aevum", index=True)
+    user_id: Mapped[str] = mapped_column(String(36), nullable=False, default="user", index=True)
+    claimed_assertion: Mapped[str] = mapped_column(Text, nullable=False)
+    verified_truth: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    topic_domain: Mapped[str] = mapped_column(String(50), nullable=False, default="general")
+    deception_type: Mapped[str] = mapped_column(String(50), nullable=False, default="OUTRAGEOUS_CLAIM")
+    stage: Mapped[str] = mapped_column(String(50), nullable=False, default="VERIFIED_DECEPTION", index=True)
+    emotional_tone: Mapped[str] = mapped_column(String(50), nullable=False, default="playful_indignant")
+    confrontation_hint: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+    verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    confronted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

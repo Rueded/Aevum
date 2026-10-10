@@ -24,6 +24,47 @@ SCHEMA_MIGRATIONS: dict[str, list[tuple[str, str]]] = {
     "life_events": [
         ("idempotency_key", "VARCHAR(120) NULL"),
     ],
+    "character_candidate_facts": [
+        ("selection_metadata_json", "TEXT NULL"),
+    ],
+    "character_social_records": [
+        ("candidate_id", "VARCHAR(36) NULL"),
+        ("role_template_id", "VARCHAR(50) NULL"),
+        ("familiarity", "FLOAT NOT NULL DEFAULT 0.05"),
+        ("comfort", "FLOAT NOT NULL DEFAULT 0.1"),
+        ("respect", "FLOAT NOT NULL DEFAULT 0.5"),
+        ("trust", "FLOAT NOT NULL DEFAULT 0.1"),
+        ("first_met_at", "DATETIME NULL"),
+    ],
+    "life_activities": [
+        ("goal_id", "VARCHAR(36) NULL"),
+    ],
+    "life_goals": [
+        ("progress_per_completion", "FLOAT NOT NULL DEFAULT 0.1"),
+    ],
+    "life_plans": [
+        ("goal_id", "VARCHAR(36) NULL"),
+    ],
+    # Phase 16.3: New tables created by Base.metadata.create_all() on startup.
+    # These entries are present for future ADD COLUMN migration readiness only.
+    "character_facet_appraisals": [],
+    "character_facet_preferences": [],
+    # Phase 16.4: New table created by Base.metadata.create_all() on startup.
+    "character_resurgence_events": [],
+    # Phase 17.1: Character blueprints & relationship genesis tables
+    "character_blueprints": [],
+    "relationship_genesis": [],
+    "character_schedule_profiles": [],
+    "life_states": [
+        ("active_contingency_id", "VARCHAR(100) NULL"),
+        ("active_contingency_title", "VARCHAR(200) NULL"),
+        ("contingency_expires_at", "DATETIME NULL"),
+    ],
+    "desktop_user_settings": [
+        ("user_country", "VARCHAR(32) NOT NULL DEFAULT 'MY'"),
+    ],
+    # Cross-turn deception & cognitive grievances table
+    "character_deception_grievances": [],
 }
 
 

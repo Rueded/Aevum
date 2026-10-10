@@ -3,8 +3,10 @@
 Phase 6.2 — Response Generation Foundation.
 """
 
-from typing import Any
+from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.character.conversational_models import TurnConversationalDecision
 
 
 class CharacterResponse(BaseModel):
@@ -29,4 +31,12 @@ class CharacterResponse(BaseModel):
     raw_metadata: dict[str, Any] | None = Field(
         default=None,
         description="Optional provider-neutral generation metadata (e.g. usage, finish reason).",
+    )
+    decision: Optional[TurnConversationalDecision] = Field(
+        default=None,
+        description="Optional parsed TurnConversationalDecision metadata from CCDF protocol.",
+    )
+    speech_bubbles: list[str] = Field(
+        default_factory=list,
+        description="Realized conversational speech bubbles (GC-426 emergent multi-bubble).",
     )

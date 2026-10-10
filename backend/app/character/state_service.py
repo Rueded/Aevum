@@ -292,7 +292,7 @@ class CharacterStateService:
             id=record.id,
             version=record.version,
             updated_at=_ensure_utc(record.updated_at),
-            mood=CharacterMood(record.mood),
+            mood=CharacterMood(record.mood.lower()) if record.mood else CharacterMood.NEUTRAL,
             energy=record.energy,
             stress=record.stress,
             social_energy=record.social_energy,

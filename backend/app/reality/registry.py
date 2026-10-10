@@ -35,6 +35,18 @@ def _validate_int_range(name: str, min_v: int, max_v: int) -> Callable[[Any], in
     return validator
 
 
+def _validate_education_year(name: str) -> Callable[[Any], Any]:
+    def validator(val: Any) -> Any:
+        if isinstance(val, bool):
+            raise InvalidFactValueError(f"Fact '{name}' cannot be boolean.")
+        if isinstance(val, int) and 1 <= val <= 6:
+            return val
+        if isinstance(val, str) and val.strip():
+            return val.strip()
+        raise InvalidFactValueError(f"Fact '{name}' must be an academic year (int 1-6 or string).")
+    return validator
+
+
 def _validate_str_list(name: str, min_items: int = 1, max_items: int = 50) -> Callable[[Any], list[str]]:
     def validator(val: Any) -> list[str]:
         if not isinstance(val, (list, tuple)):
@@ -63,13 +75,18 @@ class FactKeyRegistry:
         "family.background": _validate_non_empty_str("family.background", max_len=1000),
         "education.level": _validate_non_empty_str("education.level", max_len=100),
         "education.university": _validate_non_empty_str("education.university", max_len=200),
+        "education.institution": _validate_non_empty_str("education.institution", max_len=200),
         "education.major": _validate_non_empty_str("education.major", max_len=200),
-        "education.year": _validate_int_range("education.year", 1, 6),
+        "education.year": _validate_education_year("education.year"),
         "location.residence": _validate_non_empty_str("location.residence", max_len=200),
         "interests": _validate_str_list("interests", min_items=1),
         "dislikes": _validate_str_list("dislikes", min_items=1),
         "lifestyle.transit": _validate_non_empty_str("lifestyle.transit", max_len=200),
         "lifestyle.beverage": _validate_non_empty_str("lifestyle.beverage", max_len=200),
+        "family.parents_occupation": _validate_non_empty_str("family.parents_occupation", max_len=500),
+        "family.childhood_background": _validate_non_empty_str("family.childhood_background", max_len=1000),
+        "education.secondary_school": _validate_non_empty_str("education.secondary_school", max_len=300),
+        "education.music_qualification": _validate_non_empty_str("education.music_qualification", max_len=300),
     }
 
     @classmethod

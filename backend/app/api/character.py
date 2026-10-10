@@ -5,15 +5,21 @@ for the desktop client. Adheres strictly to the architectural invariant:
 Backend owns reality; frontend is purely a projection layer.
 """
 
+import logging
+from pathlib import Path
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = logging.getLogger(__name__)
+
 from app.character.engine_models import format_emotion_summary
 from app.character.service import CharacterDefinitionService
+from app.character.state_models import CharacterMood
 from app.character.state_service import CharacterStateService
 from app.db.session import get_db_session
+from app.emotion.emotion_models import EmotionType
 from app.emotion.service import EmotionService
 from app.life.services import LifeService
 from app.memory.service import MemoryService
@@ -25,6 +31,7 @@ from app.relationship.context_builder import (
     get_trust_summary,
     synthesize_relationship_summary,
 )
+from app.relationship.models import RelationshipStateUpdate
 from app.relationship.service import RelationshipService
 from app.character.desire_service import DesireEvaluationEngine
 from app.relationship.contract_evaluator import RelationshipContractEvaluator
@@ -57,6 +64,17 @@ class CharacterStateResponse(BaseModel):
     status: str = "online"
 
 
+class CharacterStateUpdateRequest(BaseModel):
+    mood: str | None = None
+    emotion_type: str | None = None
+    intensity: float | None = Field(default=None, ge=0.0, le=1.0)
+    energy: float | None = Field(default=None, ge=0.0, le=1.0)
+    stress: float | None = Field(default=None, ge=0.0, le=1.0)
+    social_energy: float | None = Field(default=None, ge=0.0, le=1.0)
+    current_activity: str | None = None
+    current_location: str | None = None
+
+
 class RelationshipResponse(BaseModel):
     summary: str
     familiarity: float
@@ -70,6 +88,15 @@ class RelationshipResponse(BaseModel):
     comfort_label: str
     affection_label: str
     attachment_label: str
+
+
+class RelationshipUpdateRequest(BaseModel):
+    familiarity: float | None = Field(default=None, ge=0.0, le=1.0)
+    trust: float | None = Field(default=None, ge=0.0, le=1.0)
+    comfort: float | None = Field(default=None, ge=0.0, le=1.0)
+    respect: float | None = Field(default=None, ge=0.0, le=1.0)
+    affection: float | None = Field(default=None, ge=0.0, le=1.0)
+    attachment: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class LifeEventItem(BaseModel):
@@ -114,6 +141,74 @@ class MemoryDeleteResponse(BaseModel):
     id: str
 
 
+class BiographicalFactProjection(BaseModel):
+    id: str
+    domain: str
+    attribute_key: str
+    attribute_value: str
+    era: str
+    canonical_status: str
+    recall_level: str
+    provenance: str
+
+
+class LifeEventProjection(BaseModel):
+    id: str
+    era: str
+    domain: str
+    headline: str
+    summary: str
+    canonical_status: str
+    recall_level: str
+    qualia_ids: list[str] = Field(default_factory=list)
+
+
+class PersonalPreferenceProjection(BaseModel):
+    id: str
+    category: str
+    object_name: str
+    affinity: str
+    era_acquired: str
+    causal_state: str
+    causal_relation_id: str | None = None
+
+
+class QualiaAnchorProjection(BaseModel):
+    id: str
+    sensory_modality: str
+    description: str
+    emotional_coloring: str | None = None
+
+
+class SocialContactProjection(BaseModel):
+    id: str
+    display_name: str
+    relation_role: str
+    era_first_met: str
+    is_user: bool
+
+
+class SharedHistoryEpisodeProjection(BaseModel):
+    id: str
+    episode_type: str
+    title: str
+    summary: str
+    session_anchor: str
+    key_learnings: list[str] = Field(default_factory=list)
+    recall_level: str
+    created_at_era: str
+
+
+class LongitudinalMemoryResponse(BaseModel):
+    facts: list[BiographicalFactProjection] = Field(default_factory=list)
+    life_events: list[LifeEventProjection] = Field(default_factory=list)
+    preferences: list[PersonalPreferenceProjection] = Field(default_factory=list)
+    qualia: list[QualiaAnchorProjection] = Field(default_factory=list)
+    contacts: list[SocialContactProjection] = Field(default_factory=list)
+    shared_episodes: list[SharedHistoryEpisodeProjection] = Field(default_factory=list)
+    relational_dynamics: dict[str, float] = Field(default_factory=dict)
+
+
 class CharacterDebugResponse(BaseModel):
     character_id: str
     state_version: int
@@ -134,6 +229,7 @@ class CharacterDebugResponse(BaseModel):
 )
 async def get_character_state(
     db: AsyncSession = Depends(get_db_session),
+    reconcile: bool = True,
 ) -> CharacterStateResponse:
     """Retrieve Aevum's current identity, baseline mood, energy, and situational condition."""
     char_def = await CharacterDefinitionService(db).get_character("aevum")
@@ -142,6 +238,14 @@ async def get_character_state(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Character definition for 'aevum' not found.",
         )
+
+    if reconcile:
+        # Reconcile dynamic schedule with real-world time
+        try:
+            from app.life.schedule_engine import LifeScheduleEngine
+            await LifeScheduleEngine.reconcile_schedule(db, "aevum")
+        except Exception as sched_err:
+            logger.warning("Dynamic schedule reconcile skipped: %s", sched_err)
 
     char_state = await CharacterStateService(db).get_state("aevum")
     emotion_state = await EmotionService(db).get_emotion_state("aevum")
@@ -168,6 +272,66 @@ async def get_character_state(
         ),
         status="online",
     )
+
+
+@router.patch(
+    "/state",
+    response_model=CharacterStateResponse,
+    summary="Update character situational/mood state directly (developer calibration)",
+)
+async def update_character_state(
+    payload: CharacterStateUpdateRequest,
+    db: AsyncSession = Depends(get_db_session),
+) -> CharacterStateResponse:
+    """Update character mood and continuous state indicators for developer calibration."""
+    state_service = CharacterStateService(db)
+    current_state = await state_service.get_state("aevum")
+
+    update_dict: dict[str, Any] = {}
+    if payload.mood is not None:
+        try:
+            update_dict["mood"] = CharacterMood(payload.mood.lower())
+        except ValueError:
+            update_dict["mood"] = CharacterMood.CALM
+    if payload.energy is not None:
+        update_dict["energy"] = payload.energy
+    if payload.stress is not None:
+        update_dict["stress"] = payload.stress
+    if payload.social_energy is not None:
+        update_dict["social_energy"] = payload.social_energy
+    if payload.current_activity is not None:
+        update_dict["current_activity"] = payload.current_activity
+    if payload.current_location is not None:
+        update_dict["current_location"] = payload.current_location
+
+    if update_dict:
+        updated_state = current_state.model_copy(update=update_dict)
+        await state_service.update_state(updated_state, character_id="aevum", commit=False)
+
+        # Also sync LifeStateRecord if activity or location modified directly
+        if payload.current_activity is not None or payload.current_location is not None:
+            life_service = LifeService(db)
+            curr_life = await life_service.get_life_state("aevum")
+            await life_service.update_life_state(
+                "aevum",
+                current_activity=payload.current_activity or curr_life.current_activity,
+                current_location=payload.current_location or curr_life.current_location,
+                expected_version=curr_life.version,
+            )
+
+    if payload.emotion_type is not None:
+        emotion_service = EmotionService(db)
+        current_emo = await emotion_service.get_emotion_state("aevum")
+        try:
+            target_emo_type = EmotionType[payload.emotion_type.upper()]
+        except KeyError:
+            target_emo_type = EmotionType.CALM
+        new_intensity = payload.intensity if payload.intensity is not None else current_emo.intensity
+        updated_emo = current_emo.model_copy(update={"emotion_type": target_emo_type, "intensity": new_intensity})
+        await emotion_service.update_emotion_state(updated_emo, character_id="aevum", commit=False)
+
+    await db.commit()
+    return await get_character_state(db, reconcile=False)
 
 
 @router.get(
@@ -198,6 +362,47 @@ async def get_character_relationship(
     )
 
 
+@router.patch(
+    "/relationship",
+    response_model=RelationshipResponse,
+    summary="Update relationship state (developer inspection / sovereign calibration)",
+)
+async def update_character_relationship(
+    payload: RelationshipUpdateRequest,
+    db: AsyncSession = Depends(get_db_session),
+) -> RelationshipResponse:
+    """Update relationship state metrics directly for developer debugging and testing."""
+    rel_service = RelationshipService(db)
+    current_rel = await rel_service.get_relationship_state(relationship_id="user")
+    update_data = RelationshipStateUpdate(
+        familiarity=payload.familiarity,
+        trust=payload.trust,
+        comfort=payload.comfort,
+        respect=payload.respect,
+        affection=payload.affection,
+        attachment=payload.attachment,
+    )
+    new_state = await rel_service.apply_update(
+        update_data=update_data,
+        expected_version=current_rel.version,
+        relationship_id="user",
+    )
+    return RelationshipResponse(
+        summary=synthesize_relationship_summary(new_state),
+        familiarity=new_state.familiarity,
+        trust=new_state.trust,
+        comfort=new_state.comfort,
+        affection=new_state.affection,
+        attachment=new_state.attachment,
+        respect=new_state.respect,
+        familiarity_label=get_familiarity_summary(new_state.familiarity),
+        trust_label=get_trust_summary(new_state.trust),
+        comfort_label=get_comfort_summary(new_state.comfort),
+        affection_label=get_affection_summary(new_state.affection),
+        attachment_label=get_attachment_summary(new_state.attachment),
+    )
+
+
 @router.get(
     "/life",
     response_model=LifeResponse,
@@ -207,6 +412,13 @@ async def get_character_life(
     db: AsyncSession = Depends(get_db_session),
 ) -> LifeResponse:
     """Retrieve what Aevum has been doing, current location, and recent episodic events."""
+    # Reconcile dynamic schedule with real-world time
+    try:
+        from app.life.schedule_engine import LifeScheduleEngine
+        await LifeScheduleEngine.reconcile_schedule(db, "aevum")
+    except Exception as sched_err:
+        logger.warning("Dynamic schedule reconcile in get_life skipped: %s", sched_err)
+
     life_service = LifeService(db)
     life_state = await life_service.get_life_state("aevum")
     events = await life_service.list_events("aevum", limit=10)
@@ -286,6 +498,117 @@ async def delete_character_memory(
             detail=f"Memory '{memory_id}' not found.",
         )
     return MemoryDeleteResponse(status="deleted", id=memory_id)
+
+
+@router.get(
+    "/longitudinal-memory",
+    response_model=LongitudinalMemoryResponse,
+    summary="Retrieve read-only projection of personal biography and longitudinal shared history",
+)
+async def get_longitudinal_memory(
+    db: AsyncSession = Depends(get_db_session),
+) -> LongitudinalMemoryResponse:
+    """Retrieve read-only projection of personal biography, causal life graph, and shared history.
+    
+    Guarantees (Rule 19 & ADR-023):
+    - Strictly READ-ONLY projection.
+    - Zero mutation authority.
+    - Preserves Lock F scope segregation and Lock D causal UNKNOWN bounds.
+    """
+    from app.biography.biography_registry import get_biography_service, get_shared_history_service
+    
+    bio_service = get_biography_service()
+    shared_service = get_shared_history_service()
+    rel_state = await RelationshipService(db).get_relationship_state("user")
+
+    facts = [
+        BiographicalFactProjection(
+            id=f.fact_id,
+            domain=f.domain.value,
+            attribute_key=f.attribute_key,
+            attribute_value=f.attribute_value,
+            era=f.era.value,
+            canonical_status=f.canonical_status.value,
+            recall_level=f.recall_level.value,
+            provenance=f.provenance,
+        )
+        for f in bio_service.get_all_facts()
+    ]
+    events = [
+        LifeEventProjection(
+            id=e.event_id,
+            era=e.era.value,
+            domain=e.domain.value,
+            headline=e.headline,
+            summary=e.summary,
+            canonical_status=e.canonical_status.value,
+            recall_level=e.recall_level.value,
+            qualia_ids=list(e.qualia_ids),
+        )
+        for e in bio_service.get_all_events()
+    ]
+    preferences = [
+        PersonalPreferenceProjection(
+            id=p.preference_id,
+            category=p.category,
+            object_name=p.object_name,
+            affinity=p.affinity.value,
+            era_acquired=p.era_acquired.value,
+            causal_state=p.causal_state.value,
+            causal_relation_id=p.causal_relation_id,
+        )
+        for p in bio_service.get_all_preferences()
+    ]
+    qualia = [
+        QualiaAnchorProjection(
+            id=q.qualia_id,
+            sensory_modality=q.sensory_modality,
+            description=q.description,
+            emotional_coloring=q.emotional_coloring,
+        )
+        for q in bio_service.get_all_qualia()
+    ]
+    contacts = [
+        SocialContactProjection(
+            id=c.contact_id,
+            display_name=c.display_name,
+            relation_role=c.relation_role,
+            era_first_met=c.era_first_met.value,
+            is_user=c.is_user,
+        )
+        for c in bio_service.get_all_contacts()
+    ]
+    shared_episodes = [
+        SharedHistoryEpisodeProjection(
+            id=ep.episode_id,
+            episode_type=ep.episode_type.value,
+            title=ep.title,
+            summary=ep.summary,
+            session_anchor=ep.session_anchor,
+            key_learnings=list(ep.key_learnings),
+            recall_level=ep.recall_level.value,
+            created_at_era=ep.created_at_era.value,
+        )
+        for ep in shared_service.get_recent_episodes(limit=20)
+    ]
+    relational_dynamics = {
+        "familiarity": rel_state.familiarity,
+        "trust": rel_state.trust,
+        "comfort": rel_state.comfort,
+        "respect": rel_state.respect,
+        "affection": rel_state.affection,
+        "attachment": rel_state.attachment,
+    }
+
+    return LongitudinalMemoryResponse(
+        facts=facts,
+        life_events=events,
+        preferences=preferences,
+        qualia=qualia,
+        contacts=contacts,
+        shared_episodes=shared_episodes,
+        relational_dynamics=relational_dynamics,
+    )
 
 
 @router.get(
@@ -377,4 +700,385 @@ async def get_character_debug(
             for r in (await RealityHistoryService(db).get_history("aevum"))
         ] if await RealityHistoryService(db).get_history("aevum") else None,
     )
+
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_LIVE2D_STORAGE_DIR = _PROJECT_ROOT / "data" / "live2d_models"
+_LIVE2D_REGISTRY_FILE = _PROJECT_ROOT / "data" / "live2d_directories.json"
+
+ACTIVE_LIVE2D_DIRECTORIES: dict[str, Path] = {}
+
+
+def _ensure_live2d_data_dirs() -> None:
+    _LIVE2D_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    _LIVE2D_REGISTRY_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _load_live2d_directories() -> dict[str, str]:
+    if not _LIVE2D_REGISTRY_FILE.exists():
+        return {}
+    try:
+        import json
+        with open(_LIVE2D_REGISTRY_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                return data
+    except Exception as e:
+        logger.warning("Failed to load live2d_directories.json: %s", e)
+    return {}
+
+
+def _save_live2d_directory(model_id: str, path_obj: Path) -> None:
+    _ensure_live2d_data_dirs()
+    import json
+    current = _load_live2d_directories()
+    current[model_id] = str(path_obj.resolve())
+    current["current"] = str(path_obj.resolve())
+    try:
+        temp_file = _LIVE2D_REGISTRY_FILE.with_suffix(".tmp")
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(current, f, ensure_ascii=False, indent=2)
+        temp_file.replace(_LIVE2D_REGISTRY_FILE)
+    except Exception as e:
+        logger.warning("Failed to persist live2d_directories.json: %s", e)
+
+
+def _get_live2d_dir(model_id: str) -> Path | None:
+    # 1. Check in-memory active cache
+    if model_id in ACTIVE_LIVE2D_DIRECTORIES:
+        p = ACTIVE_LIVE2D_DIRECTORIES[model_id]
+        if p.exists():
+            return p
+    if model_id == "current" and "current" in ACTIVE_LIVE2D_DIRECTORIES:
+        p = ACTIVE_LIVE2D_DIRECTORIES["current"]
+        if p.exists():
+            return p
+
+    # 2. Check persistent disk registry (recovering from backend restarts)
+    registry = _load_live2d_directories()
+    path_str = registry.get(model_id) or (registry.get("current") if model_id == "current" else None)
+    if path_str:
+        p = Path(path_str)
+        if p.exists():
+            ACTIVE_LIVE2D_DIRECTORIES[model_id] = p
+            return p
+    return None
+
+
+def _find_live2d_model_file(root_dir: Path) -> Path | None:
+    if not root_dir.exists():
+        return None
+    if root_dir.is_file():
+        if root_dir.suffix.lower() == ".json":
+            return root_dir
+        return None
+
+    # Priority 1: *.model3.json in root_dir
+    for f in sorted(root_dir.glob("*.model3.json")):
+        return f
+    # Priority 2: *.model.json in root_dir
+    for f in sorted(root_dir.glob("*.model.json")):
+        return f
+    # Priority 3: index.json in root_dir
+    idx = root_dir / "index.json"
+    if idx.exists() and idx.is_file():
+        return idx
+    # Priority 4: recursive *.model3.json
+    for f in sorted(root_dir.rglob("*.model3.json")):
+        return f
+    # Priority 5: recursive *.model.json
+    for f in sorted(root_dir.rglob("*.model.json")):
+        return f
+    # Priority 6: recursive index.json
+    for f in sorted(root_dir.rglob("index.json")):
+        return f
+    return None
+
+
+def _find_preview_icon(base_dir: Path) -> Path | None:
+    candidate_names = [
+        "icon.png", "icon.jpg", "icon.jpeg", "icon.webp",
+        "avatar.png", "avatar.jpg", "avatar.jpeg", "avatar.webp",
+        "preview.png", "preview.jpg", "preview.jpeg", "preview.webp",
+        "character.png", "character.jpg", "character.jpeg", "character.webp",
+        "sample.png", "sample.jpg", "sample.jpeg", "sample.webp",
+    ]
+    for name in candidate_names:
+        c = base_dir / name
+        if c.exists() and c.is_file():
+            return c
+    # Check parent dir if base_dir is nested (e.g. runtime/)
+    if base_dir.parent.exists() and base_dir.parent != base_dir:
+        for name in candidate_names:
+            c = base_dir.parent / name
+            if c.exists() and c.is_file():
+                return c
+    return None
+
+
+class ResolveLocalModelRequest(BaseModel):
+    file_path: str
+
+
+class ResolveLocalModelResponse(BaseModel):
+    success: bool
+    name: str
+    avatar_data_url: str | None = None
+    model_json_path: str | None = None
+    model_serve_url: str | None = None
+    message: str
+
+
+@router.get("/avatar/live2d-serve/{model_id}/{subpath:path}")
+async def serve_live2d_model_file(model_id: str, subpath: str):
+    """Serve Live2D model assets (.moc3, textures, physics) via standard HTTP for WebGL rendering."""
+    import mimetypes
+    import os
+    from fastapi.responses import FileResponse
+
+    base_dir = _get_live2d_dir(model_id)
+    if not base_dir or not base_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Model directory for {model_id} not found")
+
+    target_file = (base_dir / subpath).resolve()
+    base_dir_resolved = base_dir.resolve()
+
+    try:
+        c_base = os.path.normcase(os.path.abspath(str(base_dir_resolved)))
+        c_target = os.path.normcase(os.path.abspath(str(target_file)))
+        if not (c_target == c_base or c_target.startswith(c_base + os.sep)):
+            raise HTTPException(status_code=403, detail="Access denied")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if not target_file.exists() or not target_file.is_file():
+        raise HTTPException(status_code=404, detail=f"File {subpath} not found in model {model_id}")
+
+    if subpath.endswith(".model3.json"):
+        try:
+            import json
+            from fastapi.responses import JSONResponse
+            with open(target_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            filerefs = data.setdefault("FileReferences", {})
+            if "Motions" not in filerefs:
+                motions = {}
+                for anim_dir in [base_dir / "animations", base_dir / "motions"]:
+                    if anim_dir.exists() and anim_dir.is_dir():
+                        for m in sorted(anim_dir.glob("*.motion3.json")):
+                            clean_name = m.name.replace(".motion3.json", "")
+                            grp = clean_name.split("_")[0]
+                            entry = {"File": f"{anim_dir.name}/{m.name}"}
+                            motions.setdefault(grp, []).append(entry)
+                            if grp.lower() == "idle":
+                                motions.setdefault("idle", []).append(entry)
+                                motions.setdefault("Idle", []).append(entry)
+                if motions:
+                    filerefs["Motions"] = motions
+
+            if "Expressions" not in filerefs:
+                expressions = []
+                exp_dir = base_dir / "expressions"
+                if exp_dir.exists() and exp_dir.is_dir():
+                    for exp in sorted(exp_dir.glob("*.exp3.json")):
+                        clean_name = exp.name.replace(".exp3.json", "").lower()
+                        expressions.append({
+                            "Name": clean_name,
+                            "File": f"expressions/{exp.name}"
+                        })
+                if expressions:
+                    filerefs["Expressions"] = expressions
+
+            groups = data.setdefault("Groups", [])
+            group_names = {g.get("Name") for g in groups}
+            if "EyeBlink" not in group_names:
+                groups.append({
+                    "Target": "Parameter",
+                    "Name": "EyeBlink",
+                    "Ids": ["ParamEyeLOpen", "ParamEyeROpen"]
+                })
+            else:
+                for g in groups:
+                    if g.get("Name") == "EyeBlink" and not g.get("Ids"):
+                        g["Ids"] = ["ParamEyeLOpen", "ParamEyeROpen"]
+
+            if "LipSync" not in group_names:
+                groups.append({
+                    "Target": "Parameter",
+                    "Name": "LipSync",
+                    "Ids": ["ParamMouthOpen", "ParamMouthOpenY"]
+                })
+            else:
+                for g in groups:
+                    if g.get("Name") == "LipSync" and not g.get("Ids"):
+                        g["Ids"] = ["ParamMouthOpen", "ParamMouthOpenY"]
+
+            return JSONResponse(content=data)
+        except Exception as e:
+            logger.warning("Failed to enhance model3.json: %s", e)
+
+    media_type, _ = mimetypes.guess_type(str(target_file))
+    if subpath.endswith(".moc3") or subpath.endswith(".moc"):
+        media_type = "application/octet-stream"
+    elif subpath.endswith(".json"):
+        media_type = "application/json"
+
+    return FileResponse(target_file, media_type=media_type)
+
+
+@router.post("/avatar/resolve-local-model", response_model=ResolveLocalModelResponse)
+async def resolve_local_model(payload: ResolveLocalModelRequest) -> ResolveLocalModelResponse:
+    """Resolve and extract an avatar/portrait from a user-specified local Live2D or image path."""
+    raw_path = payload.file_path.strip().strip('"').strip("'")
+    if not raw_path:
+        raise HTTPException(status_code=400, detail="Empty path provided")
+
+    path_obj = Path(raw_path)
+    if not path_obj.exists():
+        return ResolveLocalModelResponse(
+            success=False,
+            name="",
+            message=f"路径在本地磁盘中不存在: {raw_path}",
+        )
+
+    # 1. If it's an image file directly
+    if path_obj.is_file() and path_obj.suffix.lower() in [".png", ".jpg", ".jpeg", ".webp", ".gif"]:
+        parent_dir = path_obj.parent
+        dir_id = parent_dir.name
+        ACTIVE_LIVE2D_DIRECTORIES[dir_id] = parent_dir
+        ACTIVE_LIVE2D_DIRECTORIES["current"] = parent_dir
+        _save_live2d_directory(dir_id, parent_dir)
+        serve_img_url = f"http://127.0.0.1:8000/character/avatar/live2d-serve/{dir_id}/{path_obj.name}"
+        return ResolveLocalModelResponse(
+            success=True,
+            name=path_obj.stem,
+            avatar_data_url=serve_img_url,
+            message="成功读取本地角色图片",
+        )
+
+    # 2. If it's a directory or .json file
+    if path_obj.is_file() and path_obj.suffix.lower() == ".json":
+        model_json_file = path_obj
+    else:
+        model_json_file = _find_live2d_model_file(path_obj)
+
+    if not model_json_file or not model_json_file.exists():
+        return ResolveLocalModelResponse(
+            success=False,
+            name=path_obj.name,
+            message=f"在该目录及子目录中未找到 .model3.json 或 .model.json 配置文件: {raw_path}",
+        )
+
+    # Anchor base_dir to the parent directory of the model JSON file so relative paths resolve
+    base_dir = model_json_file.parent
+    model_name = path_obj.parent.name if path_obj.is_file() else path_obj.name
+    model_id = model_name
+    ACTIVE_LIVE2D_DIRECTORIES[model_id] = base_dir
+    ACTIVE_LIVE2D_DIRECTORIES[base_dir.name] = base_dir
+    ACTIVE_LIVE2D_DIRECTORIES["current"] = base_dir
+    _save_live2d_directory(model_id, base_dir)
+    if base_dir.name != model_id:
+        _save_live2d_directory(base_dir.name, base_dir)
+
+    serve_url = f"http://127.0.0.1:8000/character/avatar/live2d-serve/{model_id}/{model_json_file.name}"
+
+    # Look for icon.jpg, icon.png, avatar.png, preview.png, etc. (NEVER raw texture sheets)
+    icon_file = _find_preview_icon(base_dir)
+    avatar_url = None
+    if icon_file:
+        try:
+            rel = icon_file.relative_to(base_dir).as_posix()
+            avatar_url = f"http://127.0.0.1:8000/character/avatar/live2d-serve/{model_id}/{rel}"
+        except Exception:
+            pass
+
+    return ResolveLocalModelResponse(
+        success=True,
+        name=model_name,
+        avatar_data_url=avatar_url,
+        model_json_path=str(model_json_file),
+        model_serve_url=serve_url,
+        message=f"已成功加载 Live2D 模型 [{model_name}]" + (f" (包含预览图 {icon_file.name})" if icon_file else " (已激活 WebGL 骨骼渲染)"),
+    )
+
+
+@router.post("/avatar/upload-live2d-zip", response_model=ResolveLocalModelResponse)
+async def upload_live2d_zip(file: UploadFile = File(...)) -> ResolveLocalModelResponse:
+    """Extract an uploaded Live2D model zip archive and register it for streaming."""
+    if not file.filename or not file.filename.lower().endswith(".zip"):
+        raise HTTPException(status_code=400, detail="请上传 .zip 格式的 Live2D 模型压缩包")
+
+    _ensure_live2d_data_dirs()
+    import zipfile
+    import io
+    import re
+    import shutil
+
+    clean_stem = re.sub(r"[^\w\-_]", "_", Path(file.filename).stem) or "custom_model"
+    extract_target = _LIVE2D_STORAGE_DIR / clean_stem
+    if extract_target.exists():
+        counter = 1
+        while (_LIVE2D_STORAGE_DIR / f"{clean_stem}_{counter}").exists():
+            counter += 1
+        extract_target = _LIVE2D_STORAGE_DIR / f"{clean_stem}_{counter}"
+        clean_stem = extract_target.name
+
+    extract_target.mkdir(parents=True, exist_ok=True)
+
+    try:
+        contents = await file.read()
+        with zipfile.ZipFile(io.BytesIO(contents)) as z:
+            for member in z.infolist():
+                member_path = Path(member.filename)
+                # Prevent zip slip directory traversal attacks
+                if member_path.is_absolute() or ".." in member_path.parts:
+                    continue
+                z.extract(member, extract_target)
+    except Exception as e:
+        logger.error("Failed to extract Live2D zip: %s", e)
+        shutil.rmtree(extract_target, ignore_errors=True)
+        return ResolveLocalModelResponse(
+            success=False,
+            name=clean_stem,
+            message=f"解压模型压缩包失败: {e}",
+        )
+
+    # Discover model file
+    model_json = _find_live2d_model_file(extract_target)
+    if not model_json:
+        return ResolveLocalModelResponse(
+            success=False,
+            name=clean_stem,
+            message="压缩包内未找到 .model3.json 或 .model.json 配置文件，请确认压缩包内包含完整的 Live2D 模型数据",
+        )
+
+    base_dir = model_json.parent
+    model_id = clean_stem
+    ACTIVE_LIVE2D_DIRECTORIES[model_id] = base_dir
+    ACTIVE_LIVE2D_DIRECTORIES["current"] = base_dir
+    _save_live2d_directory(model_id, base_dir)
+
+    serve_url = f"http://127.0.0.1:8000/character/avatar/live2d-serve/{model_id}/{model_json.name}"
+
+    icon_file = _find_preview_icon(base_dir)
+    avatar_url = None
+    if icon_file:
+        try:
+            rel = icon_file.relative_to(base_dir).as_posix()
+            avatar_url = f"http://127.0.0.1:8000/character/avatar/live2d-serve/{model_id}/{rel}"
+        except Exception:
+            pass
+
+    return ResolveLocalModelResponse(
+        success=True,
+        name=clean_stem,
+        avatar_data_url=avatar_url,
+        model_json_path=str(model_json),
+        model_serve_url=serve_url,
+        message=f"已成功解压并加载 Live2D 模型 [{clean_stem}]！已启动 WebGL 骨骼渲染！",
+    )
+
 

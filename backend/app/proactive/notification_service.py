@@ -12,7 +12,7 @@ import logging
 from typing import Optional
 import uuid
 
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -387,22 +387,36 @@ class ProactiveNotificationService:
         now_utc = now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc)
         cutoff_24h = now_utc - timedelta(seconds=self.MAX_NOTIFICATION_AGE_SECONDS)
 
-        # Proactively suppress any expired pending notifications (>24h)
-        expired_stmt = (
-            update(ProactiveNotificationRecord)
-            .where(
-                ProactiveNotificationRecord.character_id == character_id,
-                ProactiveNotificationRecord.status == NotificationStatus.PENDING.value,
-                ProactiveNotificationRecord.created_at < cutoff_24h,
+        # Proactively suppress any expired pending notifications (>24h) only if they exist
+        try:
+            has_expired_stmt = (
+                select(func.count())
+                .select_from(ProactiveNotificationRecord)
+                .where(
+                    ProactiveNotificationRecord.character_id == character_id,
+                    ProactiveNotificationRecord.status == NotificationStatus.PENDING.value,
+                    ProactiveNotificationRecord.created_at < cutoff_24h,
+                )
             )
-            .values(
-                status=NotificationStatus.SUPPRESSED.value,
-                suppression_reason=SuppressionReason.EXPIRED.value,
-            )
-            .execution_options(synchronize_session=False)
-        )
-        await self.session.execute(expired_stmt)
-        await self.session.commit()
+            expired_count = (await self.session.scalar(has_expired_stmt)) or 0
+            if expired_count > 0:
+                expired_stmt = (
+                    update(ProactiveNotificationRecord)
+                    .where(
+                        ProactiveNotificationRecord.character_id == character_id,
+                        ProactiveNotificationRecord.status == NotificationStatus.PENDING.value,
+                        ProactiveNotificationRecord.created_at < cutoff_24h,
+                    )
+                    .values(
+                        status=NotificationStatus.SUPPRESSED.value,
+                        suppression_reason=SuppressionReason.EXPIRED.value,
+                    )
+                    .execution_options(synchronize_session=False)
+                )
+                await self.session.execute(expired_stmt)
+                await self.session.commit()
+        except Exception as exc:
+            logger.warning("Failed to auto-suppress expired notifications during read poll: %s", exc)
 
         stmt = (
             select(ProactiveNotificationRecord)

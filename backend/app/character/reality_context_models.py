@@ -38,6 +38,8 @@ class EpistemicTruthType(str, enum.Enum):
     CHOICE_DECISION = "CHOICE_DECISION"
     EPHEMERAL_REPAIR_INTERPRETATION = "EPHEMERAL_REPAIR_INTERPRETATION"
     CONVERSATION_LOCAL = "CONVERSATION_LOCAL"
+    TEMPORAL_TRAJECTORY_PLURALITY = "TEMPORAL_TRAJECTORY_PLURALITY"
+    LONGITUDINAL_TEMPORAL_CONTEXT = "LONGITUDINAL_TEMPORAL_CONTEXT"
 
 
 class RealityItemProvenance(BaseModel):
@@ -114,5 +116,7 @@ class GovernedRealityContext(BaseModel):
     evidence_items: tuple[GovernedRealityItem, ...] = Field(default_factory=tuple, description="Structured evidence references.")
     user_claim_items: tuple[GovernedRealityItem, ...] = Field(default_factory=tuple, description="Unverified user claim observations.")
     memory_items: tuple[GovernedRealityItem, ...] = Field(default_factory=tuple, description="Retrieved memory reference items.")
+    temporal_items: tuple[GovernedRealityItem, ...] = Field(default_factory=tuple, description="Temporal trajectory plurality items (non-canonical).")
+    longitudinal_items: tuple[GovernedRealityItem, ...] = Field(default_factory=tuple, description="Longitudinal temporal context items (non-canonical).")
     budget_metrics: ContextBudgetMetrics = Field(..., description="Presentation budget metrics.")
     audit_metadata: ContextAuditMetadata = Field(..., description="Runtime audit metadata.")

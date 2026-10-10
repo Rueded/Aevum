@@ -19,3 +19,7 @@ class LLMContext(BaseModel):
         default_factory=list,
         description="Explicit system or contextual instructions.",
     )
+    enable_grounding: bool = Field(
+        default=True,
+        description="Enable real-time search grounding for factual current queries.",
+    )

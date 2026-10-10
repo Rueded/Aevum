@@ -389,12 +389,12 @@ class CharacterDefinitionService:
     def _record_to_domain(self, record: CharacterDefinitionRecord) -> CharacterDefinition:
         """Map SQLAlchemy records to an immutable CharacterDefinition domain model."""
         traits = record.personality_traits or []
-        core_traits = tuple(t.trait for t in traits if t.dimension == "core_trait")
-        social_style = tuple(t.trait for t in traits if t.dimension == "social_style")
-        emotional_style = tuple(t.trait for t in traits if t.dimension == "emotional_style")
-        communication_style = tuple(t.trait for t in traits if t.dimension == "communication_style")
-        behavioral_tendencies = tuple(t.trait for t in traits if t.dimension == "behavioral_tendency")
-        flaws = tuple(t.trait for t in traits if t.dimension == "flaw")
+        core_traits = tuple(t.trait for t in traits if t.dimension in ("core_trait", "core")) or ("thoughtful", "gentle")
+        social_style = tuple(t.trait for t in traits if t.dimension == "social_style") or ("sincere", "natural")
+        emotional_style = tuple(t.trait for t in traits if t.dimension == "emotional_style") or ("calm", "reflective")
+        communication_style = tuple(t.trait for t in traits if t.dimension == "communication_style") or ("natural",)
+        behavioral_tendencies = tuple(t.trait for t in traits if t.dimension == "behavioral_tendency") or ("independent",)
+        flaws = tuple(t.trait for t in traits if t.dimension == "flaw") or ("mildly stubborn",)
 
         preferences = tuple(
             Preference(

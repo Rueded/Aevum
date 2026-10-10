@@ -50,6 +50,7 @@ Cargo.lock
 *.db-wal
 *.db-shm
 *.sqlite3
+data/
 
 # Environment Variables & Secrets
 .env

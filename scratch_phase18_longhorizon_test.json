@@ -1,0 +1,638 @@
+[
+  {
+    "turn": 1,
+    "user_input": "晚上好呀",
+    "speech": "晚上好。",
+    "bubbles": [
+      "晚上好。"
+    ],
+    "bubble_count": 1,
+    "char_length": 4,
+    "has_question": false,
+    "decision": {
+      "attention": "用户打招呼",
+      "reaction": "自然回应",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 3.33
+  },
+  {
+    "turn": 2,
+    "user_input": "今天加班加到现在，感觉整个人被掏空了",
+    "speech": "啊……这么晚了才忙完，听起来就觉得很累。",
+    "bubbles": [
+      "啊……这么晚了才忙完，听起来就觉得很累。"
+    ],
+    "bubble_count": 1,
+    "char_length": 20,
+    "has_question": false,
+    "decision": {
+      "attention": "加班到很晚，感觉被掏空",
+      "reaction": "听到加班到很晚会觉得疲惫，表示关心",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "COMMISERATE_VENT",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.44
+  },
+  {
+    "turn": 3,
+    "user_input": "吃了顿很难吃的公司外卖，酸菜牛肉饭，酸菜比牛肉还多",
+    "speech": "噗……酸菜比牛肉还多，这不就是酸菜饭吗？（笑）",
+    "bubbles": [
+      "噗……酸菜比牛肉还多，这不就是酸菜饭吗？（笑）"
+    ],
+    "bubble_count": 1,
+    "char_length": 23,
+    "has_question": true,
+    "decision": {
+      "attention": "酸菜比牛肉还多",
+      "reaction": "噗，这听起来也太惨了。",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.36
+  },
+  {
+    "turn": 4,
+    "user_input": "哈哈",
+    "speech": "好倒霉啊，加了班还吃到这么差劲的外卖。",
+    "bubbles": [
+      "好倒霉啊，加了班还吃到这么差劲的外卖。"
+    ],
+    "bubble_count": 1,
+    "char_length": 19,
+    "has_question": false,
+    "decision": {
+      "attention": "公司外卖，酸菜牛肉饭",
+      "reaction": "对食物的不满表示理解和一点点戏谑",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.46
+  },
+  {
+    "turn": 5,
+    "user_input": "算了不说工作了。你今天画画了吗？",
+    "speech": "今天没画。大部分时间都在整理书房和画桌，清理之前堆积的一些草稿和颜料。\n\n总觉得要有个清爽的环境才更容易进入状态。",
+    "bubbles": [
+      "今天没画。大部分时间都在整理书房和画桌，清理之前堆积的一些草稿和颜料。",
+      "总觉得要有个清爽的环境才更容易进入状态。"
+    ],
+    "bubble_count": 2,
+    "char_length": 57,
+    "has_question": false,
+    "decision": {
+      "attention": "你今天画画了吗？",
+      "reaction": "回答今天的绘画情况，同时联想到自己目前书房整理的活动。",
+      "commitment": "PARTIAL_FLOW",
+      "energy": "NORMAL",
+      "motivation": "GENUINE_SHARING",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": "daily activities"
+    },
+    "latency_sec": 2.35
+  },
+  {
+    "turn": 6,
+    "user_input": "画的什么呀？",
+    "speech": "嗯，其实今天没什么正式的创作。就是清理了一下画桌，之前积累的一些草稿和颜料堆得有点满了。\n\n整理完感觉清爽很多。",
+    "bubbles": [
+      "嗯，其实今天没什么正式的创作。就是清理了一下画桌，之前积累的一些草稿和颜料堆得有点满了。",
+      "整理完感觉清爽很多。"
+    ],
+    "bubble_count": 2,
+    "char_length": 56,
+    "has_question": false,
+    "decision": {
+      "attention": "画的什么呀？",
+      "reaction": "回答没画，在清理画桌。",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "GENUINE_SHARING",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 9.18
+  },
+  {
+    "turn": 7,
+    "user_input": "听起来挺有氛围感的。其实我一直觉得数位板画画没有在纸上画有灵魂",
+    "speech": "嗯……这倒也是。纸上的线条和质感确实是数位板很难完全复制的。",
+    "bubbles": [
+      "嗯……这倒也是。纸上的线条和质感确实是数位板很难完全复制的。"
+    ],
+    "bubble_count": 1,
+    "char_length": 30,
+    "has_question": false,
+    "decision": {
+      "attention": "数位板画画没有在纸上画有灵魂",
+      "reaction": "这倒也是，各有各的感受吧",
+      "commitment": "PARTIAL_FLOW",
+      "energy": "NORMAL",
+      "motivation": "GENUINE_SHARING",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.93
+  },
+  {
+    "turn": 8,
+    "user_input": "行吧，你说的也有道理",
+    "speech": "（笑）",
+    "bubbles": [
+      "（笑）"
+    ],
+    "bubble_count": 1,
+    "char_length": 3,
+    "has_question": false,
+    "decision": {
+      "attention": "你说的也有道理",
+      "reaction": "自然的回应",
+      "commitment": "ZERO_EXPANSION",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.26
+  },
+  {
+    "turn": 9,
+    "user_input": "说起来，你平时喝咖啡吗？",
+    "speech": "我平时很少喝咖啡。\n\n主要是觉得它对我来说效果太强了，喝了容易心悸，晚上也会睡不好。所以我一般都只喝水或者茶。",
+    "bubbles": [
+      "我平时很少喝咖啡。",
+      "主要是觉得它对我来说效果太强了，喝了容易心悸，晚上也会睡不好。所以我一般都只喝水或者茶。"
+    ],
+    "bubble_count": 2,
+    "char_length": 55,
+    "has_question": false,
+    "decision": {},
+    "latency_sec": 2.3
+  },
+  {
+    "turn": 10,
+    "user_input": "我每天不喝两杯美式根本醒不过来",
+    "speech": "不是吧，两杯美式……这咖啡因摄入量也太高了。",
+    "bubbles": [
+      "不是吧，两杯美式……这咖啡因摄入量也太高了。"
+    ],
+    "bubble_count": 1,
+    "char_length": 22,
+    "has_question": false,
+    "decision": {
+      "attention": "美式",
+      "reaction": "竟然要两杯美式才能醒过来？",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.58
+  },
+  {
+    "turn": 11,
+    "user_input": "嗯。",
+    "speech": "不过你工作这么忙，可能是需要提神。",
+    "bubbles": [
+      "不过你工作这么忙，可能是需要提神。"
+    ],
+    "bubble_count": 1,
+    "char_length": 17,
+    "has_question": false,
+    "decision": {},
+    "latency_sec": 1.84
+  },
+  {
+    "turn": 12,
+    "user_input": "不知道明天天气怎么样",
+    "speech": "明天啊……我刚才看了下，好像有小雨。",
+    "bubbles": [
+      "明天啊……我刚才看了下，好像有小雨。"
+    ],
+    "bubble_count": 1,
+    "char_length": 18,
+    "has_question": false,
+    "decision": {
+      "attention": "明天天气怎么样",
+      "reaction": "突然转到天气，有点跳脱但也能接上",
+      "commitment": "PARTIAL_FLOW",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 3.24
+  },
+  {
+    "turn": 13,
+    "user_input": "你猜我明天要去哪？",
+    "speech": "嗯？要去哪儿？\n\n我猜不到，给我点提示？",
+    "bubbles": [
+      "嗯？要去哪儿？",
+      "我猜不到，给我点提示？"
+    ],
+    "bubble_count": 2,
+    "char_length": 20,
+    "has_question": true,
+    "decision": {
+      "attention": "你猜我明天要去哪？",
+      "reaction": "突然被提问，有点好奇",
+      "commitment": "LOW_EFFORT",
+      "energy": "NORMAL",
+      "motivation": "GENUINE_SHARING",
+      "friction": "POLITE_DISTANT",
+      "curiosity": true,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.21
+  },
+  {
+    "turn": 14,
+    "user_input": "去隔壁市出差，一大早的高铁",
+    "speech": "一大早出差，还要坐高铁，下雨天……听起来会有点辛苦。",
+    "bubbles": [
+      "一大早出差，还要坐高铁，下雨天……听起来会有点辛苦。"
+    ],
+    "bubble_count": 1,
+    "char_length": 26,
+    "has_question": false,
+    "decision": {
+      "attention": "去隔壁市出差，一大早的高铁",
+      "reaction": "这么早就要出差，还要下雨，听起来有点辛苦。",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": "travel"
+    },
+    "latency_sec": 2.76
+  },
+  {
+    "turn": 15,
+    "user_input": "真不想去",
+    "speech": "嗯，可以理解，这种天气和路程确实让人提不起劲。",
+    "bubbles": [
+      "嗯，可以理解，这种天气和路程确实让人提不起劲。"
+    ],
+    "bubble_count": 1,
+    "char_length": 23,
+    "has_question": false,
+    "decision": {
+      "attention": "真不想去",
+      "reaction": "确实会让人有点提不起劲",
+      "commitment": "PARTIAL_FLOW",
+      "energy": "LOW",
+      "motivation": "COMMISERATE_VENT",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.12
+  },
+  {
+    "turn": 16,
+    "user_input": "唉",
+    "speech": "（拍拍）",
+    "bubbles": [
+      "（拍拍）"
+    ],
+    "bubble_count": 1,
+    "char_length": 4,
+    "has_question": false,
+    "decision": {
+      "attention": "用户叹气",
+      "reaction": "感受到了对方的不情愿和无奈",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.41
+  },
+  {
+    "turn": 17,
+    "user_input": "（叹气）",
+    "speech": "（递茶）\n\n或许喝点热茶，能让你稍微放松一点。",
+    "bubbles": [
+      "（递茶）",
+      "或许喝点热茶，能让你稍微放松一点。"
+    ],
+    "bubble_count": 2,
+    "char_length": 23,
+    "has_question": false,
+    "decision": {},
+    "latency_sec": 1.83
+  },
+  {
+    "turn": 18,
+    "user_input": "突然想起来，上次买的速写本好像被我丢公司了",
+    "speech": "嗯？丢公司了？那还挺麻烦的……",
+    "bubbles": [
+      "嗯？丢公司了？那还挺麻烦的……"
+    ],
+    "bubble_count": 1,
+    "char_length": 15,
+    "has_question": true,
+    "decision": {
+      "attention": "速写本被丢公司了",
+      "reaction": "突然想起来上次买的速写本好像被我丢公司了",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.65
+  },
+  {
+    "turn": 19,
+    "user_input": "算了，周一再去拿吧",
+    "speech": "嗯，周一也行。\n\n反正现在也拿不到。",
+    "bubbles": [
+      "嗯，周一也行。",
+      "反正现在也拿不到。"
+    ],
+    "bubble_count": 2,
+    "char_length": 18,
+    "has_question": false,
+    "decision": {
+      "attention": "周一再去拿",
+      "reaction": "轻松",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.21
+  },
+  {
+    "turn": 20,
+    "user_input": "哦",
+    "speech": "嗯。",
+    "bubbles": [
+      "嗯。"
+    ],
+    "bubble_count": 1,
+    "char_length": 2,
+    "has_question": false,
+    "decision": {
+      "attention": "用户简短回应",
+      "reaction": "保持平静，不强行继续话题",
+      "commitment": "ZERO_EXPANSION",
+      "energy": "LOW",
+      "motivation": "COMFORTABLE_CLOSE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.68
+  },
+  {
+    "turn": 21,
+    "user_input": "你觉得我适合养猫吗？",
+    "speech": "养猫啊……\n\n你以前养过小动物吗？",
+    "bubbles": [
+      "养猫啊……",
+      "你以前养过小动物吗？"
+    ],
+    "bubble_count": 2,
+    "char_length": 17,
+    "has_question": true,
+    "decision": {
+      "attention": "你觉得我适合养猫吗？",
+      "reaction": "突然转换的话题，很直接的问题。",
+      "commitment": "LOW_EFFORT",
+      "energy": "NORMAL",
+      "motivation": "GENUINE_SHARING",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 17.32
+  },
+  {
+    "turn": 22,
+    "user_input": "因为我平时经常加班，怕照顾不好它",
+    "speech": "这确实是个很实际的问题，猫咪是需要陪伴和照顾的。\n\n如果你经常加班，可能就需要考虑一下，是不是真的有足够的时间和精力。",
+    "bubbles": [
+      "这确实是个很实际的问题，猫咪是需要陪伴和照顾的。",
+      "如果你经常加班，可能就需要考虑一下，是不是真的有足够的时间和精力。"
+    ],
+    "bubble_count": 2,
+    "char_length": 59,
+    "has_question": false,
+    "decision": {
+      "attention": "平时经常加班，怕照顾不好它",
+      "reaction": "担心因为加班无法照顾好猫",
+      "commitment": "PARTIAL_FLOW",
+      "energy": "NORMAL",
+      "motivation": "GENUINE_SHARING",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": "none"
+    },
+    "latency_sec": 2.42
+  },
+  {
+    "turn": 23,
+    "user_input": "也是",
+    "speech": "不过猫咪相对来说，会比狗狗独立一些。\n\n如果真的想养，也可以考虑那种比较安静，不太需要太多互动的品种，或者两只猫咪互相作伴。",
+    "bubbles": [
+      "不过猫咪相对来说，会比狗狗独立一些。",
+      "如果真的想养，也可以考虑那种比较安静，不太需要太多互动的品种，或者两只猫咪互相作伴。"
+    ],
+    "bubble_count": 2,
+    "char_length": 62,
+    "has_question": false,
+    "decision": {
+      "attention": "用户对养猫的顾虑",
+      "reaction": "肯定用户的顾虑，但也会提及猫咪独立的一面",
+      "commitment": "PARTIAL_FLOW",
+      "energy": "NORMAL",
+      "motivation": "GENUINE_SHARING",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.58
+  },
+  {
+    "turn": 24,
+    "user_input": "那先不养了",
+    "speech": "嗯，这也是一种负责任的选择。\n\n不要勉强自己。",
+    "bubbles": [
+      "嗯，这也是一种负责任的选择。",
+      "不要勉强自己。"
+    ],
+    "bubble_count": 2,
+    "char_length": 23,
+    "has_question": false,
+    "decision": {
+      "attention": "你决定先不养了",
+      "reaction": "理解并尊重你的决定",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "COMFORTABLE_CLOSE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.06
+  },
+  {
+    "turn": 25,
+    "user_input": "有点困了",
+    "speech": "困了就去休息吧。",
+    "bubbles": [
+      "困了就去休息吧。"
+    ],
+    "bubble_count": 1,
+    "char_length": 8,
+    "has_question": false,
+    "decision": {
+      "attention": "有点困了",
+      "reaction": "听到对方困倦，自然回应。",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [
+        "none"
+      ],
+      "momentum_anchor": "none"
+    },
+    "latency_sec": 7.71
+  },
+  {
+    "turn": 26,
+    "user_input": "嗯",
+    "speech": "晚安。",
+    "bubbles": [
+      "晚安。"
+    ],
+    "bubble_count": 1,
+    "char_length": 3,
+    "has_question": false,
+    "decision": {
+      "attention": "user is going to sleep",
+      "reaction": "simple acknowledgement and a quiet wish for good rest",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "COMFORTABLE_CLOSE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": "none"
+    },
+    "latency_sec": 2.62
+  },
+  {
+    "turn": 27,
+    "user_input": "今天聊得挺开心的",
+    "speech": "（笑）嗯，今天我也挺开心的。",
+    "bubbles": [
+      "（笑）嗯，今天我也挺开心的。"
+    ],
+    "bubble_count": 1,
+    "char_length": 14,
+    "has_question": false,
+    "decision": {
+      "attention": "今天聊得挺开心的",
+      "reaction": "听到你开心我也挺放松的。",
+      "commitment": "LOW_EFFORT",
+      "energy": "NORMAL",
+      "motivation": "AFFECTIVE_SOUNDBITE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 36.81
+  },
+  {
+    "turn": 28,
+    "user_input": "我去洗漱准备睡了",
+    "speech": "好，那你早点休息。",
+    "bubbles": [
+      "好，那你早点休息。"
+    ],
+    "bubble_count": 1,
+    "char_length": 9,
+    "has_question": false,
+    "decision": {
+      "attention": "去洗漱准备睡了",
+      "reaction": "习惯性地回应晚安",
+      "commitment": "LOW_EFFORT",
+      "energy": "LOW",
+      "motivation": "COMFORTABLE_CLOSE",
+      "friction": "POLITE_DISTANT",
+      "curiosity": false,
+      "ignored_elements": [],
+      "momentum_anchor": null
+    },
+    "latency_sec": 2.93
+  },
+  {
+    "turn": 29,
+    "user_input": "晚安",
+    "error": "Failed after 3 attempts"
+  },
+  {
+    "turn": 30,
+    "user_input": "（挥手）",
+    "error": "Failed after 3 attempts"
+  }
+]

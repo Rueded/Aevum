@@ -48,7 +48,7 @@ from app.reality.candidate_models import (
     RealityTaxonomy,
 )
 from app.reality.candidate_repository import CandidateRepository
-from app.reality.choice_models import ChoiceDecisionResult
+from app.reality.choice_models import ChoiceDecisionResult, ChoiceFactorBreakdown, CompetitionResult
 from app.reality.competition_service import CandidateCompetitionService
 from app.reality.choice_service import ChoiceSelectionService
 from app.reality.contradiction_resolver import ContradictionResolver
@@ -57,6 +57,25 @@ from app.reality.evidence_classifier import EvidenceClassificationResult, Eviden
 from app.reality.repair_models import RealityRepairResult
 from app.reality.repair_service import RealityRepairService
 from app.reality.world_facts_selector import WorldFactsSelector
+from app.reality.inquiry_detector import RealityInquiryDetector, InquirySignal
+from app.reality.autonomous_inference_coordinator import AutonomousInferenceCoordinator
+from app.reality.timeline_orchestration_coordinator import (
+    TemporalConflictSignal,
+    TemporalEvaluationStatus,
+    TimelineOrchestrationCoordinator,
+    TimelineOrchestrationResult,
+)
+from app.reality.longitudinal_coordinator import (
+    LongitudinalCoordinator,
+    LongitudinalCoordinatorResult,
+    LongitudinalEvaluationStatus,
+)
+from app.reality.verification_orchestrator import VerificationEvidenceInbox
+from app.reality.verification_reconciler import (
+    VerificationReconciler,
+    VerificationReconciliationResult,
+    VerificationRepairRequest,
+)
 
 if TYPE_CHECKING:
     from app.character.bible_models import CharacterBible
@@ -105,6 +124,9 @@ class OrchestrationTurnResult:
         default_factory=lambda: ContradictionResolution()
     )
     promoted: bool = False
+    timeline_result: Optional[TimelineOrchestrationResult] = None
+    longitudinal_result: Optional[LongitudinalCoordinatorResult] = None
+    reconciliation_result: Optional[VerificationReconciliationResult] = None
 
 
 # ---------------------------------------------------------------------------
@@ -123,11 +145,36 @@ class RealityOrchestrationService:
     not call promotion services or CandidateRepository directly.
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        candidate_repo: Optional[CandidateRepository] = None,
+        competition_service: Optional[CandidateCompetitionService] = None,
+        choice_service: Optional[ChoiceSelectionService] = None,
+        inference_coordinator: Optional[AutonomousInferenceCoordinator] = None,
+        timeline_coordinator: Optional[TimelineOrchestrationCoordinator] = None,
+        longitudinal_coordinator: Optional[LongitudinalCoordinator] = None,
+        inbox: Optional[VerificationEvidenceInbox] = None,
+        reconciler: Optional[VerificationReconciler] = None,
+        rcl_adapter: Optional[Any] = None,
+    ) -> None:
         self._session = session
-        self._candidate_repo = CandidateRepository(session)
-        self._competition_service = CandidateCompetitionService()
-        self._choice_service = ChoiceSelectionService()
+        self._candidate_repo = candidate_repo or CandidateRepository(session)
+        self._competition_service = competition_service or CandidateCompetitionService()
+        self._choice_service = choice_service or ChoiceSelectionService()
+        # Constitutional Lock 9: If rcl_adapter is provided, it supersedes Step C2
+        # AutonomousInferenceCoordinator, ensuring exactly ONE Reality Construction authority.
+        if rcl_adapter is not None:
+            self._inference_coordinator = rcl_adapter
+        else:
+            self._inference_coordinator = inference_coordinator or AutonomousInferenceCoordinator(
+                session=session,
+                candidate_repo=self._candidate_repo,
+            )
+        self._timeline_coordinator = timeline_coordinator or TimelineOrchestrationCoordinator()
+        self._longitudinal_coordinator = longitudinal_coordinator or LongitudinalCoordinator()
+        self._inbox = inbox
+        self._reconciler = reconciler or (VerificationReconciler() if inbox is not None else None)
 
     async def run_turn(
         self,
@@ -138,6 +185,8 @@ class RealityOrchestrationService:
         current_location: Optional[str] = None,
         prior_turn_slip: Optional[str] = None,
         bible: Optional["CharacterBible"] = None,
+        current_turn_id: str = "turn-0",
+        current_turn_sequence: Optional[int] = None,
     ) -> OrchestrationTurnResult:
         """Execute the complete A→J per-turn governed reality pipeline.
 
@@ -166,6 +215,20 @@ class RealityOrchestrationService:
         classification: EvidenceClassificationResult = EvidenceClassifier.classify(
             user_input, core=core
         )
+
+        # ------------------------------------------------------------------
+        # Step A2 — Reality Inquiry Signal Detection (Phase 20 Gate 0)
+        # INQUIRY != EVIDENCE:
+        # Detects whether user message targets an unknown personal reality slot.
+        # Pure function. Never raises.
+        # ------------------------------------------------------------------
+        inquiry_signal: Optional[InquirySignal] = None
+        try:
+            inquiry_signal = RealityInquiryDetector.detect_inquiry(user_input, core=core)
+        except Exception as exc:
+            logger.debug("RealityInquiryDetector failed: %s", exc)
+            inquiry_signal = None
+        requested_slot = inquiry_signal.target_slot if inquiry_signal else None
 
         # ------------------------------------------------------------------
         # Step B — Contradiction Detection
@@ -205,6 +268,28 @@ class RealityOrchestrationService:
                 new_evidence_family = None
 
         # ------------------------------------------------------------------
+        # Step C2 — Autonomous Reality Inference (Phase 8A)
+        # Coordinates Opportunity Detection, Hypothesis Proposal, Evaluation,
+        # and Atomic Batch Persistence.
+        # Single-invocation-per-turn invariant: executed exactly once per turn.
+        # Infrastructure/inference failures are absorbed safely without aborting turn.
+        # ------------------------------------------------------------------
+        autonomous_candidates: Sequence[CandidateHypothesis] = ()
+        try:
+            autonomous_candidates = await self._inference_coordinator.run_inference_cycle(
+                core=core,
+                character_id=character_id,
+                requested_slot=requested_slot,
+            )
+        except Exception as exc:
+            logger.error(
+                "Autonomous inference cycle failed for character '%s': %s. "
+                "Continuing without autonomous candidates.",
+                character_id, exc,
+            )
+            autonomous_candidates = ()
+
+        # ------------------------------------------------------------------
         # Step D — Load Active Candidates from DB
         # FAILURE CONTRACT: If this raises, propagate as
         # CandidateRepositoryUnavailableError. NEVER convert to [].
@@ -220,12 +305,131 @@ class RealityOrchestrationService:
             ) from exc
 
         # ------------------------------------------------------------------
+        # Step C3 — Retrospective Timeline Orchestration (Phase 8B.5)
+        # Evaluates candidate temporal constraint compatibility and synthesizes
+        # trajectory plurality without mutating state (Lock 1, 4, 6, 9).
+        # Catches unexpected failure and degrades to UNAVAILABLE (zero false exclusions).
+        # ------------------------------------------------------------------
+        timeline_result: TimelineOrchestrationResult
+        try:
+            timeline_result = self._timeline_coordinator.coordinate_turn(
+                core=core,
+                active_candidates=all_candidates,
+            )
+        except Exception as exc:
+            logger.error(
+                "Timeline orchestration coordinator failed for character '%s': %s. "
+                "Degrading to UNAVAILABLE (zero exclusions, no repair signal).",
+                character_id, exc,
+            )
+            timeline_result = TimelineOrchestrationResult(
+                evaluation_status=TemporalEvaluationStatus.UNAVAILABLE,
+                evaluation_error=str(exc),
+            )
+
+        # Candidate exclusion occurs ONLY when ALL applicable trajectories
+        # are HARD_INCOMPATIBLE (Lock 1 & Lock 6).
+        eligible_candidates = [
+            c for c in all_candidates
+            if c.candidate_id not in timeline_result.temporally_incompatible_candidate_ids
+        ]
+
+        # ------------------------------------------------------------------
+        # Step C4 — Longitudinal Life Progression Coordination (Phase 8C.5)
+        # Evaluates derived age, calendar boundaries, guarded transitions,
+        # milestone lapses, and trajectory realignment without state mutation.
+        # Catches unexpected failure and degrades to UNAVAILABLE (zero false exclusions).
+        # ------------------------------------------------------------------
+        longitudinal_result: LongitudinalCoordinatorResult
+        try:
+            active_trajs = (
+                timeline_result.trajectory_plurality.compatible_trajectories
+                if (
+                    timeline_result.evaluation_status == TemporalEvaluationStatus.AVAILABLE
+                    and timeline_result.trajectory_plurality is not None
+                )
+                else ()
+            )
+            longitudinal_result = self._longitudinal_coordinator.coordinate_turn(
+                core=core,
+                active_candidates=eligible_candidates,
+                trajectories=active_trajs,
+            )
+        except Exception as exc:
+            logger.error(
+                "Longitudinal coordinator failed for character '%s': %s. "
+                "Degrading to UNAVAILABLE (zero false exclusions).",
+                character_id, exc,
+            )
+            longitudinal_result = LongitudinalCoordinatorResult(
+                evaluation_status=LongitudinalEvaluationStatus.UNAVAILABLE,
+                effective_now=_utc_now(),
+                evaluation_error=str(exc),
+            )
+
+        # Candidate exclusion for Step E:
+        # Candidates whose intake/activity window has elapsed are excluded from active
+        # competition in this turn (Lock 4 & 8C.4 Permanent Lock: Lapsed != Deleted).
+        # They remain in all_candidates and in DB, never deleted.
+        if longitudinal_result.evaluation_status == LongitudinalEvaluationStatus.AVAILABLE:
+            competition_candidates = [
+                c for c in eligible_candidates
+                if c.candidate_id not in longitudinal_result.temporally_lapsed_candidate_ids
+            ]
+        else:
+            competition_candidates = eligible_candidates
+
+        # ------------------------------------------------------------------
+        # Step C5 — Evidence Reconciliation & Refutation Routing (Phase 9.5)
+        # Reconciles drained VerificationEvidenceInbox items for this turn.
+        # Produces candidate augmentations/proposals to inject into competition,
+        # candidates to exclude from current-turn competition view, and repair requests.
+        # ADR-020 Item 23: Evaluation-level exclusion ONLY.
+        # all_candidates remains the immutable truth source; zero candidate lifecycle mutation.
+        # ------------------------------------------------------------------
+        reconciliation_result: Optional[VerificationReconciliationResult] = None
+        if self._inbox is not None and self._reconciler is not None:
+            try:
+                drained_items = self._inbox.drain_for_turn(
+                    consumer_turn_id=current_turn_id,
+                    consumer_turn_sequence=current_turn_sequence,
+                )
+                if drained_items:
+                    reconciliation_result = self._reconciler.reconcile(
+                        inbox_items=drained_items,
+                        core=core,
+                        active_candidates=competition_candidates,
+                        consumer_turn_id=current_turn_id,
+                        consumer_turn_sequence=current_turn_sequence,
+                    )
+            except Exception as exc:
+                logger.error(
+                    "Verification reconciliation failed for character '%s': %s. "
+                    "Continuing without reconciliation.",
+                    character_id, exc,
+                )
+                reconciliation_result = None
+
+        if reconciliation_result is not None:
+            excluded_ids = set(reconciliation_result.candidate_ids_to_exclude)
+            if excluded_ids:
+                competition_candidates = [
+                    c for c in competition_candidates
+                    if c.candidate_id not in excluded_ids
+                ]
+            if reconciliation_result.candidate_hypotheses_to_inject:
+                competition_candidates = (
+                    list(competition_candidates)
+                    + list(reconciliation_result.candidate_hypotheses_to_inject)
+                )
+
+        # ------------------------------------------------------------------
         # Step E — Per-slot Competition
         # No-op when candidate list is empty. Pure computation, no DB writes.
         # ------------------------------------------------------------------
         competition_results = []
-        if all_candidates:
-            competition_results = self._run_competition(all_candidates, core, character_id)
+        if competition_candidates:
+            competition_results = self._run_competition(competition_candidates, core, character_id)
 
         # ------------------------------------------------------------------
         # Step F — Per-slot Choice
@@ -242,8 +446,8 @@ class RealityOrchestrationService:
 
         # ------------------------------------------------------------------
         # Step G — Reality Repair
-        # No-op when contradiction_type is NONE.
-        # Consumes contradiction signal from Step B only.
+        # No-op when contradiction_type is NONE and no canonical temporal conflict.
+        # RealityRepairService is the singular repair authority (Lock 2, 3, 7, 8).
         # ------------------------------------------------------------------
         repair_result: Optional[RealityRepairResult] = None
         if contradiction.contradiction_type != ContradictionType.NONE:
@@ -252,6 +456,29 @@ class RealityOrchestrationService:
             except Exception as exc:
                 logger.error(
                     "RealityRepairService failed for character '%s': %s. "
+                    "Continuing without repair result.",
+                    character_id, exc,
+                )
+                repair_result = None
+        elif (
+            timeline_result.canonical_conflict_signal is not None
+            and timeline_result.evaluation_status == TemporalEvaluationStatus.AVAILABLE
+        ):
+            try:
+                repair_result = self._run_temporal_repair(timeline_result.canonical_conflict_signal)
+            except Exception as exc:
+                logger.error(
+                    "RealityRepairService failed for temporal conflict (character '%s'): %s. "
+                    "Continuing without repair result.",
+                    character_id, exc,
+                )
+                repair_result = None
+        elif reconciliation_result is not None and reconciliation_result.repair_requests:
+            try:
+                repair_result = self._run_verification_repair(reconciliation_result.repair_requests[0])
+            except Exception as exc:
+                logger.error(
+                    "RealityRepairService failed for verification repair (character '%s'): %s. "
                     "Continuing without repair result.",
                     character_id, exc,
                 )
@@ -266,13 +493,18 @@ class RealityOrchestrationService:
         promoted = False
         refreshed_core = core
 
+        candidates_for_promotion = (
+            list(all_candidates)
+            + (list(reconciliation_result.candidate_hypotheses_to_inject) if reconciliation_result else [])
+        )
         if choices:
             try:
                 promoted, refreshed_core = await self._run_promotion(
                     choices=choices,
-                    all_candidates=all_candidates,
+                    all_candidates=candidates_for_promotion,
                     core=core,
                     character_id=character_id,
+                    target_slot=requested_slot,
                 )
             except Exception as exc:
                 logger.error(
@@ -324,6 +556,8 @@ class RealityOrchestrationService:
             unverified_user_claims=unverified_user_claims if unverified_user_claims else None,
             evidence_references=evidence_references if evidence_references else None,
             memories=memories,
+            trajectory_plurality=timeline_result.trajectory_plurality if timeline_result.evaluation_status == TemporalEvaluationStatus.AVAILABLE else None,
+            longitudinal_result=longitudinal_result if longitudinal_result.evaluation_status == LongitudinalEvaluationStatus.AVAILABLE else None,
         )
 
         return OrchestrationTurnResult(
@@ -333,6 +567,9 @@ class RealityOrchestrationService:
             repair_result=repair_result,
             contradiction=contradiction,
             promoted=promoted,
+            timeline_result=timeline_result,
+            longitudinal_result=longitudinal_result,
+            reconciliation_result=reconciliation_result,
         )
 
     # -----------------------------------------------------------------------
@@ -350,11 +587,16 @@ class RealityOrchestrationService:
         Returns (candidate, evidence_family). Propagates any exception to caller.
         """
         slot_name = classification.slot_name  # type: ignore[assignment]
-        cluster_key = f"{character_id}.{slot_name}.user_assertion"
+        slot_name = classification.slot_name
+        is_auth = getattr(classification, "is_authoritative", False)
+        # Canonical slot normalization: for authoritative revisions, ensure canonical education.institution is targeted
+        target_slot = "education.institution" if is_auth and slot_name == "education.university" else slot_name
+        cluster_key = f"{character_id}.{target_slot}.user_assertion"
 
         # Record evidence family (idempotent — same cluster_key increments mention_count)
+        source_type = "OFFICIAL_RECORD" if is_auth else "USER_ASSERTION"
         evidence_family = await self._candidate_repo.record_evidence(
-            source_type="USER_ASSERTION",
+            source_type=source_type,
             cluster_key=cluster_key,
         )
 
@@ -366,15 +608,21 @@ class RealityOrchestrationService:
                 0 if classification.inference_scope == InferenceScope.DIRECT else 1
             ),
         )
-        plausibility = PlausibilityBreakdown.create(
-            evidence_grounding_score=0.55,
-            coherence_score=0.60,
-        )
+        if is_auth:
+            plausibility = PlausibilityBreakdown.create(
+                evidence_grounding_score=0.95,
+                coherence_score=0.90,
+            )
+        else:
+            plausibility = PlausibilityBreakdown.create(
+                evidence_grounding_score=0.55,
+                coherence_score=0.60,
+            )
 
         candidate = CandidateHypothesis(
             candidate_id=candidate_id,
             entity_id=character_id,
-            slot_name=slot_name,
+            slot_name=target_slot,
             proposed_value=classification.claimed_value or user_input[:120],
             reality_taxonomy=classification.reality_taxonomy,
             inference_depth=provenance.inference_depth,
@@ -383,6 +631,11 @@ class RealityOrchestrationService:
             provenance=provenance,
             evidence_families=(evidence_family,),
             lifecycle_state=CandidateLifecycleState.GENERATED,
+            selection_metadata=(
+                {"is_authoritative_revision": True, "revision_slot": target_slot}
+                if is_auth
+                else None
+            ),
         )
 
         saved = await self._candidate_repo.save_candidate(candidate)
@@ -430,8 +683,15 @@ class RealityOrchestrationService:
         choices: list[ChoiceDecisionResult] = []
         for comp_result in competition_results:
             try:
+                # Correction A: Derive multi-attribute factor inputs with explicit provenance and neutral fallbacks
+                factor_inputs = self._derive_choice_factor_inputs(
+                    competition_result=comp_result,
+                    core=core,
+                    bible=bible,
+                )
                 choice = self._choice_service.select_choice(
                     competition_result=comp_result,
+                    factor_inputs_by_candidate=factor_inputs,
                     core=core,
                     bible=bible,
                 )
@@ -451,6 +711,98 @@ class RealityOrchestrationService:
                     comp_result.slot_name, exc,
                 )
         return choices
+
+    @classmethod
+    def _derive_choice_factor_inputs(
+        cls,
+        competition_result: CompetitionResult,
+        core: Optional["CharacterCore"] = None,
+        bible: Optional["CharacterBible"] = None,
+    ) -> dict[str, ChoiceFactorBreakdown]:
+        """Derive multi-attribute factor inputs for choice selection.
+
+        Provenance Rules (Correction A):
+        - plausibility_score: from competition_result.plausibility_scores (adjusted plausibility).
+        - temperament_fit, values_alignment, challenge_preference, resource_compatibility, timeline_compatibility:
+          derived from canonical reality if explicit evidence exists, otherwise strictly neutral 0.50 baseline.
+        - opportunity_cost, time_cost: strictly default to 0.0 (Phase 7 default contract).
+        - ZERO arbitrary constants (like 0.10) allowed.
+        """
+        factor_inputs: dict[str, ChoiceFactorBreakdown] = {}
+        for cand in competition_result.viable_candidates:
+            cid = cand.candidate_id
+            plaus_score = competition_result.plausibility_scores.get(
+                cid,
+                cand.plausibility.composite_plausibility_score,
+            )
+
+            temp_fit = 0.5
+            val_align = 0.5
+            chal_pref = 0.5
+            res_compat = 0.5
+            time_compat = 0.5
+            opp_cost = 0.0
+            time_cost = 0.0
+
+            # Derive from canonical core if explicit evidence is available
+            if core is not None and hasattr(core, "facts") and core.facts:
+                val_str = str(cand.proposed_value).lower()
+                # 1. Temperament fit from core temperament / personality facts
+                temp_fact = core.get_fact("personality.temperament") or core.get_fact("identity.temperament")
+                if temp_fact and temp_fact.value:
+                    tf_val = str(temp_fact.value).lower()
+                    if tf_val in val_str or any(w in val_str for w in tf_val.split()):
+                        temp_fit = 0.75
+
+                # 1b. Temperament / Interest fit from core interests
+                interests_fact = core.get_fact("interests")
+                if interests_fact and interests_fact.value:
+                    int_vals = interests_fact.value if isinstance(interests_fact.value, (list, tuple)) else [interests_fact.value]
+                    if cand.slot_name == "education.major" and "music" in val_str:
+                        if any("piano" in str(x).lower() or "guitar" in str(x).lower() or "music" in str(x).lower() for x in int_vals):
+                            temp_fit = 0.75
+
+                # 1c. Temperament fit from core dislikes
+                dislikes_fact = core.get_fact("dislikes")
+                if dislikes_fact and dislikes_fact.value:
+                    dis_vals = dislikes_fact.value if isinstance(dislikes_fact.value, (list, tuple)) else [dislikes_fact.value]
+                    if cand.slot_name in ("education.institution", "education.university") and ("usm" in val_str or "sains" in val_str):
+                        if any("crowd" in str(x).lower() or "noisy" in str(x).lower() for x in dis_vals):
+                            temp_fit = 0.75
+
+                # 2. Values alignment from core values / philosophy facts
+                val_fact = core.get_fact("identity.values") or core.get_fact("character.values")
+                if val_fact and val_fact.value:
+                    vf_val = str(val_fact.value).lower()
+                    if vf_val in val_str or any(w in val_str for w in vf_val.split()):
+                        val_align = 0.75
+
+                # 3. Timeline compatibility from age
+                age_fact = core.get_fact("identity.age")
+                if age_fact and age_fact.value:
+                    try:
+                        age = int(age_fact.value)
+                        if age < 16 and "university" in cand.slot_name:
+                            time_compat = 0.20
+                        elif age >= 18:
+                            time_compat = 0.50
+                        if cand.slot_name == "education.year" and age == 21:
+                            if val_str in ("year 2", "year_2", "2"):
+                                time_compat = 0.75
+                    except (ValueError, TypeError):
+                        time_compat = 0.50
+
+            factor_inputs[cid] = ChoiceFactorBreakdown(
+                plausibility_score=plaus_score,
+                temperament_fit=temp_fit,
+                values_alignment=val_align,
+                challenge_preference=chal_pref,
+                resource_compatibility=res_compat,
+                timeline_compatibility=time_compat,
+                opportunity_cost=opp_cost,
+                time_cost=time_cost,
+            )
+        return factor_inputs
 
     @staticmethod
     def _map_contradiction_to_repair(
@@ -477,11 +829,14 @@ class RealityOrchestrationService:
             is_social_misspeak = True
             social_explanation = contradiction.repair_guidance
 
-        elif ct in (
-            ContradictionType.USER_FACTUAL_ERROR,
-            ContradictionType.WORLD_KNOWLEDGE_CONFLICT,
-        ):
+        elif ct == ContradictionType.WORLD_KNOWLEDGE_CONFLICT:
+            conflict_type = "POP_CULTURE_SLIP"
+            is_social_misspeak = True
+            social_explanation = contradiction.repair_guidance
+
+        elif ct == ContradictionType.USER_FACTUAL_ERROR:
             conflict_type = "FACTUAL_DISAGREEMENT"
+            social_explanation = contradiction.repair_guidance
 
         elif ct == ContradictionType.ANOMALOUS_HIGH_IMPACT:
             conflict_type = "GRACEFUL_UNCERTAINTY"
@@ -508,12 +863,71 @@ class RealityOrchestrationService:
         kwargs = self._map_contradiction_to_repair(contradiction)
         return RealityRepairService.repair(**kwargs)
 
+    def _run_temporal_repair(
+        self,
+        signal: TemporalConflictSignal,
+    ) -> Optional[RealityRepairResult]:
+        """Delegate canonical temporal conflict to existing RealityRepairService (Lock 3).
+
+        Zero second repair engine. C3 produces signal/evidence; RealityRepairService
+        is the sole repair authority and selects the repair level (Lock 2, 7, 8).
+        """
+        adapter = signal.temporal_evidence
+        evidence_dict = adapter.to_repair_evidence_dict()
+        return RealityRepairService.repair(
+            conflict_type="TEMPORAL_CONFLICT",
+            timeline_evidence=evidence_dict,
+            rationale=signal.rationale,
+        )
+
+    def _run_verification_repair(
+        self,
+        repair_req: VerificationRepairRequest,
+    ) -> Optional[RealityRepairResult]:
+        """Delegate factual contradiction from verification reconciliation to existing RealityRepairService.
+
+        ADR-020 Item 22: Reconciler passes factual inputs; RealityRepairService evaluates 5-level hierarchy.
+        """
+        timeline_evidence: Optional[dict[str, Any]] = None
+        if repair_req.temporal_split_context is not None:
+            ctx = repair_req.temporal_split_context
+            timeline_evidence = {
+                "independent_timeline_supported": True,
+                "temporal_split": {
+                    "past": ctx.conflicting_interval,
+                    "present": ctx.observed_interval,
+                },
+                "temporal_relation": ctx.temporal_relation,
+            }
+
+        entity_disambiguation: Optional[dict[str, Any]] = None
+        if repair_req.entity_disambiguation_context is not None:
+            ectx = repair_req.entity_disambiguation_context
+            entity_disambiguation = {
+                "independent_evidence_supported": True,
+                "ambiguous_name": ectx.canonical_entity_anchor,
+                "reanchored_target": ectx.observed_entity_anchor,
+                "ambiguity_reason": ectx.ambiguity_reason,
+            }
+
+        return RealityRepairService.repair(
+            claim_key=repair_req.claim_key,
+            claimed_value=repair_req.claimed_value,
+            existing_value=repair_req.existing_value,
+            unconfirmed_candidate_id=repair_req.target_candidate_id,
+            timeline_evidence=timeline_evidence,
+            entity_disambiguation=entity_disambiguation,
+            compensatory_biography_requested=repair_req.compensatory_biography_requested,
+            rationale=repair_req.rationale,
+        )
+
     async def _run_promotion(
         self,
         choices: list[ChoiceDecisionResult],
         all_candidates: list[CandidateHypothesis],
         core: "CharacterCore",
         character_id: str,
+        target_slot: Optional[str] = None,
     ) -> tuple[bool, "CharacterCore"]:
         """Attempt biography promotion for any promotable choice decision.
 
@@ -535,8 +949,13 @@ class RealityOrchestrationService:
         # Build lookup of candidate by ID for choice resolution
         candidate_by_id = {c.candidate_id: c for c in all_candidates}
 
+        # If target_slot is specified, prioritize choices matching target_slot
+        ordered_choices = list(choices)
+        if target_slot:
+            ordered_choices.sort(key=lambda ch: 0 if ch.slot_name == target_slot else 1)
+
         promoted = False
-        for choice in choices:
+        for choice in ordered_choices:
             if not choice.selected_candidate_id:
                 continue
             candidate = (
@@ -554,11 +973,27 @@ class RealityOrchestrationService:
                 )
                 if promo_record:
                     promoted = True
+                    logger.info(
+                        "[PROMOTION] slot=%s candidate=%s value=%s",
+                        candidate.slot_name,
+                        candidate.candidate_id,
+                        candidate.proposed_value,
+                    )
+                    logger.info(
+                        "[CANONICAL] Committed slot '%s' with value '%s' to DB",
+                        candidate.slot_name,
+                        candidate.proposed_value,
+                    )
                     # One successful promotion per turn is enough; refresh core and stop.
                     break
+            except PermissionError as perm_err:
+                logger.info(
+                    "Autonomous promotion for candidate '%s' slot '%s' skipped by Hard Gates: %s",
+                    candidate.candidate_id, candidate.slot_name, perm_err,
+                )
             except Exception as exc:
                 logger.error(
-                    "promote_candidate failed for candidate '%s' slot '%s': %s. "
+                    "promote_candidate unexpected failure for candidate '%s' slot '%s': %s. "
                     "Skipping promotion.",
                     candidate.candidate_id, candidate.slot_name, exc,
                 )

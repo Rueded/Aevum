@@ -6,10 +6,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.character import router as character_router
+from app.api.genesis import router as genesis_router
 from app.api.conversations import router as conversations_router
 from app.api.desktop import router as desktop_router
 from app.api.health import router as health_router
 from app.api.profile import router as profile_router
+from app.api.voice import router as voice_router
+from app.api.call_stream import router as call_stream_router
 from app.core.config import settings
 from app.db.session import async_session_factory, engine, init_db
 
@@ -82,8 +85,11 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(conversations_router)
     app.include_router(character_router)
+    app.include_router(genesis_router)
     app.include_router(profile_router)
     app.include_router(desktop_router)
+    app.include_router(voice_router)
+    app.include_router(call_stream_router)
 
     return app
 

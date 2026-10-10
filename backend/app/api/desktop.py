@@ -7,6 +7,8 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import uuid
+
 from app.db.session import get_db_session
 from app.desktop.models import (
     ClaimNotificationRequest,
@@ -21,7 +23,13 @@ from app.desktop.models import (
     SetDNDRequest,
 )
 from app.desktop.service import DesktopService
-from app.proactive.models import NotificationStatus, SuppressionReason
+from app.proactive.models import (
+    NotificationStatus,
+    ProactiveContext,
+    ProactiveIntent,
+    ProactiveIntentType,
+    SuppressionReason,
+)
 from app.proactive.notification_service import ProactiveNotificationService
 
 router = APIRouter(prefix="/desktop", tags=["Desktop Integration"])
@@ -46,6 +54,7 @@ async def get_settings(
         "min_cooldown_minutes": record.min_cooldown_minutes,
         "idle_awareness_enabled": record.idle_awareness_enabled,
         "idle_threshold_seconds": record.idle_threshold_seconds,
+        "user_country": getattr(record, "user_country", "MY"),
         "dnd_until": record.dnd_until.isoformat() if record.dnd_until else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
@@ -72,6 +81,7 @@ async def update_settings(
         "min_cooldown_minutes": record.min_cooldown_minutes,
         "idle_awareness_enabled": record.idle_awareness_enabled,
         "idle_threshold_seconds": record.idle_threshold_seconds,
+        "user_country": getattr(record, "user_country", "MY"),
         "dnd_until": record.dnd_until.isoformat() if record.dnd_until else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
@@ -428,3 +438,46 @@ async def interact_with_notification(
         "conversation_message_id": updated.conversation_message_id if updated else record.conversation_message_id,
         "interacted_at": updated.interacted_at.isoformat() if updated and updated.interacted_at else None,
     }
+
+
+@router.post(
+    "/proactive/trigger-test",
+    response_model=dict[str, Any],
+    summary="Trigger a test proactive reach-out notification",
+)
+async def trigger_proactive_test(
+    character_id: str = "aevum",
+    conversation_id: Optional[str] = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Force-trigger a proactive reach-out notification for live interactive testing."""
+    service = ProactiveNotificationService(session)
+    intent = ProactiveIntent(
+        character_id=character_id,
+        intent_type=ProactiveIntentType.SHARE_EXPERIENCE,
+        intent_strength=0.85,
+        topic_hook="想知道你现在在忙些什么",
+        grounding_activity_title="刚刚画完一幅插画草稿，伸了个懒腰",
+    )
+    context = ProactiveContext(
+        approved_intent=intent,
+        character_id=character_id,
+        current_activity="画室休息中",
+    )
+    idempotency_key = f"manual-test-{uuid.uuid4()}"
+    notif = await service.create_proactive_notification(
+        intent=intent,
+        context=context,
+        idempotency_key=idempotency_key,
+        conversation_id=conversation_id,
+        title="晚晚发来了新消息",
+    )
+    await session.commit()
+    return {
+        "status": "success",
+        "notification_id": notif.id,
+        "title": notif.title,
+        "body": notif.body,
+        "conversation_message_id": notif.conversation_message_id,
+    }
+

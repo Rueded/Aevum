@@ -7,7 +7,7 @@ Guarantees:
 - Deterministic: Pure function of (RelationshipState, Sequence[RelationshipSignal]).
   Zero randomness, zero LLM calls, zero time-dependent decay.
 - Gradual & Bounded: Strict per-signal and per-interaction aggregate delta caps (0.03).
-- No Direct Affection Mutation: Ordinary interaction signals NEVER directly modify affection.
+- Gradual Affection Dynamics: Meaningful interpersonal signals (appreciation, playful connection, emotional support, disclosure) contribute gradual, bounded affection without sudden romantic leaps.
 - Safe Clamping: All target metrics clamped to [0.0, 1.0].
 - High Confidence / Strength Thresholds: Weak signals (<0.70 confidence or <0.10 strength)
   produce no relationship mutation.
@@ -36,24 +36,28 @@ MAX_SIGNAL_DELTA: float = 0.03
 MAX_AGGREGATE_DELTA_PER_DIMENSION: float = 0.03
 
 # Base delta contributions per signal type.
-# Affection is strictly omitted: ordinary conversation signals do not directly change affection.
+# Affection is earned through authentic appreciation, shared interests, personal disclosure, support, and playfulness.
 SIGNAL_BASE_DELTAS: dict[RelationshipSignalType, dict[str, float]] = {
     RelationshipSignalType.APPRECIATION: {
         "trust": 0.004,
         "comfort": 0.006,
+        "affection": 0.005,
     },
     RelationshipSignalType.SHARED_INTEREST: {
         "familiarity": 0.006,
         "comfort": 0.004,
+        "affection": 0.003,
     },
     RelationshipSignalType.PERSONAL_DISCLOSURE: {
         "trust": 0.006,
         "familiarity": 0.008,
+        "affection": 0.005,
     },
     RelationshipSignalType.SUPPORT_RECEIVED: {
         "trust": 0.008,
         "comfort": 0.006,
         "attachment": 0.003,
+        "affection": 0.006,
     },
     RelationshipSignalType.SUPPORT_GIVEN: {
         "respect": 0.003,
@@ -68,15 +72,18 @@ SIGNAL_BASE_DELTAS: dict[RelationshipSignalType, dict[str, float]] = {
         "trust": -0.012,
         "respect": -0.010,
         "comfort": -0.008,
+        "affection": -0.008,
     },
     RelationshipSignalType.DISAGREEMENT: {},  # Healthy disagreement is neutral by default
     RelationshipSignalType.REPAIR_ATTEMPT: {
         "trust": 0.010,
         "comfort": 0.006,
+        "affection": 0.003,
     },
     RelationshipSignalType.PLAYFUL_CONNECTION: {
         "comfort": 0.005,
         "familiarity": 0.005,
+        "affection": 0.005,
     },
     RelationshipSignalType.RELIABILITY: {
         "trust": 0.010,

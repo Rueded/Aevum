@@ -85,7 +85,12 @@ class VolatilityDecayPolicy:
         Strictly NEVER transitions to REJECTED.
         """
         now = as_of or datetime.now(timezone.utc)
-        elapsed = (now - candidate.updated_at).total_seconds()
+        cand_updated = candidate.updated_at
+        if cand_updated.tzinfo is None:
+            cand_updated = cand_updated.replace(tzinfo=timezone.utc)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=timezone.utc)
+        elapsed = (now - cand_updated).total_seconds()
         if elapsed <= 0:
             return candidate
 

@@ -1,0 +1,97 @@
+[1790589550] [Thread] run() thread: ThreadId(1)
+[1790589551] [Thread] setup() thread: ThreadId(1)
+[1790589551] [Config] App identifier: com.aevum.desktop
+[1790589551] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0xe0ea2))
+[1790589551] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1790589551] [Supervisor] Backend ready in mode: attached
+[1790589848] [WindowEvent] Close requested -> intercepted: window hidden to tray
+[1790589941] [Thread] run() thread: ThreadId(1)
+[1790589942] [Thread] setup() thread: ThreadId(1)
+[1790589942] [Config] App identifier: com.aevum.desktop
+[1790589942] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x40e3e))
+[1790589942] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1790589942] [Supervisor] Backend ready in mode: attached
+[1790591035] [WindowEvent] Close requested -> intercepted: window hidden to tray
+[1791125641] [Thread] run() thread: ThreadId(1)
+[1791125642] [Thread] setup() thread: ThreadId(1)
+[1791125642] [Config] App identifier: com.aevum.desktop
+[1791125642] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x260e7e))
+[1791125642] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791125642] [Supervisor] Backend ready in mode: attached
+[1791126723] [WindowEvent] Close requested -> intercepted: window hidden to tray
+[1791200371] [Thread] run() thread: ThreadId(1)
+[1791200372] [Thread] setup() thread: ThreadId(1)
+[1791200372] [Config] App identifier: com.aevum.desktop
+[1791200372] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x70bde))
+[1791200372] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791200372] [Supervisor] Backend ready in mode: attached
+[1791200610] [WindowEvent] Close requested -> intercepted: window hidden to tray
+[1791202626] [Thread] run() thread: ThreadId(1)
+[1791202627] [Thread] setup() thread: ThreadId(1)
+[1791202627] [Config] App identifier: com.aevum.desktop
+[1791202627] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x5136a))
+[1791202627] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791202627] [Supervisor] Backend ready in mode: attached
+[1791203851] [WindowEvent] Close requested -> intercepted: window hidden to tray
+[1791385953] [Thread] run() thread: ThreadId(1)
+[1791385954] [Thread] setup() thread: ThreadId(1)
+[1791385954] [Config] App identifier: com.aevum.desktop
+[1791385954] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x490d82))
+[1791385954] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791385954] [Supervisor] Backend ready in mode: attached
+[1791385995] [WindowEvent] Close requested -> intercepted: window hidden to tray
+[1791468581] [Thread] run() thread: ThreadId(1)
+[1791468582] [Thread] setup() thread: ThreadId(1)
+[1791468582] [Config] App identifier: com.aevum.desktop
+[1791468582] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x20d64))
+[1791468582] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791468582] [Supervisor] Backend ready in mode: attached
+[1791474099] [WindowEvent] Close requested -> intercepted: window hidden to tray
+[1791540506] [Toast] Dispatched WinRT Toast for notification_id: poc-test-winrt-uuid
+[1791541083] [Thread] run() thread: ThreadId(1)
+[1791541084] [Thread] setup() thread: ThreadId(1)
+[1791541084] [Config] App identifier: com.aevum.desktop
+[1791541084] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0xd0e28))
+[1791541084] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791541084] [Supervisor] Backend ready in mode: attached
+[1791549937] [Thread] run() thread: ThreadId(1)
+[1791549939] [Thread] setup() thread: ThreadId(1)
+[1791549939] [Config] App identifier: com.aevum.desktop
+[1791549939] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x30d66))
+[1791549939] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791549939] [Supervisor] Backend ready in mode: attached
+[1791555078] [Thread] run() thread: ThreadId(1)
+[1791555079] [Thread] setup() thread: ThreadId(1)
+[1791555079] [Config] App identifier: com.aevum.desktop
+[1791555079] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x220192))
+[1791555079] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791555079] [Supervisor] Backend ready in mode: attached
+[1791608594] [Thread] run() thread: ThreadId(1)
+[1791608595] [Thread] setup() thread: ThreadId(1)
+[1791608595] [Config] App identifier: com.aevum.desktop
+[1791608595] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x50bd4))
+[1791608595] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791608595] [Supervisor] Backend ready in mode: attached
+[1791609646] [WindowEvent] Close requested -> intercepted: window hidden to tray
+[1791634816] [Thread] run() thread: ThreadId(1)
+[1791634817] [Thread] setup() thread: ThreadId(1)
+[1791634817] [Config] App identifier: com.aevum.desktop
+[1791634817] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x20b20))
+[1791634817] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791634817] [Supervisor] Backend ready in mode: attached
+[1791637588] [WindowEvent] Close requested -> intercepted: window hidden to tray
+[1791641079] [Thread] run() thread: ThreadId(1)
+[1791641080] [Thread] setup() thread: ThreadId(1)
+[1791641080] [Config] App identifier: com.aevum.desktop
+[1791641080] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x250dc2))
+[1791641080] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791641080] [Supervisor] Backend ready in mode: attached
+[1791641083] [Toast] Dispatched WinRT Toast for notification_id: 9b44cb9c-fb5f-4ca2-a2a3-0ae306c232d5
+[1791641213] [Toast] Dispatched WinRT Toast for notification_id: 77d09eb9-3cfc-4e79-8318-8cf7bd2aebc9
+[1791644065] [WindowEvent] Close requested -> intercepted: window hidden to tray
+[1791644094] [Thread] run() thread: ThreadId(1)
+[1791644095] [Thread] setup() thread: ThreadId(1)
+[1791644095] [Config] App identifier: com.aevum.desktop
+[1791644095] [SingleInstanceCheck] FindWindowW result: Ok(HWND(0x200e0c))
+[1791644095] [Supervisor] Starting background supervisor lifecycle probe/spawn...
+[1791644095] [Supervisor] Backend ready in mode: attached

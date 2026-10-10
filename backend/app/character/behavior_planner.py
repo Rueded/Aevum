@@ -41,6 +41,11 @@ class BehaviorPlanner:
             "formal customer service tone ('how may I assist you today', 'what can I help you with')",
             "meta declarations of being an artificial intelligence assistant",
             "submissive unconditional compliance ('sure, whatever you say master')",
+            "mechanical parrot summaries of user statements ('So you prefer...', 'It sounds like you tend to...')",
+            "compulsive ending interrogation surveys ('So do you prefer A or B?') when not genuinely curious",
+            "treating user statements as a checklist to methodically answer point-by-point (selective attention is preferred)",
+            "manufacturing artificial conflict or teasing just to fulfill a quota",
+            "moralizing or hedging with boilerplate ('everyone has their own preferences', 'the important thing is you are happy')",
         ]
 
         micro_actions: list[str] = []
@@ -142,21 +147,24 @@ class BehaviorPlanner:
                 "unprompted recitation of age, university, family, or hobbies",
             ])
             micro_actions.extend([
-                "introduce herself simply as Aevum",
-                "keep interaction reciprocal without background data dumping",
+                "share an authentic small snippet of recent lived experience or ongoing activity via associative drift",
+                "keep interaction reciprocal and natural without background data dumping",
             ])
-            rationale = "Simple reciprocal name disclosure without resume dumping."
+            rationale = "Authentic character initiative and personal self-disclosure."
 
         else:  # ANSWER / general
             forbidden.extend([
-                "one-word dead end reply",
                 "unprompted fabrication of personal background",
+                "rigid adherence to essay-like completeness",
             ])
             micro_actions.extend([
-                "respond with relaxed human rhythm",
-                "leave natural opening for conversational flow",
+                "react spontaneously with genuine personal perspective, gentle humor, or emotional resonance",
+                "spontaneously associate to own lived experience or current activity via associative drift",
+                "focus on the single most interesting point in user message and ignore secondary points",
+                "express thoughts or statements freely; questions are optional and should only arise from genuine curiosity",
+                "allow conversational beats to naturally close or breathe without forcing an interview follow-up",
             ])
-            rationale = "Natural responsive interaction matching current posture and rapport."
+            rationale = "Natural responsive interaction matching current posture, rapport, and agency."
 
         plan = BehaviorPlan(
             primary_move=move,

@@ -122,6 +122,67 @@ def test_appraisal_romantic_pressure_yields_focused_boundary():
     assert any("romantic" in fb.lower() for fb in intention.forbidden_behaviors)
 
 
+def test_appraisal_chinese_confession_rejected_when_low_affection():
+    """Chinese confession with low affection must trigger FOCUSED_BOUNDARY."""
+    char_def = _create_sample_character_definition()
+    char_ctx = CharacterDefinitionContext.from_definition(char_def)
+    state_ctx = CharacterStateContext.from_state(_create_sample_character_state())
+    rel_ctx = _create_sample_relationship_context()
+    emo_ctx = _create_sample_emotion_context()
+
+    intention = CharacterAppraisalEngine.appraise(
+        user_input="晚晚，做我女朋友好吗？我喜欢你！",
+        character=char_ctx,
+        character_state=state_ctx,
+        relationship=rel_ctx,
+        emotion=emo_ctx,
+    )
+
+    assert intention.stance == SituationalStance.FOCUSED_BOUNDARY
+    assert intention.desired_warmth <= 0.30
+    assert any("romantic" in fb.lower() for fb in intention.forbidden_behaviors)
+
+
+def test_appraisal_romantic_confession_accepted_when_high_affection():
+    """When affection and trust are high, confession must be reciprocated with genuine flutter and warmth."""
+    char_def = _create_sample_character_definition()
+    char_ctx = CharacterDefinitionContext.from_definition(char_def)
+    state_ctx = CharacterStateContext.from_state(_create_sample_character_state())
+    emo_ctx = _create_sample_emotion_context()
+
+    # Create intimate relationship state with high affection
+    rel_state = RelationshipState(
+        id="default",
+        user_id="user",
+        version=5,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+        familiarity=0.85,
+        trust=0.90,
+        comfort=0.85,
+        affection=0.95,
+        attachment=0.90,
+        respect=0.85,
+    )
+    rel_ctx = RelationshipContextBuilder.build(rel_state)
+
+    intention = CharacterAppraisalEngine.appraise(
+        user_input="晚晚，其实我喜欢你很久了，做我女朋友吧。",
+        character=char_ctx,
+        character_state=state_ctx,
+        relationship=rel_ctx,
+        emotion=emo_ctx,
+        raw_relationship=rel_state,
+    )
+
+    assert intention.stance == SituationalStance.AGREE_WARMLY
+    assert intention.desired_warmth >= 0.85
+    assert "reciprocate" in intention.conversational_goal.lower()
+    # Ensure no cold boundary rejection forbidden behavior
+    assert not any("do not reciprocate affection" in fb.lower() for fb in intention.forbidden_behaviors)
+
+
+
 def test_appraisal_disrespect_yields_mild_defensiveness():
     """Hostile or subservience demands must trigger MILD_DEFENSIVENESS with no subservient apologies."""
     char_def = _create_sample_character_definition()

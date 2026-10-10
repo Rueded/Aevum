@@ -46,13 +46,19 @@ from app.reality.candidate_models import (
     EvidenceFamily,
 )
 from app.reality.choice_models import ChoiceDecisionResult
-from app.reality.models import FactAuthority, FactSource
+from app.reality.models import FactAuthority, FactSource, FactStatus
 from app.reality.repair_models import RealityRepairResult, RepairLevel
 from app.reality.volatility_policy import (
     FactVolatilityCategory,
     VolatilityDecayPolicy,
     classify_slot_volatility,
 )
+from app.reality.trajectory_engine import TrajectoryPluralityResult
+from app.reality.longitudinal_coordinator import (
+    LongitudinalCoordinatorResult,
+    LongitudinalEvaluationStatus,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +91,8 @@ class RealityContextBuilder:
         evidence_references: Optional[Sequence[EvidenceFamily]] = None,
         memories: Optional[Sequence[Any]] = None,
         current_time: Optional[datetime] = None,
+        trajectory_plurality: Optional[TrajectoryPluralityResult] = None,
+        longitudinal_result: Optional[LongitudinalCoordinatorResult] = None,
     ) -> GovernedRealityContext:
         """Assemble structured GovernedRealityContext with complete provenance and budget limits.
 
@@ -199,6 +207,12 @@ class RealityContextBuilder:
                 if cand.candidate_id in invalidated_candidate_ids:
                     continue
 
+                # Omit candidates for slots that are already canonical in core
+                if core and hasattr(core, "facts") and core.facts:
+                    c_fact = core.facts.get(cand.slot_name)
+                    if c_fact and getattr(c_fact, "status", None) == FactStatus.CANONICAL:
+                        continue
+
                 # Volatility decay filter: apply_decay returns candidate with decayed lifecycle
                 decayed = VolatilityDecayPolicy.apply_decay(cand, as_of=now)
                 if decayed.lifecycle_state in (
@@ -260,6 +274,12 @@ class RealityContextBuilder:
             # Deterministic sorting: (slot_name ASC, decision_id ASC)
             sorted_choices = sorted(choices, key=lambda ch: (ch.slot_name, ch.decision_id))
             for ch in sorted_choices[: cls.MAX_CONTEXT_CHOICE_ITEMS]:
+                # Omit choices for slots that are already canonical in core
+                if core and hasattr(core, "facts") and core.facts:
+                    c_fact = core.facts.get(ch.slot_name)
+                    if c_fact and getattr(c_fact, "status", None) == FactStatus.CANONICAL:
+                        continue
+
                 ch_prov = RealityItemProvenance(
                     item_id=f"choice_{ch.decision_id}",
                     fact_key=ch.slot_name,
@@ -375,6 +395,54 @@ class RealityContextBuilder:
                 )
 
         # ---------------------------------------------------------------------
+        # 8b. Temporal Trajectory Plurality Context (Phase 8B.5 Lock 5)
+        # Pure serialization of synthesized trajectories without ranking or selection.
+        # ---------------------------------------------------------------------
+        temporal_items: list[GovernedRealityItem] = []
+        if trajectory_plurality is not None:
+            prov = RealityItemProvenance(
+                item_id=f"temporal_plurality_{character_id}",
+                fact_key="temporal.trajectory_plurality",
+                truth_type=EpistemicTruthType.TEMPORAL_TRAJECTORY_PLURALITY,
+                authority=FactAuthority.SYSTEM_BASELINE,
+                source_type=FactSource.AEVUM_INFERRED,
+                volatility_class=FactVolatilityCategory.EPHEMERAL_ROUTINE,
+            )
+            temporal_items.append(
+                GovernedRealityItem(
+                    provenance=prov,
+                    value=trajectory_plurality.model_dump(),
+                    is_canonical=False,
+                )
+            )
+
+        # ---------------------------------------------------------------------
+        # 8c. Longitudinal Life Context (Phase 8C.5)
+        # Pure serialization of derived age, boundaries, transitions, and lapses
+        # without temporal reasoning, selection, or canonical mutation.
+        # ---------------------------------------------------------------------
+        longitudinal_items: list[GovernedRealityItem] = []
+        if (
+            longitudinal_result is not None
+            and getattr(longitudinal_result, "evaluation_status", None) == LongitudinalEvaluationStatus.AVAILABLE
+        ):
+            prov = RealityItemProvenance(
+                item_id=f"longitudinal_{character_id}",
+                fact_key="temporal.longitudinal_context",
+                truth_type=EpistemicTruthType.LONGITUDINAL_TEMPORAL_CONTEXT,
+                authority=FactAuthority.SYSTEM_BASELINE,
+                source_type=FactSource.AEVUM_INFERRED,
+                volatility_class=FactVolatilityCategory.EPHEMERAL_ROUTINE,
+            )
+            longitudinal_items.append(
+                GovernedRealityItem(
+                    provenance=prov,
+                    value=longitudinal_result.to_context_dict(),
+                    is_canonical=False,
+                )
+            )
+
+        # ---------------------------------------------------------------------
         # 9. Deterministic Prompt Payload Serialization & SHA-256 Hash
         # Hard Invariant: assembled_at and execution duration are strictly EXCLUDED from the hash!
         # ---------------------------------------------------------------------
@@ -387,6 +455,8 @@ class RealityContextBuilder:
             evidence_items=evidence_items,
             user_claim_items=user_claim_items,
             memory_items=memory_items,
+            temporal_items=temporal_items,
+            longitudinal_items=longitudinal_items,
         )
         context_hash = cls.compute_deterministic_prompt_hash(prompt_blocks)
 
@@ -418,6 +488,8 @@ class RealityContextBuilder:
             evidence_items=tuple(evidence_items),
             user_claim_items=tuple(user_claim_items),
             memory_items=tuple(memory_items),
+            temporal_items=tuple(temporal_items),
+            longitudinal_items=tuple(longitudinal_items),
             budget_metrics=budget_metrics,
             audit_metadata=audit_metadata,
         )
@@ -438,6 +510,8 @@ class RealityContextBuilder:
             evidence_items=context.evidence_items,
             user_claim_items=context.user_claim_items,
             memory_items=context.memory_items,
+            temporal_items=context.temporal_items,
+            longitudinal_items=context.longitudinal_items,
         )
 
     @classmethod
@@ -451,6 +525,8 @@ class RealityContextBuilder:
         evidence_items: Sequence[GovernedRealityItem],
         user_claim_items: Sequence[GovernedRealityItem],
         memory_items: Sequence[GovernedRealityItem],
+        temporal_items: Sequence[GovernedRealityItem] = (),
+        longitudinal_items: Sequence[GovernedRealityItem] = (),
     ) -> list[str]:
         """Internal deterministic serializer ensuring bitwise replay stability."""
         blocks: list[str] = []
@@ -522,10 +598,10 @@ class RealityContextBuilder:
                 if r_data.get("social_guidance"):
                     lines.append(f'    <social_guidance>{r_data["social_guidance"]}</social_guidance>')
                 if r_data.get("temporal_split"):
-                    split_json = json.dumps(r_data["temporal_split"], ensure_ascii=False)
+                    split_json = json.dumps(r_data["temporal_split"], default=str, ensure_ascii=False)
                     lines.append(f"    <temporal_split>{split_json}</temporal_split>")
                 if r_data.get("reanchored_context"):
-                    reanchor_json = json.dumps(r_data["reanchored_context"], ensure_ascii=False)
+                    reanchor_json = json.dumps(r_data["reanchored_context"], default=str, ensure_ascii=False)
                     lines.append(f"    <reanchored_entity>{reanchor_json}</reanchored_entity>")
                 if r_data.get("unresolved_reasons"):
                     for reason in r_data["unresolved_reasons"]:
@@ -554,6 +630,79 @@ class RealityContextBuilder:
                 c_text = item.value.get("claim_text", "")
                 lines.append(f"  <claim status=\"UNVERIFIED_OBSERVATION\">{c_text}</claim>")
             lines.append("</unverified_user_claims>")
+            blocks.append("\n".join(lines))
+
+        # 8. Temporal Trajectory Context block (Phase 8B.5 Lock 5: Pure Serialization)
+        if temporal_items:
+            lines = ["<temporal_trajectory_context>"]
+            lines.append("  <guidance>Do NOT assert a specific pathway as a confirmed personal fact.</guidance>")
+            for item in temporal_items:
+                t_data = item.value
+                bound_exceeded = t_data.get("trajectory_bound_exceeded", False)
+                total_compat = t_data.get("total_compatible_count", 0)
+                compat_paths = t_data.get("compatible_pathways", ())
+                compat_trajs = t_data.get("compatible_trajectories", ())
+
+                if bound_exceeded:
+                    lines.append(f'  <ambiguity status="BOUND_EXCEEDED" total_compatible="{total_compat}">')
+                    for p in compat_paths:
+                        lines.append(f'    <compatible_pathway name="{p}" />')
+                    lines.append("  </ambiguity>")
+                elif compat_trajs:
+                    lines.append(f'  <compatible_trajectories count="{len(compat_trajs)}">')
+                    for traj in compat_trajs:
+                        t_id = traj.get("trajectory_id", "")
+                        pathway = traj.get("pathway", "")
+                        raw_status = traj.get("status", "")
+                        status_val = str(raw_status.value if hasattr(raw_status, "value") else raw_status).replace("TrajectoryStatus.", "")
+                        lines.append(f'    <trajectory id="{t_id}" pathway="{pathway}" status="{status_val}">')
+                        for node in traj.get("nodes", ()):
+                            n_id = node.get("node_id", "")
+                            n_label = node.get("label", "")
+                            raw_stage = node.get("stage", "")
+                            n_stage = str(raw_stage.value if hasattr(raw_stage, "value") else raw_stage).replace("LifeStage.", "")
+                            raw_grounding = node.get("epistemic_grounding", "")
+                            n_grounding = str(raw_grounding.value if hasattr(raw_grounding, "value") else raw_grounding).replace("EpistemicGrounding.", "")
+                            lines.append(f'      <node id="{n_id}" stage="{n_stage}" grounding="{n_grounding}">{n_label}</node>')
+                        lines.append("    </trajectory>")
+                    lines.append("  </compatible_trajectories>")
+            lines.append("</temporal_trajectory_context>")
+            blocks.append("\n".join(lines))
+
+        # 9. Longitudinal Life Context block (Phase 8C.5: Pure Serialization)
+        if longitudinal_items:
+            lines = ["<longitudinal_life_context>"]
+            lines.append("  <guidance>Do NOT assert projected or unverified milestones as canonical historical facts. Age is mathematically derived from birth date.</guidance>")
+            for item in longitudinal_items:
+                l_data = item.value
+                eff_time = l_data.get("effective_now_iso", "")
+                if eff_time:
+                    lines.append(f"  <effective_time>{eff_time}</effective_time>")
+                if "derived_age" in l_data and l_data["derived_age"] is not None:
+                    lines.append(f'  <derived_age status="MATHEMATICAL_VIEW">{l_data["derived_age"]}</derived_age>')
+
+                boundaries = l_data.get("calendar_events", ())
+                if boundaries:
+                    lines.append(f'  <calendar_boundaries count="{len(boundaries)}">')
+                    for b in boundaries:
+                        lines.append(f'    <boundary type="{b.get("event_type", "")}" boundary_date="{b.get("boundary_date", "")}" />')
+                    lines.append("  </calendar_boundaries>")
+
+                transitions = l_data.get("transition_signals", ())
+                if transitions:
+                    lines.append(f'  <supported_transitions count="{len(transitions)}">')
+                    for tr in transitions:
+                        lines.append(f'    <transition target_stage="{tr.get("target_stage", "")}" is_canonical="false" status="TRANSITION_SUPPORTED" />')
+                    lines.append("  </supported_transitions>")
+
+                lapses = l_data.get("candidate_lapses", ())
+                if lapses:
+                    lines.append(f'  <temporal_lapses count="{len(lapses)}">')
+                    for lp in lapses:
+                        lines.append(f'    <lapse slot="{lp.get("slot_name", "")}" candidate_id="{lp.get("candidate_id", "")}" status="ELAPSED_UNVERIFIED" />')
+                    lines.append("  </temporal_lapses>")
+
+            lines.append("</longitudinal_life_context>")
             blocks.append("\n".join(lines))
 
         return blocks

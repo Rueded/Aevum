@@ -70,6 +70,11 @@ from app.character.behavior_planner import BehaviorPlanner
 from app.reality.belief_models import BeliefClaim
 from app.reality.contradiction_models import ContradictionResolution
 from app.reality.promotion_models import PromotionDecision
+from app.character.conversational_models import (
+    CharacterExpressionSignature,
+    ConversationalMomentumState,
+)
+from app.reality.deception_models import CognitiveGrievanceContext
 # RealityBeliefEngine (Phase 7B.3) removed from governed path in Phase 7D.5.
 # The module is preserved for reference but is no longer called here.
 # See: reality_orchestration_service.py for the replacement pipeline.
@@ -117,6 +122,10 @@ class CharacterEngine:
         override_desire: Optional[str] = None,
         context_notes: Optional[str] = None,
         governed_reality: Optional[GovernedRealityContext] = None,
+        conversational_momentum: Optional[ConversationalMomentumState] = None,
+        expression_signature: Optional[CharacterExpressionSignature] = None,
+        user_country: Optional[str] = None,
+        deception_grievance: Optional[CognitiveGrievanceContext] = None,
     ) -> CharacterResponseContext:
         """Gather all relevant domain contexts into a structured CharacterResponseContext.
 
@@ -282,6 +291,7 @@ class CharacterEngine:
             emotion=emotion_ctx,
             life=life_ctx,
             personal_world=personal_world,
+            raw_relationship=relationship_state,
         )
         behavior_ctx = CharacterBehaviorContext.synthesize(
             state=state_ctx,
@@ -372,6 +382,52 @@ class CharacterEngine:
                     memories=memories,
                 )
 
+        # Phase 16.5: Personal Growth Context Assembly (Read-Only)
+        personal_growth_xml = None
+        try:
+            from app.growth.growth_context_adapter import PersonalGrowthContextAdapter
+            growth_ctx = await PersonalGrowthContextAdapter.assemble_async(
+                session=self._session,
+                character_id=character_id,
+                salient_topics=[cleaned_user_input],
+            )
+            personal_growth_xml = growth_ctx.xml_block
+        except Exception as exc:
+            logger.debug("Personal growth context assembly omitted: %s", exc)
+
+        if expression_signature is None:
+            expression_signature = CharacterExpressionSignature()
+
+        if conversational_momentum is None:
+            from app.character.momentum_engine import ConversationalMomentumEngine
+            conversational_momentum = ConversationalMomentumEngine.update_momentum(
+                previous_state=None,
+                user_input=cleaned_user_input,
+            )
+
+        if user_country is None and self._session:
+            try:
+                from app.desktop.service import DesktopService
+                d_svc = DesktopService(self._session)
+                d_rec = await d_svc.get_settings(character_id)
+                user_country = getattr(d_rec, "user_country", "MY") or "MY"
+            except Exception:
+                user_country = "MY"
+        elif user_country is None:
+            user_country = "MY"
+
+        if deception_grievance is None and self._session:
+            try:
+                from app.reality.deception_service import DeceptionService
+                dec_svc = DeceptionService(self._session)
+                deception_grievance = await dec_svc.process_incoming_turn(
+                    user_input=cleaned_user_input,
+                    character_id=character_id,
+                    user_id=user_id,
+                )
+            except Exception as exc:
+                logger.debug("Automatic deception grievance processing skipped: %s", exc)
+
         return CharacterResponseContext(
             user_input=cleaned_user_input,
             character=char_ctx,
@@ -394,5 +450,10 @@ class CharacterEngine:
             contradiction_resolution=contradiction_resolution,
             promotion_decision=promotion_decision,
             governed_reality=governed_reality,
+            personal_growth=personal_growth_xml,
+            conversational_momentum=conversational_momentum,
+            expression_signature=expression_signature,
+            user_country=user_country,
+            deception_grievance=deception_grievance,
         )
 

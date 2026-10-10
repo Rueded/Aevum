@@ -59,6 +59,11 @@ from app.reality.belief_models import BeliefClaim
 from app.reality.contradiction_models import ContradictionResolution
 from app.reality.promotion_models import PromotionDecision
 from app.character.reality_context_models import GovernedRealityContext
+from app.character.conversational_models import (
+    CharacterExpressionSignature,
+    ConversationalMomentumState,
+)
+from app.reality.deception_models import CognitiveGrievanceContext
 
 
 class CharacterDefinitionContext(BaseModel):
@@ -300,6 +305,11 @@ class CharacterMemoryContext(BaseModel):
             experience=MemoryExperienceContext.synthesize(memories),
         )
 
+    @classmethod
+    def empty(cls) -> "CharacterMemoryContext":
+        """Construct an empty memory context with default experience hints."""
+        return cls.from_memories()
+
 
 class CharacterBehaviorContext(BaseModel):
     """Immutable semantic guidance derived from mood, emotion, and relationship state."""
@@ -377,4 +387,21 @@ class CharacterResponseContext(BaseModel):
     contradiction_resolution: Optional[ContradictionResolution] = Field(default=None, description="Active contradiction resolution and repair strategy.")
     promotion_decision: Optional[PromotionDecision] = Field(default=None, description="Active reality promotion policy decision.")
     governed_reality: Optional[GovernedRealityContext] = Field(default=None, description="Authoritative Governed Reality Context (Phase 7D.4).")
+    personal_growth: Optional[str] = Field(default=None, description="Authoritative Personal Growth Context XML block (Phase 16.5).")
+    conversational_momentum: Optional[ConversationalMomentumState] = Field(
+        default=None,
+        description="Active conversational dynamics and topic momentum (Phase 18.2).",
+    )
+    expression_signature: Optional[CharacterExpressionSignature] = Field(
+        default=None,
+        description="Emergent character conversational expression signature (Phase 18.2).",
+    )
+    user_country: Optional[str] = Field(
+        default="MY",
+        description="User cultural locale/country (e.g. 'MY', 'CN', 'SG', 'TW', 'GLOBAL').",
+    )
+    deception_grievance: Optional[CognitiveGrievanceContext] = Field(
+        default=None,
+        description="Active cognitive deception grievance context (Phase: Deception Closed Loop).",
+    )
 

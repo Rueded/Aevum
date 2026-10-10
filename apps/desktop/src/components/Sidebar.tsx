@@ -6,12 +6,13 @@ import {
   MemoryItem,
   RelationshipResponse,
 } from "../types";
+import { BiographicalMemoryView } from "./BiographicalMemoryView";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTab: "about" | "relationship" | "memories" | "debug";
-  onSelectTab: (tab: "about" | "relationship" | "memories" | "debug") => void;
+  activeTab: "about" | "biography" | "relationship" | "memories" | "debug";
+  onSelectTab: (tab: "about" | "biography" | "relationship" | "memories" | "debug") => void;
   characterState: CharacterStateResponse | null;
   relationship: RelationshipResponse | null;
   life: LifeResponse | null;
@@ -64,6 +65,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => onSelectTab("about")}
           >
             Life & Identity
+          </button>
+          <button
+            className={`tab-btn ${activeTab === "biography" ? "active" : ""}`}
+            onClick={() => onSelectTab("biography")}
+          >
+            Journey & History
           </button>
           <button
             className={`tab-btn ${activeTab === "relationship" ? "active" : ""}`}
@@ -177,6 +184,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
+        {/* Tab: Journey & History (Phase 12.5) */}
+        {activeTab === "biography" && (
+          <div className="tab-pane">
+            <BiographicalMemoryView />
+          </div>
+        )}
+
         {/* Tab 2: Relationship */}
         {activeTab === "relationship" && (
           <div className="tab-pane">
@@ -246,6 +260,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     />
                   </div>
                   <div className="dim-desc">Respect for boundaries, integrity, and agency.</div>
+                </div>
+
+                <div className="dimension-item">
+                  <div className="dim-header">
+                    <span className="dim-name">Affection (好感/心动)</span>
+                    <span className="dim-pct" style={{ color: "#f472b6" }}>{Math.round((relationship?.affection ?? 0) * 100)}%</span>
+                  </div>
+                  <div className="progress-bar-container">
+                    <div
+                      className="progress-bar-fill"
+                      style={{
+                        width: `${Math.round((relationship?.affection ?? 0) * 100)}%`,
+                        background: "linear-gradient(90deg, #ec4899, #f43f5e)",
+                      }}
+                    />
+                  </div>
+                  <div className="dim-desc">Warmth, fondness, and emotional resonance.</div>
                 </div>
               </div>
             </div>

@@ -138,7 +138,7 @@ def test_empty_signals_produce_no_update():
 
 
 def test_appreciation_affects_trust_and_comfort():
-    """APPRECIATION increases trust and comfort without altering other dimensions."""
+    """APPRECIATION increases trust, comfort, and bounded affection."""
     state = _make_state()
     sig = _make_signal(RelationshipSignalType.APPRECIATION, confidence=0.90, strength=0.50)
     update_data = apply_relationship_signals(state, [sig])
@@ -147,16 +147,17 @@ def test_appreciation_affects_trust_and_comfort():
     # effective_strength = 0.90 * 0.50 = 0.45
     # trust delta = 0.004 * 0.45 = 0.0018 -> 0.20 + 0.0018 = 0.2018
     # comfort delta = 0.006 * 0.45 = 0.0027 -> 0.10 + 0.0027 = 0.1027
+    # affection delta = 0.005 * 0.45 = 0.00225 -> 0.00 + 0.00225 = 0.00225
     assert update_data.trust == pytest.approx(0.2018, rel=1e-4)
     assert update_data.comfort == pytest.approx(0.1027, rel=1e-4)
-    assert update_data.affection is None
+    assert update_data.affection == pytest.approx(0.00225, rel=1e-4)
     assert update_data.attachment is None
     assert update_data.respect is None
     assert update_data.familiarity is None
 
 
 def test_shared_interest_affects_familiarity_and_comfort():
-    """SHARED_INTEREST increases familiarity and comfort."""
+    """SHARED_INTEREST increases familiarity, comfort, and bounded affection."""
     state = _make_state()
     sig = _make_signal(RelationshipSignalType.SHARED_INTEREST, confidence=0.80, strength=0.50)
     update_data = apply_relationship_signals(state, [sig])
@@ -179,7 +180,7 @@ def test_personal_disclosure_affects_trust_and_familiarity():
 
 
 def test_support_received_affects_trust_comfort_and_attachment():
-    """SUPPORT_RECEIVED increases trust, comfort, and slightly increases attachment."""
+    """SUPPORT_RECEIVED increases trust, comfort, attachment, and bounded affection."""
     state = _make_state()
     sig = _make_signal(RelationshipSignalType.SUPPORT_RECEIVED, confidence=0.80, strength=0.50)
     update_data = apply_relationship_signals(state, [sig])
@@ -188,7 +189,7 @@ def test_support_received_affects_trust_comfort_and_attachment():
     assert update_data.trust is not None
     assert update_data.comfort is not None
     assert update_data.attachment is not None
-    assert update_data.affection is None  # Never affection!
+    assert update_data.affection == pytest.approx(0.0024, rel=1e-4)
 
 
 def test_support_given_affects_respect_and_familiarity():
@@ -216,8 +217,8 @@ def test_respect_boundary_affects_trust_respect_and_comfort():
 
 
 def test_boundary_violation_reduces_trust_respect_and_comfort():
-    """BOUNDARY_VIOLATION meaningfully decreases trust, respect, and comfort."""
-    state = _make_state(trust=0.50, respect=0.60, comfort=0.40)
+    """BOUNDARY_VIOLATION meaningfully decreases trust, respect, comfort, and affection."""
+    state = _make_state(trust=0.50, respect=0.60, comfort=0.40, affection=0.30)
     sig = _make_signal(RelationshipSignalType.BOUNDARY_VIOLATION, confidence=0.90, strength=0.80)
     update_data = apply_relationship_signals(state, [sig])
 
@@ -225,6 +226,7 @@ def test_boundary_violation_reduces_trust_respect_and_comfort():
     assert update_data.trust < 0.50
     assert update_data.respect < 0.60
     assert update_data.comfort < 0.40
+    assert update_data.affection < 0.30
 
 
 def test_disagreement_is_neutral_by_default():
@@ -247,7 +249,7 @@ def test_repair_attempt_affects_trust_and_comfort():
 
 
 def test_playful_connection_affects_comfort_and_familiarity():
-    """PLAYFUL_CONNECTION increases comfort and familiarity without affecting affection."""
+    """PLAYFUL_CONNECTION increases comfort, familiarity, and bounded affection."""
     state = _make_state()
     sig = _make_signal(RelationshipSignalType.PLAYFUL_CONNECTION, confidence=0.80, strength=0.50)
     update_data = apply_relationship_signals(state, [sig])
@@ -255,11 +257,11 @@ def test_playful_connection_affects_comfort_and_familiarity():
     assert update_data is not None
     assert update_data.comfort is not None
     assert update_data.familiarity is not None
-    assert update_data.affection is None
+    assert update_data.affection == pytest.approx(0.002, rel=1e-4)
 
 
 def test_reliability_affects_trust_and_respect():
-    """RELIABILITY increases trust and respect."""
+    """RELIABILITY increases trust and respect without modifying affection."""
     state = _make_state()
     sig = _make_signal(RelationshipSignalType.RELIABILITY, confidence=0.80, strength=0.50)
     update_data = apply_relationship_signals(state, [sig])
@@ -267,21 +269,28 @@ def test_reliability_affects_trust_and_respect():
     assert update_data is not None
     assert update_data.trust is not None
     assert update_data.respect is not None
+    assert update_data.affection is None
 
 
 # =============================================================================
-# 4. Strict Constraints: No Affection, No Decay, Bounded Clamping
+# 4. Strict Constraints: No Affection Leak on Non-Relational Signals, Bounded Clamping
 # =============================================================================
 
 
-def test_no_signal_directly_modifies_affection():
-    """Verify across all signal types that affection is NEVER present in update."""
+def test_non_affection_signals_do_not_modify_affection():
+    """Verify that task/boundary/work signals (SUPPORT_GIVEN, RESPECT_BOUNDARY, RELIABILITY) do NOT alter affection."""
     state = _make_state(affection=0.0)
-    for sig_type in RelationshipSignalType:
+    non_affection_types = [
+        RelationshipSignalType.SUPPORT_GIVEN,
+        RelationshipSignalType.RESPECT_BOUNDARY,
+        RelationshipSignalType.RELIABILITY,
+        RelationshipSignalType.DISAGREEMENT,
+    ]
+    for sig_type in non_affection_types:
         sig = _make_signal(sig_type, confidence=1.0, strength=1.0)
         update_data = apply_relationship_signals(state, [sig])
         if update_data is not None:
-            assert update_data.affection is None, f"Signal {sig_type} illegally updated affection!"
+            assert update_data.affection is None, f"Signal {sig_type} unexpectedly updated affection!"
 
 
 def test_maximum_aggregate_delta_cap():

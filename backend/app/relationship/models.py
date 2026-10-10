@@ -17,7 +17,7 @@ import math
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-DEFAULT_RELATIONSHIP_ID: str = "default"
+DEFAULT_RELATIONSHIP_ID: str = "user"
 DEFAULT_USER_ID: str = "user"
 
 # Deterministic bootstrap baseline values for initial relationship state.

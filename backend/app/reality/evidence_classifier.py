@@ -52,6 +52,7 @@ class EvidenceClassificationResult:
     inference_scope: InferenceScope
     inference_edge_type: InferenceEdgeType
     reality_taxonomy: RealityTaxonomy
+    is_authoritative: bool = False      # True if backed by authoritative official documentation/transfer records
 
 
 # Canonical no-signal result — returned for all non-triggering input.
@@ -62,6 +63,7 @@ _NO_SIGNAL = EvidenceClassificationResult(
     inference_scope=InferenceScope.DIRECT,
     inference_edge_type=InferenceEdgeType.DIRECT_ATTRIBUTE,
     reality_taxonomy=RealityTaxonomy.SIMULATED_BIOGRAPHY_FACT,
+    is_authoritative=False,
 )
 
 
@@ -186,18 +188,49 @@ class EvidenceClassifier:
             ["读", "学", "念", "就读", "study", "studying", "attend", "attending",
              "在读", "professional", "course", "课程", "专业", "major", "faculty"],
         ]):
+            # Detect whether text is an authoritative institutional/transfer document
+            # e.g. "官方正式转学调动通知书", "官方转学文件正式生效", "官方转学凭证已正式下达"
+            authoritative_markers = [
+                "官方", "正式", "通知书", "转学", "学籍", "调动", "凭证", "生效", "下达",
+                "official", "transfer", "notice", "transcript", "certified", "credential",
+            ]
+            weak_markers = [
+                "我记得", "你不是", "好像", "我听说", "其实是", "吧", "对吧", "难道",
+            ]
+            lower = text.lower()
+            is_authoritative = (
+                any(m in text or m in lower for m in authoritative_markers)
+                and not any(w in text or w in lower for w in weak_markers)
+            )
+
+            # Extract claimed university entity if present
+            claimed_uni: Optional[str] = None
+            if any(k in lower or k in text for k in ["um", "malaya", "马来亚大学"]):
+                claimed_uni = "Universiti Malaya (UM)"
+            elif any(k in lower or k in text for k in ["usm", "sains", "理大", "理科大学"]):
+                claimed_uni = "Universiti Sains Malaysia (USM)"
+            elif any(k in lower or k in text for k in ["monash", "莫纳什"]):
+                claimed_uni = "Monash University Malaysia"
+
             # Check if already canonical to avoid duplicate candidates
             if core and hasattr(core, "facts"):
-                existing = core.facts.get("education.university")
+                existing = core.facts.get("education.university") or core.facts.get("education.institution")
                 if existing is not None:
-                    return _NO_SIGNAL
+                    # If already canonical, only authoritative revision evidence can emit a signal
+                    if not is_authoritative:
+                        return _NO_SIGNAL
+                    # If authoritative evidence claims the same value as existing, skip
+                    if claimed_uni and str(existing.value).strip().lower() == claimed_uni.lower():
+                        return _NO_SIGNAL
+
             return EvidenceClassificationResult(
                 has_biographical_signal=True,
-                slot_name="education.university",
-                claimed_value=None,   # value not directly parseable from trigger
+                slot_name="education.institution" if is_authoritative else "education.university",
+                claimed_value=claimed_uni,
                 inference_scope=InferenceScope.LOCAL,
                 inference_edge_type=InferenceEdgeType.STRUCTURAL_DEPENDENCY,
                 reality_taxonomy=RealityTaxonomy.SIMULATED_BIOGRAPHY_FACT,
+                is_authoritative=is_authoritative,
             )
 
         # ------------------------------------------------------------------

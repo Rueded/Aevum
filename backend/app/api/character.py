@@ -861,33 +861,52 @@ def _get_live2d_dir(model_id: str) -> Path | None:
     return None
 
 
+def _is_valid_model_file(f: Path) -> bool:
+    try:
+        import json
+        with open(f, "r", encoding="utf-8") as fp:
+            data = json.load(fp)
+            if "FileReferences" in data:
+                file_refs = data.get("FileReferences")
+                if not file_refs or (not file_refs.get("Moc") and not file_refs.get("Textures")):
+                    return False
+        return True
+    except Exception:
+        return True
+
+
 def _find_live2d_model_file(root_dir: Path) -> Path | None:
     if not root_dir.exists():
         return None
     if root_dir.is_file():
-        if root_dir.suffix.lower() == ".json":
+        if root_dir.suffix.lower() == ".json" and _is_valid_model_file(root_dir):
             return root_dir
         return None
 
     # Priority 1: *.model3.json in root_dir
     for f in sorted(root_dir.glob("*.model3.json")):
-        return f
+        if _is_valid_model_file(f):
+            return f
     # Priority 2: *.model.json in root_dir
     for f in sorted(root_dir.glob("*.model.json")):
-        return f
+        if _is_valid_model_file(f):
+            return f
     # Priority 3: index.json in root_dir
     idx = root_dir / "index.json"
-    if idx.exists() and idx.is_file():
+    if idx.exists() and idx.is_file() and _is_valid_model_file(idx):
         return idx
     # Priority 4: recursive *.model3.json
     for f in sorted(root_dir.rglob("*.model3.json")):
-        return f
+        if _is_valid_model_file(f):
+            return f
     # Priority 5: recursive *.model.json
     for f in sorted(root_dir.rglob("*.model.json")):
-        return f
+        if _is_valid_model_file(f):
+            return f
     # Priority 6: recursive index.json
     for f in sorted(root_dir.rglob("index.json")):
-        return f
+        if _is_valid_model_file(f):
+            return f
     return None
 
 

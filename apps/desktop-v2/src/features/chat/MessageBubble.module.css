@@ -121,3 +121,32 @@
   color: var(--text-tertiary);
   margin-top: 2px;
 }
+
+@media (max-width: 640px) {
+  .messageRow {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .bubbleColumn {
+    max-width: 86%;
+  }
+  .bubble {
+    padding: 10px 14px;
+    font-size: 15px;
+    line-height: 1.55;
+    border-radius: 18px;
+  }
+  .userBubble {
+    border-bottom-right-radius: 4px;
+    background: linear-gradient(135deg, #7c3aed, #db2777);
+  }
+  .companionBubble {
+    border-bottom-left-radius: 4px;
+    background: #181a26;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .audioBtn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}

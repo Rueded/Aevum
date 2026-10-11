@@ -134,3 +134,13 @@
   background: rgba(239, 68, 68, 0.35);
   color: #fff;
 }
+
+@media (max-width: 640px) {
+  .container {
+    padding: 10px 12px;
+  }
+  .emptyState {
+    padding: 16px 8px;
+    max-width: 100%;
+  }
+}

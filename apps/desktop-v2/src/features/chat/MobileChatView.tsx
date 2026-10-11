@@ -109,53 +109,31 @@ export const MobileChatView: React.FC<MobileChatViewProps> = ({
 
         <div className={styles.rightActions}>
           <button
-            className={styles.iconBtn}
-            onClick={() => setMobileDrawerTab("memories")}
-            title="共同记忆"
-          >
-            💫
-          </button>
-          <button
-            className={styles.iconBtn}
-            onClick={() => setMobileDrawerTab("bond")}
-            title="情感羁绊"
-          >
-            💖
-          </button>
-          <button
-            className={styles.iconBtn}
-            onClick={() => setMobileDrawerTab("history")}
-            title="历史会话"
-          >
-            🕒
-          </button>
-          <button
-            className={styles.iconBtn}
+            type="button"
+            className={`${styles.iconBtn} ${styles.callBtn}`}
             onClick={onStartCall}
-            title="拨打语音通话"
+            title="拨打实时语音通话"
+            aria-label="实时语音通话"
           >
             📞
           </button>
           <button
+            type="button"
             className={styles.iconBtn}
             onClick={() => createConversation()}
             title="新开一轮会话"
+            aria-label="新开会话"
           >
             ＋
           </button>
           <button
-            className={styles.iconBtn}
-            onClick={onOpenSettings}
-            title="伴侣与系统设置"
+            type="button"
+            className={`${styles.iconBtn} ${mobileDrawerTab ? styles.iconBtnActive : ""}`}
+            onClick={() => setMobileDrawerTab("memories")}
+            title="伴侣抽屉 (记忆 / 羁绊 / 历程 / 历史)"
+            aria-label="伴侣抽屉"
           >
-            ⚙️
-          </button>
-          <button
-            className={styles.switchModeBtn}
-            onClick={onSwitchToDesktop}
-            title="切换回电脑桌面形象模式"
-          >
-            🖥️ 桌面版
+            ☰
           </button>
         </div>
       </header>
@@ -204,129 +182,94 @@ export const MobileChatView: React.FC<MobileChatViewProps> = ({
         onClose={() => setIsDatingModalOpen(false)}
       />
 
-      {/* Mobile Drawer Slide-over / Modal for Memories, Bond, Journey, History */}
+      {/* Mobile Drawer Bottom Sheet for Memories, Bond, Journey, History */}
       {mobileDrawerTab && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.75)",
-            backdropFilter: "blur(6px)",
-            zIndex: 1000,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-          }}
+          className={styles.drawerOverlay}
           onClick={() => setMobileDrawerTab(null)}
         >
           <div
-            style={{
-              width: "100%",
-              height: "82vh",
-              background: "var(--bg-secondary, #18181b)",
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              borderTop: "1px solid var(--border-default, #27272a)",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
+            className={styles.bottomSheet}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header Tabs */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "12px 16px",
-                borderBottom: "1px solid var(--border-subtle, rgba(255,255,255,0.06))",
-              }}
-            >
-              <div style={{ display: "flex", gap: 8, overflowX: "auto" }}>
-                <button
-                  type="button"
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 16,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: "none",
-                    cursor: "pointer",
-                    background: mobileDrawerTab === "memories" ? "var(--color-primary, #ec4899)" : "rgba(255,255,255,0.06)",
-                    color: "#fff",
+            <div className={styles.dragHandle} />
+
+            {/* Companion Profile Card in Drawer */}
+            <div className={styles.drawerCompanionHeader}>
+              <div className={styles.drawerAvatarWrap}>
+                <div className={styles.drawerAvatarCircle}>{avatarLetter}</div>
+                <span
+                  className={`${styles.onlineDot} ${
+                    isBackendOnline ? styles.onlineDotActive : styles.onlineDotOffline
+                  }`}
+                />
+              </div>
+              <div className={styles.drawerCompanionMeta}>
+                <div className={styles.drawerCompanionTitleRow}>
+                  <span className={styles.drawerCompanionName}>{characterName}</span>
+                  <span className={styles.moodBadge}>
+                    {characterState?.natural_mood || characterState?.mood || "平静"}
+                  </span>
+                  <span className={styles.bondBadge}>
+                    💖 好感度 {Math.round((relationship?.affection ?? 0.64) * 100)}%
+                  </span>
+                </div>
+                <div
+                  className={styles.drawerLocationRow}
+                  onClick={() => {
+                    setMobileDrawerTab(null);
+                    setIsDatingModalOpen(true);
                   }}
-                  onClick={() => setMobileDrawerTab("memories")}
+                  title="点击切换约会地点与现场"
                 >
-                  💫 记忆
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 16,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: "none",
-                    cursor: "pointer",
-                    background: mobileDrawerTab === "bond" ? "var(--color-primary, #ec4899)" : "rgba(255,255,255,0.06)",
-                    color: "#fff",
-                  }}
-                  onClick={() => setMobileDrawerTab("bond")}
-                >
-                  💖 羁绊
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 16,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: "none",
-                    cursor: "pointer",
-                    background: mobileDrawerTab === "journey" ? "var(--color-primary, #ec4899)" : "rgba(255,255,255,0.06)",
-                    color: "#fff",
-                  }}
-                  onClick={() => setMobileDrawerTab("journey")}
-                >
-                  📖 历程
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 16,
-                    fontSize: 13,
-                    fontWeight: 600,
-                    border: "none",
-                    cursor: "pointer",
-                    background: mobileDrawerTab === "history" ? "var(--color-primary, #ec4899)" : "rgba(255,255,255,0.06)",
-                    color: "#fff",
-                  }}
-                  onClick={() => setMobileDrawerTab("history")}
-                >
-                  🕒 历史
-                </button>
+                  <span>{statusSummary}</span>
+                  <span className={styles.switchLocationPill}>切换地点 ➔</span>
+                </div>
               </div>
               <button
                 type="button"
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--text-tertiary, #a1a1aa)",
-                  fontSize: 18,
-                  cursor: "pointer",
-                  padding: "4px 8px",
-                }}
+                className={styles.sheetCloseBtn}
                 onClick={() => setMobileDrawerTab(null)}
+                aria-label="关闭"
               >
                 ✕
               </button>
             </div>
 
+            {/* Header Tabs */}
+            <div className={styles.sheetTabsRow}>
+              <button
+                type="button"
+                className={`${styles.sheetTab} ${mobileDrawerTab === "memories" ? styles.sheetTabActive : ""}`}
+                onClick={() => setMobileDrawerTab("memories")}
+              >
+                💫 共同记忆
+              </button>
+              <button
+                type="button"
+                className={`${styles.sheetTab} ${mobileDrawerTab === "bond" ? styles.sheetTabActive : ""}`}
+                onClick={() => setMobileDrawerTab("bond")}
+              >
+                💖 情感羁绊
+              </button>
+              <button
+                type="button"
+                className={`${styles.sheetTab} ${mobileDrawerTab === "journey" ? styles.sheetTabActive : ""}`}
+                onClick={() => setMobileDrawerTab("journey")}
+              >
+                📖 人生成长
+              </button>
+              <button
+                type="button"
+                className={`${styles.sheetTab} ${mobileDrawerTab === "history" ? styles.sheetTabActive : ""}`}
+                onClick={() => setMobileDrawerTab("history")}
+              >
+                🕒 会话历史
+              </button>
+            </div>
+
             {/* Tab Body */}
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px" }}>
+            <div className={styles.sheetBody}>
               {mobileDrawerTab === "memories" && <MemoriesTab />}
               {mobileDrawerTab === "bond" && <BondTab />}
               {mobileDrawerTab === "journey" && <BiographicalMemoryView />}
@@ -336,6 +279,30 @@ export const MobileChatView: React.FC<MobileChatViewProps> = ({
                   onNewConversation={() => setMobileDrawerTab(null)}
                 />
               )}
+            </div>
+
+            {/* Bottom Actions inside Sheet */}
+            <div className={styles.sheetFooter}>
+              <button
+                type="button"
+                className={styles.sheetFooterBtn}
+                onClick={() => {
+                  setMobileDrawerTab(null);
+                  onOpenSettings();
+                }}
+              >
+                ⚙️ 伴侣与系统设置
+              </button>
+              <button
+                type="button"
+                className={styles.sheetFooterBtnSecondary}
+                onClick={() => {
+                  setMobileDrawerTab(null);
+                  onSwitchToDesktop();
+                }}
+              >
+                🖥️ 切换为桌面模式
+              </button>
             </div>
           </div>
         </div>

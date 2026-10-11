@@ -181,8 +181,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           rows={1}
           placeholder={
             isGenerating
-              ? `${characterName} 正在思考与回应中... (您可以继续发送，消息将自动排队)`
-              : `跟 ${characterName} 说点什么... (Enter 发送, Shift+Enter 换行)`
+              ? `${characterName} 正在回应中...`
+              : `跟 ${characterName} 聊点什么吧...`
           }
           value={inputMessage}
           onChange={handleInput}

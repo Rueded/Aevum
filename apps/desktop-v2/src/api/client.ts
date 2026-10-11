@@ -1,15 +1,28 @@
 // Base HTTP Client for Aevum Core API
+import { Capacitor } from "@capacitor/core";
+
+export const CLOUD_BACKEND_URL = "https://aevum-1mcy.onrender.com";
 
 export function getBackendBaseUrl(): string {
   if (typeof window !== "undefined") {
+    const isNativeMobile = Capacitor.isNativePlatform() || (window as any).Capacitor !== undefined;
     const saved = localStorage.getItem("aevum_backend_url");
+
     if (saved && saved.trim()) {
-      return saved.trim().replace(/\/+$/, "");
+      const clean = saved.trim().replace(/\/+$/, "");
+      // On mobile native app, ignore accidental/legacy localhost/127.0.0.1 settings
+      if (isNativeMobile && (clean.includes("localhost") || clean.includes("127.0.0.1"))) {
+        localStorage.removeItem("aevum_backend_url");
+        return CLOUD_BACKEND_URL;
+      }
+      return clean;
     }
-    // If running inside Capacitor Android app, default to 24/7 cloud backend
-    if ((window as any).Capacitor !== undefined) {
-      return "https://aevum-1mcy.onrender.com";
+
+    // If running inside Capacitor Native Mobile App, default to 24/7 cloud backend
+    if (isNativeMobile) {
+      return CLOUD_BACKEND_URL;
     }
+
     if (
       window.location.hostname &&
       window.location.hostname !== "localhost" &&
@@ -20,6 +33,17 @@ export function getBackendBaseUrl(): string {
     }
   }
   return "http://127.0.0.1:8000";
+}
+
+export function setBackendBaseUrl(url: string): void {
+  if (typeof window !== "undefined") {
+    const clean = url.trim().replace(/\/+$/, "");
+    if (clean) {
+      localStorage.setItem("aevum_backend_url", clean);
+    } else {
+      localStorage.removeItem("aevum_backend_url");
+    }
+  }
 }
 
 export const BACKEND_BASE_URL = getBackendBaseUrl();

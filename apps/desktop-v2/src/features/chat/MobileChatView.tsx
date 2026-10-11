@@ -144,6 +144,13 @@ export const MobileChatView: React.FC<MobileChatViewProps> = ({
             ＋
           </button>
           <button
+            className={styles.iconBtn}
+            onClick={onOpenSettings}
+            title="伴侣与系统设置"
+          >
+            ⚙️
+          </button>
+          <button
             className={styles.switchModeBtn}
             onClick={onSwitchToDesktop}
             title="切换回电脑桌面形象模式"

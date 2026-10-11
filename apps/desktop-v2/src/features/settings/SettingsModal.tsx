@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { api } from "../../api";
+import { getBackendBaseUrl, setBackendBaseUrl, CLOUD_BACKEND_URL } from "../../api/client";
 import {
   CharacterBlueprintResponse,
   DesktopSettings,
@@ -45,6 +46,36 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isTestingProactive, setIsTestingProactive] = useState<boolean>(false);
   const [testProactiveMsg, setTestProactiveMsg] = useState<string | null>(null);
+
+  // Backend Connection Settings
+  const [backendUrl, setBackendUrl] = useState<string>(() => getBackendBaseUrl());
+  const [testConnStatus, setTestConnStatus] = useState<string | null>(null);
+  const [isTestingConn, setIsTestingConn] = useState<boolean>(false);
+
+  const handleTestConnection = async () => {
+    setIsTestingConn(true);
+    setTestConnStatus("正在探测连接...");
+    const start = Date.now();
+    try {
+      const url = backendUrl.trim().replace(/\/+$/, "");
+      const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(6000) });
+      const latency = Date.now() - start;
+      if (res.ok) {
+        setTestConnStatus(`🟢 连接成功！延时 ${latency}ms`);
+      } else {
+        setTestConnStatus(`🔴 响应异常: HTTP ${res.status}`);
+      }
+    } catch (e: any) {
+      setTestConnStatus(`🔴 连接失败: ${e?.message || "网络不可达或超时"}`);
+    } finally {
+      setIsTestingConn(false);
+    }
+  };
+
+  const handleSaveBackendUrl = () => {
+    setBackendBaseUrl(backendUrl);
+    window.location.reload();
+  };
 
   // Expression & Style Preferences
   const [localBubbleMode, setLocalBubbleMode] = useState<"multi" | "single">(() => {
@@ -764,6 +795,125 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
             {/* TAB 5: 🛠️ 高级与开发者 */}
             {activeTab === "advanced" && (
               <div className="tab-pane-content">
+                {/* Backend Server Connection */}
+                <section className="settings-section" style={{
+                  background: "linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8))",
+                  border: "1px solid rgba(56, 189, 248, 0.3)",
+                  borderRadius: "12px",
+                  padding: "16px",
+                  marginBottom: "20px"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <h3 style={{ margin: 0, color: "#38bdf8", fontSize: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                      🌐 后端核心服务器 (Aevum Core)
+                    </h3>
+                    <span style={{ fontSize: "12px", padding: "2px 8px", borderRadius: "10px", background: "rgba(56, 189, 248, 0.15)", color: "#7dd3fc" }}>
+                      24/7 云端支持
+                    </span>
+                  </div>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "13px", marginBottom: "12px", lineHeight: "1.5" }}>
+                    手机 App 与电脑客户端通过此地址连接 Aevum 心智中枢。当前配置：
+                  </p>
+
+                  <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+                    <input
+                      type="text"
+                      value={backendUrl}
+                      onChange={(e) => setBackendUrl(e.target.value)}
+                      placeholder="https://..."
+                      style={{
+                        flex: 1,
+                        padding: "8px 12px",
+                        background: "rgba(0, 0, 0, 0.4)",
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                        borderRadius: "8px",
+                        color: "#fff",
+                        fontSize: "13px",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleTestConnection}
+                      disabled={isTestingConn}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        background: "rgba(56, 189, 248, 0.2)",
+                        border: "1px solid rgba(56, 189, 248, 0.4)",
+                        color: "#38bdf8",
+                        cursor: "pointer",
+                        fontSize: "13px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {isTestingConn ? "探测中..." : "测试连接"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveBackendUrl}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        background: "#0284c7",
+                        border: "none",
+                        color: "#fff",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        fontSize: "13px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      保存生效
+                    </button>
+                  </div>
+
+                  {testConnStatus && (
+                    <div style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      background: "rgba(0,0,0,0.3)",
+                      fontSize: "12px",
+                      color: testConnStatus.startsWith("🟢") ? "#4ade80" : "#f87171",
+                      marginBottom: "10px"
+                    }}>
+                      {testConnStatus}
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setBackendUrl(CLOUD_BACKEND_URL)}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        color: "#94a3b8",
+                        fontSize: "11px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      恢复默认云端 (Render)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBackendUrl("http://127.0.0.1:8000")}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        color: "#94a3b8",
+                        fontSize: "11px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      切换为本地电脑 (127.0.0.1:8000)
+                    </button>
+                  </div>
+                </section>
+
                 {/* Dev Inspector Trigger */}
                 <section className="settings-section">
                   <h3>开发者心智透视抽屉 (Cognitive Inspector)</h3>

@@ -7,6 +7,7 @@ Backend owns reality; frontend is purely a projection layer.
 
 import logging
 from pathlib import Path
+from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -220,6 +221,9 @@ class CharacterDebugResponse(BaseModel):
     total_events: int
     decision_trace: dict[str, Any] | None = None
     reality_history: list[dict[str, Any]] | None = None
+
+
+CharacterDebugResponse.model_rebuild()
 
 
 @router.get(

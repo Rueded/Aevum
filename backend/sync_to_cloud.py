@@ -24,8 +24,11 @@ con.execute("PRAGMA wal_checkpoint(TRUNCATE);")
 cur = con.cursor()
 cur.execute("SELECT count(*) FROM messages")
 msg_count = cur.fetchone()[0]
-cur.execute("SELECT count(*) FROM memory_items")
-mem_count = cur.fetchone()[0]
+try:
+    cur.execute("SELECT count(*) FROM memories")
+    mem_count = cur.fetchone()[0]
+except Exception:
+    mem_count = 0
 con.close()
 
 print(f"📦 准备上传: 共 {msg_count} 条对话历史，{mem_count} 条沉淀记忆...")

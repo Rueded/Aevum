@@ -1,11 +1,12 @@
 @echo off
+chcp 65001 >nul
 title Aevum Data Sync to Cloud
-cd /d "%~dp0\backend"
+cd /d "%~dp0backend"
 echo =====================================================================
-echo           Aevum 数据同步到云端 (本地电脑 -^> 手机云端)
+echo           Aevum Cloud Data Sync (PC to Cloud)
 echo =====================================================================
 echo.
-.venv\Scripts\python.exe sync_to_cloud.py
+call .venv\Scripts\python.exe sync_to_cloud.py
 echo.
 echo =====================================================================
 pause

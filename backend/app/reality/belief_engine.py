@@ -5,6 +5,8 @@ Evidence Extraction -> Subject Attribution -> Belief Formation -> Multi-Validato
 Contradiction Resolution -> Promotion Policy Gating -> Reality History Tracking.
 """
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 import logging
 from typing import TYPE_CHECKING, Any, Optional

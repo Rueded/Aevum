@@ -14,6 +14,8 @@ Responsibilities:
 - STRICT INVARIANT: Anti-Snowballing (zero biographical spillover into ancillary facts).
 """
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 import uuid

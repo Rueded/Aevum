@@ -7,6 +7,8 @@ Implements independent validators:
 - WorldKnowledgeValidator: verification against objective world lore.
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Optional, Sequence
 from pydantic import BaseModel, ConfigDict, Field
 

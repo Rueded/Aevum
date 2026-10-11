@@ -7,6 +7,8 @@ Strict Invariants:
 - Avoids arbitrary mechanical 'count >= N' rules in favor of domain and life-stage significance.
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:

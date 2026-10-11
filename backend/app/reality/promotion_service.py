@@ -5,6 +5,8 @@ anti-snowballing constraints, and validation results to determine whether
 they can be promoted into canonical Character Core reality.
 """
 
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -9,6 +9,8 @@ Strict Invariants:
   it returns None (no inference needed for already known reality).
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 import re
 from typing import Optional, TYPE_CHECKING

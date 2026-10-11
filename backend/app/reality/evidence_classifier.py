@@ -20,6 +20,8 @@ Questions, casual conversation, and input without a clear biographical
 assertion must always return the NO_SIGNAL result.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any, Optional, TYPE_CHECKING
 

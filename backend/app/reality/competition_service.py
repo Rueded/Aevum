@@ -10,6 +10,8 @@ Responsibilities:
 - STRICT INVARIANT: Competition does NOT choose the winner or mutate canonical reality.
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional, Sequence
 import uuid
 

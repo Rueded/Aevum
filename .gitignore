@@ -46,6 +46,8 @@ Cargo.lock
 
 # Database & Persistent Storage
 *.db
+*.db.bak
+*.bak
 *.db-journal
 *.db-wal
 *.db-shm

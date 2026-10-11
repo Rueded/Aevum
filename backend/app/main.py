@@ -13,6 +13,7 @@ from app.api.health import router as health_router
 from app.api.profile import router as profile_router
 from app.api.voice import router as voice_router
 from app.api.call_stream import router as call_stream_router
+from app.api.sync import router as sync_router
 from app.core.config import settings
 from app.db.session import async_session_factory, engine, init_db
 
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
     app.include_router(desktop_router)
     app.include_router(voice_router)
     app.include_router(call_stream_router)
+    app.include_router(sync_router)
 
     return app
 

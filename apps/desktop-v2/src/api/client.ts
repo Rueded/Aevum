@@ -6,6 +6,10 @@ export function getBackendBaseUrl(): string {
     if (saved && saved.trim()) {
       return saved.trim().replace(/\/+$/, "");
     }
+    // If running inside Capacitor Android app, default to 24/7 cloud backend
+    if ((window as any).Capacitor !== undefined) {
+      return "https://aevum-1mcy.onrender.com";
+    }
     if (
       window.location.hostname &&
       window.location.hostname !== "localhost" &&

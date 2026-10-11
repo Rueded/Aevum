@@ -1014,37 +1014,35 @@ async def check_idle_nudge(
         return {"nudged": False, "reason": "not_expecting_immediate_reply"}
 
     # 3. Synthesize natural hesitation nudge with topic closure appraisal
-    chat_history = [
-        ChatMessage(
-            role="user" if m.role == MessageRole.USER else "assistant",
-            content=m.content,
-        )
+    recent_dialogue_lines = [
+        f"{'对方' if m.role == MessageRole.USER else '苏棠'}: {m.content}"
         for m in conv.messages[-6:]
     ]
-
-    system_instruction = (
-        "你是苏棠（Su Tang）的情境与心智感知引擎。\n"
-        "【任务】：判断当前对话是否处于『进行到一半被突然晾着、真切在等待对方回复』的状态，并决定是否催问。\n"
-        f"你最后发的信息是：『{content[-120:]}』。\n\n"
-        "【绝对严禁催问的情况 (直接输出 [NO_NUDGE])】：\n"
-        "1. 话题已经自然结束、或者双方已达成共识收尾（例如'好哦'、'那就这样'、'哈哈知道了'、讨论已完毕）；\n"
-        "2. 属于互道晚安、准备睡觉、出门忙事、告别、或者自然舒适的静默休息；\n"
-        "3. 你的最后一句发言属于随口感叹、情绪附和、陈述句，并未真切向对方提出问题或等待对方做决定。\n"
-        "若符合上述任何一种情况，请严格直接输出：`[NO_NUDGE]`，不要输出任何其他内容。\n\n"
-        "【仅在以下情况才输出催问】：\n"
-        "你上一条发言明确提出了待商量的事宜（如商量餐厅、挑选电影、制定明天行程），或者认真问了对方意见，但对方聊着聊着突然停顿超过1分钟没声了。\n"
-        "此时以苏棠真实的傲娇、探究、微怼口吻，输出一条简短生动的催问/调侃（1到2句话，可带[偷笑]、[疑惑]、[没眼看……脑壳疼]等表情）。\n"
-        "直接输出对白文本，严禁包含任何AI声明或解释。"
+    eval_user_prompt = (
+        "【情境上下文】：\n"
+        + "\n".join(recent_dialogue_lines)
+        + f"\n\n苏棠最后发的一句是：『{content}』。\n\n"
+        + "【当前状况】：对方聊着聊着突然停顿超过1分钟没有回应了。\n"
+        + "请作为苏棠的情境与心智感知引擎判断是否需要催问。\n\n"
+        + "【绝对严禁催问的情况 (必须直接输出 [NO_NUDGE])】：\n"
+        + "1. 话题已经自然结束、或者双方已达成共识收尾（例如'好哦'、'那就这样'、'哈哈知道了'、讨论已完毕）；\n"
+        + "2. 属于互道晚安、准备睡觉、出门忙事、告别、或者自然舒适的静默休息；\n"
+        + "3. 苏棠的最后一句发言属于随口感叹、情绪附和、陈述句，并未真切向对方提出问题或等待对方做决定。\n"
+        + "若符合上述任何一种情况，请严格直接输出：`[NO_NUDGE]`，不要输出任何多余字符。\n\n"
+        + "【仅在以下情况才输出催问】：\n"
+        + "苏棠上一条发言明确提出了待商量的事宜（如挑选餐厅、看什么电影、商量明天计划等），认真在等待对方建议或做决定，但对方突然没动静了。\n"
+        + "此时以苏棠真实的傲娇、探究、微怼口吻，输出一条简短生动的催问/调侃（1到2句话，如'人呢？'、'你不会还没查好行程吧'等，可带[偷笑]、[疑惑]、[没眼看……脑壳疼]等表情）。\n"
+        + "直接输出对白文本，严禁包含任何AI声明或分析解释。"
     )
 
     try:
         response = await llm.generate_response(
             LLMContext(
-                messages=chat_history,
-                system_instructions=[system_instruction],
+                messages=[ChatMessage(role="user", content=eval_user_prompt)],
+                enable_grounding=False,
             )
         )
-        nudge_text = response.content.strip()
+        nudge_text = response.content.strip() if response and response.content else ""
         if not nudge_text or "[NO_NUDGE]" in nudge_text or "NO_NUDGE" in nudge_text:
             return {"nudged": False, "reason": "topic_naturally_concluded"}
 
@@ -1069,8 +1067,8 @@ async def check_idle_nudge(
             },
         }
     except Exception as exc:
-        logger.warning("Idle hesitation nudge generation failed for conversation '%s': %s", conversation_id, exc)
-        return {"nudged": False, "error": str(exc)}
+        logger.info("Idle hesitation check concluded without nudge: %s", exc)
+        return {"nudged": False, "reason": "topic_naturally_concluded"}
 
 
 

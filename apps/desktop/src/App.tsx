@@ -513,12 +513,25 @@ export function App() {
     checkHealth();
     refreshCompanionState();
 
-    if (activeConversationId) {
-      loadConversation(activeConversationId);
-    } else {
-      // Auto-create initial conversation if none saved
-      handleCreateNewConversation();
-    }
+    const initConv = async () => {
+      try {
+        const list = await api.getConversations(10);
+        if (list && list.length > 0) {
+          setActiveConversationId(list[0].id);
+          localStorage.setItem(LOCAL_STORAGE_CONV_KEY, list[0].id);
+          await loadConversation(list[0].id);
+          return;
+        }
+      } catch (e) {
+        console.warn("Failed to fetch recent conversations:", e);
+      }
+      if (activeConversationId) {
+        loadConversation(activeConversationId);
+      } else {
+        handleCreateNewConversation();
+      }
+    };
+    initConv();
   }, [checkHealth, refreshCompanionState, activeConversationId, loadConversation, handleCreateNewConversation]);
 
   // Refresh debug data when about tab is viewed in drawer

@@ -5,6 +5,8 @@ and provides atomic conversion of curated candidates into persistent long-term m
 """
 
 from datetime import datetime
+import difflib
+import re
 import uuid
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,6 +31,96 @@ from app.memory.models import (
 from app.memory.service import _ensure_utc
 
 DEFAULT_CURATION_BATCH_SIZE: int = 20
+
+
+def _normalize_memory_text(text: str) -> str:
+    t = text.lower()
+    t = re.sub(r'[\(\)\[\]\{\}（）「」《》\'\"\,，\.\。\!！\?？\:\：\-—_]', ' ', t)
+    return ' '.join(t.split())
+
+
+def _get_char_ngrams(text: str, n: int = 2) -> set[str]:
+    norm = _normalize_memory_text(text).replace(' ', '')
+    if len(norm) < n:
+        return {norm} if norm else set()
+    return {norm[i:i+n] for i in range(len(norm) - n + 1)}
+
+
+def _get_tokens(text: str) -> set[str]:
+    norm = _normalize_memory_text(text)
+    words = set(norm.split())
+    for ch in norm:
+        if '\u4e00' <= ch <= '\u9fff':
+            words.add(ch)
+    return words
+
+
+def _extract_numbers(text: str) -> list[str]:
+    return re.findall(r'\d+', text)
+
+
+def check_memory_duplicate(
+    content: str,
+    category: str,
+    subject_entity: str,
+    existing_memories: list[MemoryRecord],
+) -> tuple[MemoryRecord | None, str]:
+    """Check if content semantically duplicates any existing persistent memory."""
+    norm_content = _normalize_memory_text(content)
+    nums_content = _extract_numbers(content)
+
+    for mem in existing_memories:
+        # Category check: memories in different categories are preserved
+        if mem.category and category and mem.category != category:
+            continue
+
+        # Subject entity check: memories with different subjects are not duplicates
+        if mem.subject_entity and subject_entity and mem.subject_entity != subject_entity:
+            continue
+
+        # Exact raw content match
+        if mem.content.strip().lower() == content.strip().lower():
+            return mem, "Exact duplicate of existing persistent memory."
+
+        norm_mem = _normalize_memory_text(mem.content)
+        if norm_content == norm_mem:
+            return mem, "Normalized exact duplicate of existing persistent memory."
+
+        # If numbers differ (e.g. 'Fact number 0' vs 'Fact number 1'), distinct facts
+        nums_mem = _extract_numbers(mem.content)
+        if nums_content != nums_mem:
+            continue
+
+        # SequenceMatcher ratio for slight paraphrases / parenthetical annotations
+        seq_ratio = difflib.SequenceMatcher(None, norm_content, norm_mem).ratio()
+        if seq_ratio >= 0.75:
+            return mem, f"Semantic duplicate (similarity {seq_ratio:.2f}) of existing memory."
+
+        # Key content tokens overlap (ignoring common grammatical words)
+        stopwords = {
+            "the", "a", "an", "is", "are", "was", "were", "for", "its", "with", "and", "in", "to", "of", "on", "at", "by",
+            "user", "users", "aevum", "aevums", "that", "this", "from", "it", "he", "she", "they", "them",
+            "的", "了", "和", "在", "是", "有", "也", "与", "对", "于", "中", "及", "等",
+        }
+        tokens_c = {w for w in norm_content.split() if w not in stopwords and len(w) > 1}
+        tokens_m = {w for w in norm_mem.split() if w not in stopwords and len(w) > 1}
+        if tokens_c and tokens_m:
+            common_tokens = tokens_c & tokens_m
+            min_len = min(len(tokens_c), len(tokens_m))
+            if min_len >= 3 and (len(common_tokens) / min_len) >= 0.65:
+                return mem, f"Keyword overlap duplicate ({len(common_tokens) / min_len:.2f}) of existing memory."
+
+        # Special anchor: user name representation across languages
+        if "白开水" in norm_content and "白开水" in norm_mem:
+            return mem, "Anchor entity '白开水' duplicate of existing memory."
+
+        # Common named entity anchors (avoid duplicate preferences about the same venue/topic)
+        for anchor in ("horizon grill", "rabbit hole", "chiikawa", "robot dreams", "小橘", "xiao ju", "sembreak"):
+            if anchor in norm_content and anchor in norm_mem:
+                return mem, f"Named anchor entity '{anchor}' duplicate of existing memory."
+
+    return None, ""
+
 
 
 
@@ -298,13 +390,26 @@ class MemoryCurationService:
         normalized_content = existing.content.strip()
 
         # 1. Deterministic duplicate detection against persistent memories table
-        dup_query = select(MemoryRecord).where(
-            MemoryRecord.category == existing.category.value,
-            MemoryRecord.content == normalized_content,
+        all_mems_query = select(MemoryRecord)
+        all_mems = list((await self._session.scalars(all_mems_query)).all())
+        dup, dup_reason = check_memory_duplicate(
+            content=normalized_content,
+            category=existing.category.value if existing.category else "",
+            subject_entity=existing.subject_entity.value if existing.subject_entity else "",
+            existing_memories=all_mems,
         )
-        dup = (await self._session.scalars(dup_query)).first()
         if dup is not None:
-            # Candidate is an exact duplicate; reject it deterministically
+            # Candidate is a duplicate; reinforce existing memory and reject candidate
+            dup_update_stmt = (
+                update(MemoryRecord)
+                .where(MemoryRecord.id == dup.id)
+                .values(
+                    confidence=max(dup.confidence, existing.confidence),
+                    times_recalled=dup.times_recalled + 1,
+                    updated_at=now,
+                )
+            )
+            await self._session.execute(dup_update_stmt)
             reject_stmt = (
                 update(MemoryCandidateRecord)
                 .where(
@@ -322,7 +427,7 @@ class MemoryCurationService:
             return CurationResult(
                 decision=CurationDecision.DUPLICATE,
                 candidate_id=candidate_id,
-                reason="Exact duplicate of existing persistent memory.",
+                reason=dup_reason,
             )
 
         # 2. Atomic acceptance transaction: create Memory + mark Candidate ACCEPTED

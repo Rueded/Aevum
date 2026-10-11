@@ -404,4 +404,9 @@ class CharacterResponseContext(BaseModel):
         default=None,
         description="Active cognitive deception grievance context (Phase: Deception Closed Loop).",
     )
+    elapsed_time_description: Optional[str] = Field(
+        default=None,
+        description="Authentic human description of physical elapsed time since the previous turn.",
+    )
+
 

@@ -55,6 +55,7 @@ async def get_settings(
         "idle_awareness_enabled": record.idle_awareness_enabled,
         "idle_threshold_seconds": record.idle_threshold_seconds,
         "user_country": getattr(record, "user_country", "MY"),
+        "sleep_realism_enabled": getattr(record, "sleep_realism_enabled", True),
         "dnd_until": record.dnd_until.isoformat() if record.dnd_until else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
@@ -82,9 +83,11 @@ async def update_settings(
         "idle_awareness_enabled": record.idle_awareness_enabled,
         "idle_threshold_seconds": record.idle_threshold_seconds,
         "user_country": getattr(record, "user_country", "MY"),
+        "sleep_realism_enabled": getattr(record, "sleep_realism_enabled", True),
         "dnd_until": record.dnd_until.isoformat() if record.dnd_until else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
+
 
 
 @router.post("/settings/dnd", summary="Set or clear temporary Do-Not-Disturb")

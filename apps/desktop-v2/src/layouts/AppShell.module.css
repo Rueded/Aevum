@@ -1,0 +1,59 @@
+.shell {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.mainArea {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.stageContainer {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #151a24 0%, #0b0e14 100%);
+  transition: all var(--transition-normal);
+}
+
+.stageHidden {
+  display: none;
+}
+
+.drawerContainer {
+  width: 440px;
+  min-width: 360px;
+  max-width: 520px;
+  height: 100%;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width var(--transition-normal);
+  z-index: 20;
+}
+
+.drawerExpandedFull {
+  width: 100%;
+  max-width: 100%;
+  border-left: none;
+}
+
+.drawerClosed {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-left: none;
+  visibility: hidden;
+}

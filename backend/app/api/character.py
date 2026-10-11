@@ -7,9 +7,9 @@ Backend owns reality; frontend is purely a projection layer.
 
 import logging
 from pathlib import Path
-from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -251,7 +251,34 @@ async def get_character_state(
     emotion_state = await EmotionService(db).get_emotion_state("aevum")
     life_state = await LifeService(db).get_life_state("aevum")
 
-    natural_mood_label = f"{char_state.mood.value.capitalize()} ({emotion_state.emotion_type.value.capitalize()})"
+    mood_zh = {
+        "calm": "恬淡平稳",
+        "good": "心情愉悦",
+        "playful": "调皮想逗你",
+        "focused": "专注认真",
+        "tired": "微倦犯困",
+        "annoyed": "傲娇小脾气",
+        "reflective": "沉思感触",
+    }.get(char_state.mood.value.lower(), char_state.mood.value)
+
+    emo_zh = {
+        "AMUSED": "逗趣开心",
+        "TOUCHED": "心动微甜",
+        "SHY": "害羞脸红",
+        "CURIOUS": "好奇探究",
+        "TIRED": "困意浓浓",
+        "CALM": "平和自如",
+        "GRUMPY": "气鼓鼓",
+        "PROTECTIVE": "护短偏心",
+        "SURPRISED": "惊讶好奇",
+        "AFFECTIONATE": "亲昵依赖",
+        "NEUTRAL": "平和自如",
+    }.get(emotion_state.emotion_type.value.upper(), emotion_state.emotion_type.value)
+
+    if mood_zh == emo_zh or emo_zh == "平和自如":
+        natural_mood_label = mood_zh
+    else:
+        natural_mood_label = f"{mood_zh} · {emo_zh}"
 
     return CharacterStateResponse(
         name=char_def.identity.name,
@@ -450,6 +477,71 @@ async def get_character_life(
             for g in goals
         ],
     )
+
+
+class SetSituationRequest(BaseModel):
+    activity: str
+    location: str
+    duration_hours: float = 2.0
+    status: str = "ACTIVE"
+
+
+@router.post(
+    "/life/situation",
+    summary="Dynamically update companion's real-time situation, dating location, or activity",
+)
+async def set_character_situation(
+    payload: SetSituationRequest,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Dynamically sets current date location or activity, persisting with an active override."""
+    from datetime import datetime, timedelta, timezone
+    from app.db.models import CharacterStateRecord, LifeStateRecord
+
+    now_utc = datetime.now(timezone.utc)
+    expires_at = now_utc + timedelta(hours=max(0.5, payload.duration_hours))
+
+    # 1. Update LifeStateRecord
+    stmt_life = select(LifeStateRecord).where(LifeStateRecord.character_id == "aevum")
+    life_rec = (await db.scalars(stmt_life)).first()
+    if not life_rec:
+        life_rec = LifeStateRecord(
+            id="aevum",
+            character_id="aevum",
+            current_activity=payload.activity,
+            current_location=payload.location,
+            status=payload.status,
+            active_contingency_id="dating_or_custom_activity",
+            active_contingency_title=f"{payload.activity} @ {payload.location}",
+            contingency_expires_at=expires_at,
+            version=1,
+        )
+        db.add(life_rec)
+    else:
+        life_rec.current_activity = payload.activity
+        life_rec.current_location = payload.location
+        life_rec.status = payload.status
+        life_rec.active_contingency_id = "dating_or_custom_activity"
+        life_rec.active_contingency_title = f"{payload.activity} @ {payload.location}"
+        life_rec.contingency_expires_at = expires_at
+        life_rec.version += 1
+        life_rec.updated_at = now_utc
+
+    # 2. Sync to CharacterStateRecord
+    stmt_char = select(CharacterStateRecord).where(CharacterStateRecord.id == "aevum")
+    char_rec = (await db.scalars(stmt_char)).first()
+    if char_rec:
+        char_rec.current_activity = payload.activity
+        char_rec.current_location = payload.location
+
+    await db.commit()
+
+    return {
+        "status": "success",
+        "current_activity": payload.activity,
+        "current_location": payload.location,
+        "expires_at": expires_at.isoformat(),
+    }
 
 
 @router.get(
@@ -1080,5 +1172,191 @@ async def upload_live2d_zip(file: UploadFile = File(...)) -> ResolveLocalModelRe
         model_serve_url=serve_url,
         message=f"已成功解压并加载 Live2D 模型 [{clean_stem}]！已启动 WebGL 骨骼渲染！",
     )
+
+
+class AvailableModelItem(BaseModel):
+    id: str
+    name: str
+    model_serve_url: str
+    avatar_data_url: str | None = None
+    is_current: bool = False
+
+
+class SetActiveModelRequest(BaseModel):
+    model_id: str
+
+
+@router.get("/avatar/current-model")
+async def get_current_model(request: Request) -> dict[str, Any]:
+    """Retrieve the currently active persistent Live2D model configuration."""
+    _ensure_live2d_data_dirs()
+    registry = _load_live2d_directories()
+    current_path_str = registry.get("current")
+
+    active_dir = None
+    if current_path_str and Path(current_path_str).exists():
+        active_dir = Path(current_path_str)
+    elif _LIVE2D_STORAGE_DIR.exists():
+        # Auto-fallback: discover any existing model in data/live2d_models
+        for sub in sorted(_LIVE2D_STORAGE_DIR.iterdir()):
+            if sub.is_dir() and _find_live2d_model_file(sub):
+                active_dir = sub
+                break
+
+    if not active_dir:
+        return {"active": False, "name": "", "model_serve_url": "", "avatar_data_url": ""}
+
+    model_file = _find_live2d_model_file(active_dir)
+    if not model_file:
+        return {"active": False, "name": "", "model_serve_url": "", "avatar_data_url": ""}
+
+    base_dir = model_file.parent
+    model_id = active_dir.name
+    ACTIVE_LIVE2D_DIRECTORIES[model_id] = base_dir
+    ACTIVE_LIVE2D_DIRECTORIES["current"] = base_dir
+    _save_live2d_directory(model_id, base_dir)
+
+    base_url = str(request.base_url).rstrip("/")
+    serve_url = f"{base_url}/character/avatar/live2d-serve/{model_id}/{model_file.name}"
+    icon_file = _find_preview_icon(base_dir)
+    avatar_url = None
+    if icon_file:
+        try:
+            rel = icon_file.relative_to(base_dir).as_posix()
+            avatar_url = f"{base_url}/character/avatar/live2d-serve/{model_id}/{rel}"
+        except Exception:
+            pass
+
+    return {
+        "active": True,
+        "name": model_id,
+        "model_id": model_id,
+        "model_serve_url": serve_url,
+        "avatar_data_url": avatar_url,
+    }
+
+
+@router.get("/avatar/available-models", response_model=list[AvailableModelItem])
+async def list_available_models(request: Request) -> list[AvailableModelItem]:
+    """List all available local Live2D models on disk and in registry."""
+    _ensure_live2d_data_dirs()
+    registry = _load_live2d_directories()
+    current_path_str = registry.get("current")
+    current_canon = str(Path(current_path_str).resolve()) if current_path_str else ""
+    base_url = str(request.base_url).rstrip("/")
+
+    models: list[AvailableModelItem] = []
+    seen_ids: set[str] = set()
+
+    # 1. Scan storage directory data/live2d_models
+    if _LIVE2D_STORAGE_DIR.exists():
+        for sub in sorted(_LIVE2D_STORAGE_DIR.iterdir()):
+            if not sub.is_dir():
+                continue
+            model_file = _find_live2d_model_file(sub)
+            if not model_file:
+                continue
+            base_dir = model_file.parent
+            model_id = sub.name
+            seen_ids.add(model_id)
+            ACTIVE_LIVE2D_DIRECTORIES[model_id] = base_dir
+
+            serve_url = f"{base_url}/character/avatar/live2d-serve/{model_id}/{model_file.name}"
+            icon_file = _find_preview_icon(base_dir)
+            avatar_url = None
+            if icon_file:
+                try:
+                    rel = icon_file.relative_to(base_dir).as_posix()
+                    avatar_url = f"{base_url}/character/avatar/live2d-serve/{model_id}/{rel}"
+                except Exception:
+                    pass
+
+            is_cur = current_canon == str(base_dir.resolve()) or current_canon == str(sub.resolve())
+            models.append(
+                AvailableModelItem(
+                    id=model_id,
+                    name=model_id,
+                    model_serve_url=serve_url,
+                    avatar_data_url=avatar_url,
+                    is_current=is_cur,
+                )
+            )
+
+    # 2. Check remaining registered directories
+    for reg_id, reg_path in registry.items():
+        if reg_id in ("current",) or reg_id in seen_ids:
+            continue
+        p = Path(reg_path)
+        if not p.exists():
+            continue
+        model_file = _find_live2d_model_file(p)
+        if not model_file:
+            continue
+        base_dir = model_file.parent
+        ACTIVE_LIVE2D_DIRECTORIES[reg_id] = base_dir
+        serve_url = f"{base_url}/character/avatar/live2d-serve/{reg_id}/{model_file.name}"
+        icon_file = _find_preview_icon(base_dir)
+        avatar_url = None
+        if icon_file:
+            try:
+                rel = icon_file.relative_to(base_dir).as_posix()
+                avatar_url = f"{base_url}/character/avatar/live2d-serve/{reg_id}/{rel}"
+            except Exception:
+                pass
+
+        is_cur = current_canon == str(base_dir.resolve()) or current_canon == str(p.resolve())
+        models.append(
+            AvailableModelItem(
+                id=reg_id,
+                name=reg_id,
+                model_serve_url=serve_url,
+                avatar_data_url=avatar_url,
+                is_current=is_cur,
+            )
+        )
+
+    return models
+
+
+@router.post("/avatar/set-active-model")
+async def set_active_model(payload: SetActiveModelRequest, request: Request) -> dict[str, Any]:
+    """Set the active Live2D model for the companion."""
+    _ensure_live2d_data_dirs()
+    target_id = payload.model_id.strip()
+    target_dir = _get_live2d_dir(target_id)
+    if not target_dir or not target_dir.exists():
+        cand = _LIVE2D_STORAGE_DIR / target_id
+        if cand.exists():
+            target_dir = cand
+        else:
+            raise HTTPException(status_code=404, detail=f"Model '{target_id}' not found on server")
+
+    model_file = _find_live2d_model_file(target_dir)
+    if not model_file:
+        raise HTTPException(status_code=400, detail=f"No model3.json found in '{target_id}'")
+
+    base_dir = model_file.parent
+    ACTIVE_LIVE2D_DIRECTORIES[target_id] = base_dir
+    ACTIVE_LIVE2D_DIRECTORIES["current"] = base_dir
+    _save_live2d_directory(target_id, base_dir)
+
+    base_url = str(request.base_url).rstrip("/")
+    serve_url = f"{base_url}/character/avatar/live2d-serve/{target_id}/{model_file.name}"
+    icon_file = _find_preview_icon(base_dir)
+    avatar_url = None
+    if icon_file:
+        try:
+            rel = icon_file.relative_to(base_dir).as_posix()
+            avatar_url = f"{base_url}/character/avatar/live2d-serve/{target_id}/{rel}"
+        except Exception:
+            pass
+
+    return {
+        "status": "success",
+        "model_id": target_id,
+        "model_serve_url": serve_url,
+        "avatar_data_url": avatar_url,
+    }
+
 
 

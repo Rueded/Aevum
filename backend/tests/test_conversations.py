@@ -680,3 +680,116 @@ async def test_post_turn_memory_extraction_failure_does_not_fail_conversation_re
     assert msgs[0]["role"] == "user"
     assert msgs[1]["role"] == "assistant"
 
+
+@pytest.mark.asyncio
+async def test_idle_nudge_skips_on_farewell_or_closed_topic(
+    client: AsyncClient,
+    fake_provider: FakeLLMProvider,
+):
+    """Verify that check-idle never nudges if the last turn was a sign-off or bedtime."""
+    conv_res = await client.post("/conversations")
+    conv_id = conv_res.json()["id"]
+
+    fake_provider.response_text = "好啦，时间不早了，晚安好梦~"
+    await client.post(
+        f"/conversations/{conv_id}/messages",
+        json={"role": "user", "content": "我要去睡了，晚安"},
+    )
+
+    # Calling check-idle with 0s threshold
+    res = await client.post(f"/conversations/{conv_id}/check-idle?idle_threshold=0")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["nudged"] is False
+    assert data["reason"] == "conversation_farewell_or_closed"
+
+
+@pytest.mark.asyncio
+async def test_idle_nudge_skips_when_model_evaluates_topic_concluded(
+    client: AsyncClient,
+    fake_provider: FakeLLMProvider,
+):
+    """Verify that check-idle respects model [NO_NUDGE] when topic concluded naturally."""
+    conv_res = await client.post("/conversations")
+    conv_id = conv_res.json()["id"]
+
+    fake_provider.response_text = "哈哈，这样啊，那我知道了。"
+    await client.post(
+        f"/conversations/{conv_id}/messages",
+        json={"role": "user", "content": "那家店关门了"},
+    )
+
+    # Calling check-idle
+    res = await client.post(f"/conversations/{conv_id}/check-idle?idle_threshold=0")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["nudged"] is False
+
+
+@pytest.mark.asyncio
+async def test_idle_nudge_triggers_when_waiting_for_plan(
+    client: AsyncClient,
+    fake_provider: FakeLLMProvider,
+):
+    """Verify that check-idle triggers a tease when companion asked a pending plan question."""
+    conv_res = await client.post("/conversations")
+    conv_id = conv_res.json()["id"]
+
+    fake_provider.response_text = "你还没告诉我明天要去哪里玩呢，要不先给我个行程计划？"
+    await client.post(
+        f"/conversations/{conv_id}/messages",
+        json={"role": "user", "content": "明天我们一起出去玩吧"},
+    )
+
+    # Next call to LLM will generate the nudge tease
+    fake_provider.response_text = "人呢？你不会根本没有计划，现在才临时去查吧？[偷笑]"
+    res = await client.post(f"/conversations/{conv_id}/check-idle?idle_threshold=0")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["nudged"] is True
+    assert "人呢" in data["message"]["content"]
+
+
+@pytest.mark.asyncio
+async def test_conversational_situational_progression(
+    client: AsyncClient,
+    fake_provider: FakeLLMProvider,
+):
+    """Verify that location and activity advance automatically through conversational turns."""
+    conv_res = await client.post("/conversations")
+    conv_id = conv_res.json()["id"]
+
+    # Step 1: Picking a restaurant / heading out
+    fake_provider.response_text = "好呀，附近有一间日料店味道不错，要不要去试试？就在商场里面。"
+    await client.post(
+        f"/conversations/{conv_id}/messages",
+        json={"role": "user", "content": "出发吧 你有想去的餐厅或者想吃的东西吗？"},
+    )
+
+    state1 = (await client.get("/character/state")).json()
+    assert "外出赴约" in state1["current_activity"] or "商量" in state1["current_activity"]
+    assert "外出途中" in state1["current_location"]
+
+    # Step 2: Arriving at restaurant / sitting down & ordering
+    fake_provider.response_text = "好香啊，我们坐靠窗的卡座吧，看看菜单点什么。"
+    await client.post(
+        f"/conversations/{conv_id}/messages",
+        json={"role": "user", "content": "到店里了，坐下看看菜单点菜吧"},
+    )
+
+    state2 = (await client.get("/character/state")).json()
+    assert "日料店" in state2["current_activity"] or "用餐" in state2["current_activity"]
+    assert "日料店" in state2["current_location"]
+
+    # Step 3: Finishing dining & leaving
+    fake_provider.response_text = "吃得好撑呀，寿司太好吃了！走吧，去商场散散步消消食。"
+    await client.post(
+        f"/conversations/{conv_id}/messages",
+        json={"role": "user", "content": "吃饱了，结账买单走吧"},
+    )
+
+    state3 = (await client.get("/character/state")).json()
+    assert "散步" in state3["current_activity"] or "闲逛" in state3["current_activity"]
+
+
+

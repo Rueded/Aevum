@@ -87,6 +87,20 @@ async def create_call_session(
         conversation_id=payload.conversation_id,
         session_id=payload.session_id,
     )
+
+    # Wake up character if currently sleeping (incoming ringtone wakes her up)
+    try:
+        from app.db.session import async_session_factory
+        from app.character.state_service import CharacterStateService
+        async with async_session_factory() as db:
+            state_svc = CharacterStateService(db)
+            st = await state_svc.get_state("aevum")
+            cur_act = (st.current_activity or "").lower()
+            if any(k in cur_act for k in ("sleep", "night_sleep", "deep_sleep", "睡觉", "睡眠")):
+                await state_svc.update_state("aevum", current_activity="接听夜间电话 (迷迷糊糊醒来)")
+    except Exception as wake_err:
+        logger.debug("Voice call wake transition skipped: %s", wake_err)
+
     return CallSessionResponse(
         session_id=session.session_id,
         conversation_id=session.conversation_id,

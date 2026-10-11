@@ -65,14 +65,37 @@ class GeminiProvider(LLMProvider):
         contents: list[types.Content] = []
         system_parts: list[str] = list(context.system_instructions)
 
+        import re
+        import base64
+
+        img_pattern = re.compile(r"!\[.*?\]\((data:image/([a-zA-Z0-9]+);base64,([A-Za-z0-9+/=]+))\)")
+
         for msg in context.messages:
             if msg.role == "system":
                 system_parts.append(msg.content)
             elif msg.role == "user":
+                parts: list[types.Part] = []
+                cleaned_text = msg.content
+                img_matches = list(img_pattern.finditer(msg.content))
+                if img_matches:
+                    for match in img_matches:
+                        mime_sub = match.group(2)
+                        b64_data = match.group(3)
+                        mime_type = "image/jpeg" if mime_sub in ("jpg", "jpeg") else f"image/{mime_sub}"
+                        try:
+                            img_bytes = base64.b64decode(b64_data)
+                            parts.append(types.Part.from_bytes(data=img_bytes, mime_type=mime_type))
+                        except Exception as b64_err:
+                            logger.warning("Failed to decode inline user image: %s", b64_err)
+                    cleaned_text = img_pattern.sub("[用户分享了一张图片]", msg.content).strip()
+                if cleaned_text:
+                    parts.insert(0, types.Part.from_text(text=cleaned_text))
+                if not parts:
+                    parts.append(types.Part.from_text(text="[图片]"))
                 contents.append(
                     types.Content(
                         role="user",
-                        parts=[types.Part.from_text(text=msg.content)],
+                        parts=parts,
                     )
                 )
             elif msg.role == "assistant":
@@ -91,7 +114,6 @@ class GeminiProvider(LLMProvider):
                         )
                     )
             else:
-                # Default unknown roles to user for safety
                 contents.append(
                     types.Content(
                         role="user",

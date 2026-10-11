@@ -1162,6 +1162,7 @@ class DesktopUserSettingsRecord(Base):
     idle_awareness_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     idle_threshold_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
     user_country: Mapped[str] = mapped_column(String(32), nullable=False, default="MY", server_default="MY")
+    sleep_realism_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
     dnd_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(

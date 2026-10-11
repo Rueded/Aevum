@@ -111,6 +111,18 @@ export const api = {
     });
   },
 
+  checkIdleNudge: (
+    conversationId: string,
+    idleThreshold: number = 75
+  ): Promise<{ nudged: boolean; message?: MessageCreateResponse["assistant_response"] }> => {
+    return fetchJson<{ nudged: boolean; message?: MessageCreateResponse["assistant_response"] }>(
+      `/conversations/${encodeURIComponent(conversationId)}/check-idle?idle_threshold=${idleThreshold}`,
+      {
+        method: "POST",
+      }
+    );
+  },
+
   getCharacterState: (): Promise<CharacterStateResponse> => {
     return fetchJson<CharacterStateResponse>("/character/state");
   },

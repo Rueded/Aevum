@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Aevum</string>
+    <string name="title_activity_main">Aevum</string>
+    <string name="package_name">com.aevum.companion</string>
+    <string name="custom_url_scheme">com.aevum.companion</string>
+</resources>

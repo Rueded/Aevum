@@ -91,6 +91,7 @@ class DesktopUserSettingsUpdate(BaseModel):
     idle_awareness_enabled: Optional[bool] = None
     idle_threshold_seconds: Optional[int] = Field(default=None, ge=30, le=3600)
     user_country: Optional[str] = Field(default=None, description="User cultural locale/country (e.g. 'MY', 'CN', 'SG', 'TW', 'GLOBAL').")
+    sleep_realism_enabled: Optional[bool] = Field(default=None, description="Whether character realistically sleeps and does not answer single messages during deep sleep.")
 
     @field_validator("timezone")
     @classmethod

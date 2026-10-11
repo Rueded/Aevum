@@ -1,0 +1,60 @@
+.metricRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.metricInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.metricLabel {
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metricValue {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.barTrack {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 400ms ease;
+}
+
+.fillTrust {
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+}
+
+.fillFamiliarity {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.fillComfort {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.fillRespect {
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+.fillAffection {
+  background: linear-gradient(90deg, #ec4899, #f472b6);
+}

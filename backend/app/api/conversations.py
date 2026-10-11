@@ -1,7 +1,8 @@
 import base64
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import delete as sql_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +38,7 @@ from app.voice import (
 from app.voice.dependencies import get_stt_service, get_tts_service
 from app.llm import (
     ChatMessage,
+    LLMContext,
     LLMGenerationError,
     LLMProvider,
     LLMProviderNotConfiguredError,
@@ -245,6 +247,32 @@ async def create_message(
     history_result = await db.execute(history_query)
     stored_messages = history_result.scalars().all()
 
+    # 3.5 Calculate elapsed physical time since previous turn
+    elapsed_time_desc = None
+    if len(stored_messages) >= 2:
+        prev_turn = stored_messages[-2]
+        prev_time = prev_turn.created_at if prev_turn.created_at.tzinfo else prev_turn.created_at.replace(tzinfo=timezone.utc)
+        curr_time = user_msg.created_at if user_msg.created_at.tzinfo else user_msg.created_at.replace(tzinfo=timezone.utc)
+        diff_sec = max(0, int((curr_time - prev_time).total_seconds()))
+        if diff_sec < 45:
+            elapsed_time_desc = f"即时打字连续交流中（上一条消息仅过去 {diff_sec} 秒）"
+        elif diff_sec < 180:
+            elapsed_time_desc = f"间隔约 {diff_sec // 60} 分钟，几乎是在同一连续对话节奏内"
+        elif diff_sec < 3600:
+            mins = diff_sec // 60
+            elapsed_time_desc = (
+                f"距离上一条消息过去了约 {mins} 分钟。"
+                f"（重要真实物理常识：现实世界过去了 {mins} 分钟！"
+                f"例如10分钟完全足够女生快速化个淡妆换好衣服，但如果洗澡化妆全部在10分钟内做完就会显得很赶/不可思议；"
+                f"如果被用户问到时间，苏棠要具有清晰、真实的人类时间流速感知，符合物理逻辑，不可胡言乱语）"
+            )
+        elif diff_sec < 86400:
+            hrs = round(diff_sec / 3600, 1)
+            elapsed_time_desc = f"距离上一条消息过去了约 {hrs} 小时（有足够的时间进行日常生活、上课、练琴、写作业、休息或外出）"
+        else:
+            days = round(diff_sec / 86400, 1)
+            elapsed_time_desc = f"距离上一条消息已经过去约 {days} 天（一段时间未见，各自生活继续）"
+
     # 4. Build CharacterResponseContext using CharacterEngine (Phase 6.3)
     try:
         from app.life.schedule_engine import LifeScheduleEngine
@@ -258,6 +286,7 @@ async def create_message(
             user_input=payload.content,
             character_id="aevum",
             user_id="user",
+            elapsed_time_description=elapsed_time_desc,
         )
     except Exception as exc:
         logger.error("CharacterEngine failed: %s", exc)
@@ -265,6 +294,61 @@ async def create_message(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal character engine failure.",
         ) from exc
+
+    # 4.5. Sleep Realism & DND Logic (Respects quiet hours & deep sleep)
+    try:
+        from app.desktop.service import DesktopService
+        desktop_service = DesktopService(db)
+        desktop_settings = await desktop_service.get_settings("aevum")
+        sleep_realism = getattr(desktop_settings, "sleep_realism_enabled", True)
+
+        current_act = (response_context.character_state.current_activity or "").lower()
+        is_sleeping = any(k in current_act for k in ("sleep", "night_sleep", "deep_sleep", "睡觉", "睡眠", "小憩"))
+
+        if sleep_realism and is_sleeping:
+            now_utc = datetime.now(timezone.utc)
+            # Count recent user messages in the last 90 seconds
+            recent_user_turns = [
+                m for m in stored_messages
+                if m.role == MessageRole.USER.value
+                and (now_utc - (m.created_at if m.created_at.tzinfo else m.created_at.replace(tzinfo=timezone.utc))).total_seconds() <= 90
+            ]
+
+            # If user sent fewer than 3 messages in 90 seconds: she remains sound asleep!
+            if len(recent_user_turns) < 3:
+                sleep_msg = Message(
+                    conversation_id=conversation_id,
+                    role=MessageRole.ASSISTANT.value,
+                    content="（苏棠正在深度睡眠中……呼吸平稳安静，没有被消息吵醒。若有急事可尝试连续发消息或拨打语音通话）",
+                )
+                db.add(sleep_msg)
+                conversation.updated_at = now_utc
+                await db.commit()
+                await db.refresh(sleep_msg)
+
+                user_read = MessageRead.model_validate(user_msg)
+                assistant_read = MessageRead.model_validate(sleep_msg)
+                return MessageCreateResponse(
+                    user_message=user_read,
+                    assistant_message=assistant_read,
+                )
+            else:
+                # User sent 3+ messages in 90s: phone vibrations wake her up!
+                state_svc = CharacterStateService(db)
+                await state_svc.update_state(
+                    "aevum",
+                    current_activity="被消息吵醒",
+                    current_location=response_context.character_state.current_location,
+                )
+                waking_guidance = (
+                    "\n【真实作息突发事件】：你本来在深度睡眠中，但对方在短时间内连续发了多条消息，"
+                    "手机在床头连续震动把你吵醒了！你揉着眼睛迷迷糊糊从被窝里摸到手机，"
+                    "带着浓浓的鼻音、困意和打哈欠，半梦半醒地问对方怎么了，是不是有什么急事。"
+                )
+                if hasattr(response_context, "arbitration_guidance") and response_context.arbitration_guidance:
+                    response_context.arbitration_guidance += waking_guidance
+    except Exception as sleep_check_err:
+        logger.warning("Sleep realism check skipped with error: %s", sleep_check_err)
 
     # 5. Convert into provider-neutral ChatMessage format
     chat_messages = [
@@ -408,6 +492,107 @@ async def create_message(
             conversation_id,
             exc,
         )
+
+    # 9e. Non-critical post-turn processing: Situational & Dating Commitment Extraction
+    try:
+        from app.db.models import CharacterStateRecord, LifeStateRecord, LifeEventRecord
+        from app.life.models import LifeEventType
+
+        detected_situation = None
+        ast_lower = assistant_msg.content.lower()
+        usr_lower = payload.content.lower()
+        combined_text = f"{usr_lower} {ast_lower}"
+
+        # Future plan discussion guard (e.g. discussing tomorrow's itinerary late at night)
+        is_future = any(w in combined_text for w in ("明天", "后天", "下次", "改天")) and not any(
+            now_w in combined_text for now_w in ("现在", "这就去", "马上", "已经到了", "出发了", "开吃了", "出发吧")
+        )
+        if is_future and any(k in combined_text for k in ("行程", "计划", "去哪", "玩", "出去", "安排")):
+            detected_situation = ("在卧室和对方商量明天的约会行程", "老家-卧室", "ACTIVE")
+        # 1. Finishing dining & leaving restaurant / shopping
+        elif any(k in combined_text for k in ("吃饱了", "买单", "结账", "吃得好撑", "走吧去逛逛", "逛街", "吃完了走吧")):
+            detected_situation = ("商场闲逛散步/前往影城途中", "商场 (The Intermark Mall / Pavilion)", "ACTIVE")
+        # 2. Cinema / Movie in progress
+        elif any(k in combined_text for k in ("开场了", "检票", "放映厅", "电影开始了", "爆米花", "看电影中", "散场")):
+            detected_situation = ("商场影城看电影放映中", "商场影城 (GSC/TGV Cinemas)", "ACTIVE")
+        # 3. Heading to / deciding on cinema
+        elif any(k in combined_text for k in ("看电影", "影院", "gsc", "tgv", "电影院", "选座", "买票")):
+            detected_situation = ("商场影城准备看电影/选座购票中", "商场影城 (GSC/TGV Cinemas)", "ACTIVE")
+        # 4. En route / picking restaurant / traveling to meet
+        elif any(k in combined_text for k in ("出发吧", "想吃", "要不要去试试", "叫什么名字", "选餐厅", "在车上", "去吃", "去哪吃", "没找到", "换一间", "离这里不远", "商量")):
+            detected_situation = ("外出赴约途中/商量挑选约会餐厅", "雪隆外出途中 (商场/车上)", "ACTIVE")
+        # 5. Dining / at restaurant / eating / ordering
+        elif any(k in combined_text for k in ("点菜", "菜单", "入座", "好香", "上菜", "吃寿司", "开吃", "坐下", "这道菜", "尝尝", "进店", "到店里", "在店里")):
+            detected_situation = ("在日料店共进午餐/约会用餐中", "商场日料店 (The Intermark Mall Hanare)", "ACTIVE")
+        # 6. Meeting up at doorway / opening door
+        elif any(k in ast_lower for k in ("开门", "来开门", "给你开门", "动作倒是挺快", "马上开门", "到门口")) or (
+            any(k in usr_lower for k in ("开门", "我到了", "敲门", "到你家楼下", "到门口")) and any(k in ast_lower for k in ("来", "快", "走", "好", "门"))
+        ):
+            detected_situation = ("在玄关开门迎接/准备出发", "老家-玄关门口", "ACTIVE")
+        # 7. Ready & waiting in living room
+        elif any(k in ast_lower for k in ("已经在客厅", "在客厅等", "在客厅坐", "在沙发上等", "已经在等", "我好啦", "我好了", "随时可以出发")):
+            detected_situation = ("在客厅等待出发赴约", "老家-客厅沙发", "ACTIVE")
+        # 8. Dressing up & getting ready to go out
+        elif any(k in ast_lower for k in ("收拾一下", "去收拾", "准备准备", "等等我哈", "等我换衣服", "化个妆", "我这就去", "去准备", "我很快", "化得比较快")):
+            detected_situation = ("在更衣室梳妆打扮/准备出门", "老家-卧室/浴室更衣室", "BUSY")
+        # 9. Returning home / back home
+        elif any(k in combined_text for k in ("送我回家", "到家了", "回房", "换睡衣", "累瘫了", "洗完澡了", "躺床上了", "在床上了")):
+            detected_situation = ("约会结束返家休息/换上睡衣", "老家-卧室", "REST")
+        # 10. Coding / study desk
+        elif any(k in combined_text for k in ("写代码", "敲代码", "捣鼓新代码", "改bug", "独立游戏")):
+            detected_situation = ("在书房电脑前写代码敲键盘", "老家-书房电脑前", "ACTIVE")
+        # 11. Piano practice
+        elif any(k in combined_text for k in ("练琴", "扒谱", "弹琴", "乐理", "肖邦", "琴谱")):
+            detected_situation = ("古典钢琴练习与扒谱", "家中钢琴房", "ACTIVE")
+        # 12. Feeding / playing with cat
+        elif any(k in combined_text for k in ("喂小橘", "喂猫", "倒猫粮", "逗猫", "小橘在")):
+            detected_situation = ("陪伴小猫小橘/在客厅互动", "老家-客厅沙发", "ACTIVE")
+        # 13. Cafe chill
+        elif any(k in combined_text for k in ("喝咖啡", "咖啡馆", "点杯拿铁", "奶茶", "坐会儿")):
+            detected_situation = ("在海边咖啡馆悠闲喝下午茶", "街角海边咖啡馆", "ACTIVE")
+        # 14. Gaming
+        elif any(k in combined_text for k in ("上号", "联机", "开黑", "连麦打游戏", "打崩铁", "双排", "原神")):
+            detected_situation = ("电脑前联机游戏中", "老家-书房电脑前", "ACTIVE")
+
+        if detected_situation:
+            det_act, det_loc, det_status = detected_situation
+            now_utc = datetime.now(timezone.utc)
+            exp_time = now_utc + timedelta(hours=2)
+
+            stmt_life = select(LifeStateRecord).where(LifeStateRecord.character_id == "aevum")
+            life_rec = (await db.scalars(stmt_life)).first()
+            if life_rec:
+                life_rec.current_activity = det_act
+                life_rec.current_location = det_loc
+                life_rec.status = det_status
+                life_rec.active_contingency_id = "conversational_situation"
+                life_rec.active_contingency_title = f"{det_act} @ {det_loc}"
+                life_rec.contingency_expires_at = exp_time
+                life_rec.version += 1
+                life_rec.updated_at = now_utc
+
+            stmt_char = select(CharacterStateRecord).where(CharacterStateRecord.id == "aevum")
+            char_rec = (await db.scalars(stmt_char)).first()
+            if char_rec:
+                char_rec.current_activity = det_act
+                char_rec.current_location = det_loc
+
+            sit_event_key = f"situation_update:aevum:{uuid4()}"
+            session_event = LifeEventRecord(
+                character_id="aevum",
+                event_type=LifeEventType.OTHER.value,
+                title=f"动态情境变动: {det_act}",
+                description=f"苏棠当前处于: {det_act} (地点: {det_loc})",
+                significance=0.3,
+                occurred_at=now_utc,
+                idempotency_key=sit_event_key,
+            )
+            db.add(session_event)
+            await db.commit()
+            logger.info("Dialogue situational commitment applied: %s @ %s", det_act, det_loc)
+    except Exception as sit_err:
+        await db.rollback()
+        logger.warning("Dialogue situational commitment extraction error: %s", sit_err)
 
     # 10. Return both persisted messages
     return MessageCreateResponse(
@@ -717,6 +902,176 @@ async def create_voice_message(
         audio_cache_key=audio_cache_key,
         audio_status=audio_status,
     )
+
+
+@router.post(
+    "/{conversation_id}/check-idle",
+    response_model=dict[str, Any],
+    status_code=status.HTTP_200_OK,
+    summary="Check if user paused replying after companion inquiry, and generate a natural hesitation nudge",
+)
+async def check_idle_nudge(
+    conversation_id: str,
+    idle_threshold: int = 75,
+    db: AsyncSession = Depends(get_db_session),
+    llm: LLMProvider = Depends(get_llm_provider),
+) -> dict[str, Any]:
+    """Check if the user paused responding after an active inquiry and generate a natural companion nudge."""
+    query = (
+        select(Conversation)
+        .where(Conversation.id == conversation_id)
+        .options(selectinload(Conversation.messages))
+    )
+    result = await db.execute(query)
+    conv = result.scalar_one_or_none()
+    if not conv or not conv.messages:
+        return {"nudged": False, "reason": "no_messages"}
+
+    last_msg = conv.messages[-1]
+    # Only nudge if the last turn was from the assistant
+    if last_msg.role != MessageRole.ASSISTANT:
+        return {"nudged": False, "reason": "not_assistant_turn"}
+
+    # Avoid double nudging if assistant already sent the last 2 consecutive messages
+    if len(conv.messages) >= 2 and conv.messages[-2].role == MessageRole.ASSISTANT:
+        return {"nudged": False, "reason": "already_nudged"}
+
+    # Calculate elapsed idle time
+    now = datetime.now(timezone.utc)
+    msg_time = last_msg.created_at
+    if msg_time.tzinfo is None:
+        msg_time = msg_time.replace(tzinfo=timezone.utc)
+    elapsed = (now - msg_time).total_seconds()
+
+    if elapsed < idle_threshold:
+        return {"nudged": False, "reason": "within_threshold", "elapsed_seconds": elapsed}
+
+    # 1. Check for explicit farewell, bedtime, or sign-off in recent messages
+    recent_texts = " ".join([m.content for m in conv.messages[-3:]]).lower()
+    farewell_keywords = (
+        "晚安",
+        "好梦",
+        "做个好梦",
+        "去睡了",
+        "睡觉了",
+        "先睡了",
+        "准备睡了",
+        "洗洗睡",
+        "拜拜",
+        "先下了",
+        "明天见",
+        "下次聊",
+        "改天聊",
+        "先去忙",
+        "要去忙",
+        "先干活",
+        "去开会",
+        "去洗澡",
+        "出门了",
+        "回头聊",
+        "先不聊",
+        "不打扰了",
+        "不打扰你",
+        "那就这样",
+        "明天不见不散",
+        "明天见啦",
+        "路上小心",
+        "你也早点睡",
+        "快去睡吧",
+        "快去忙吧",
+    )
+    if any(kw in recent_texts for kw in farewell_keywords):
+        return {"nudged": False, "reason": "conversation_farewell_or_closed"}
+
+    # 2. Verify if companion was waiting for a plan, answer, or response
+    content = last_msg.content
+    is_expecting_reply = any(
+        q in content
+        for q in (
+            "?",
+            "？",
+            "吗",
+            "呢",
+            "吧",
+            "计划",
+            "去哪",
+            "想吃",
+            "如何",
+            "怎样",
+            "什么",
+            "你觉得",
+            "要不要",
+            "换一间",
+            "哪间",
+            "电影",
+            "餐厅",
+            "行程",
+        )
+    )
+
+    # If the last message was a statement without active question/proposal, do not nudge
+    if not is_expecting_reply:
+        return {"nudged": False, "reason": "not_expecting_immediate_reply"}
+
+    # 3. Synthesize natural hesitation nudge with topic closure appraisal
+    chat_history = [
+        ChatMessage(
+            role="user" if m.role == MessageRole.USER else "assistant",
+            content=m.content,
+        )
+        for m in conv.messages[-6:]
+    ]
+
+    system_instruction = (
+        "你是苏棠（Su Tang）的情境与心智感知引擎。\n"
+        "【任务】：判断当前对话是否处于『进行到一半被突然晾着、真切在等待对方回复』的状态，并决定是否催问。\n"
+        f"你最后发的信息是：『{content[-120:]}』。\n\n"
+        "【绝对严禁催问的情况 (直接输出 [NO_NUDGE])】：\n"
+        "1. 话题已经自然结束、或者双方已达成共识收尾（例如'好哦'、'那就这样'、'哈哈知道了'、讨论已完毕）；\n"
+        "2. 属于互道晚安、准备睡觉、出门忙事、告别、或者自然舒适的静默休息；\n"
+        "3. 你的最后一句发言属于随口感叹、情绪附和、陈述句，并未真切向对方提出问题或等待对方做决定。\n"
+        "若符合上述任何一种情况，请严格直接输出：`[NO_NUDGE]`，不要输出任何其他内容。\n\n"
+        "【仅在以下情况才输出催问】：\n"
+        "你上一条发言明确提出了待商量的事宜（如商量餐厅、挑选电影、制定明天行程），或者认真问了对方意见，但对方聊着聊着突然停顿超过1分钟没声了。\n"
+        "此时以苏棠真实的傲娇、探究、微怼口吻，输出一条简短生动的催问/调侃（1到2句话，可带[偷笑]、[疑惑]、[没眼看……脑壳疼]等表情）。\n"
+        "直接输出对白文本，严禁包含任何AI声明或解释。"
+    )
+
+    try:
+        response = await llm.generate_response(
+            LLMContext(
+                messages=chat_history,
+                system_instructions=[system_instruction],
+            )
+        )
+        nudge_text = response.content.strip()
+        if not nudge_text or "[NO_NUDGE]" in nudge_text or "NO_NUDGE" in nudge_text:
+            return {"nudged": False, "reason": "topic_naturally_concluded"}
+
+        nudge_msg = Message(
+            conversation_id=conversation_id,
+            role=MessageRole.ASSISTANT,
+            content=nudge_text,
+        )
+        db.add(nudge_msg)
+        conv.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(nudge_msg)
+
+        return {
+            "nudged": True,
+            "message": {
+                "id": nudge_msg.id,
+                "conversation_id": nudge_msg.conversation_id,
+                "role": nudge_msg.role.value if hasattr(nudge_msg.role, "value") else str(nudge_msg.role),
+                "content": nudge_msg.content,
+                "created_at": nudge_msg.created_at.isoformat(),
+            },
+        }
+    except Exception as exc:
+        logger.warning("Idle hesitation nudge generation failed for conversation '%s': %s", conversation_id, exc)
+        return {"nudged": False, "error": str(exc)}
+
 
 
 

@@ -87,6 +87,22 @@ export const useConversationStore = create<ConversationStoreState>((set, get) =>
       await get().fetchConversations();
       const list = get().conversations;
       if (list.length > 0) {
+        // Priority 1: If current saved conversation has messages, keep it
+        const currentId = get().activeConversationId;
+        const currentItem = list.find((c) => c.id === currentId);
+        if (currentItem && currentItem.message_count > 0) {
+          await get().selectConversation(currentItem.id);
+          return;
+        }
+
+        // Priority 2: Select the conversation that has chat history
+        const activeWithMessages = list.find((c) => c.message_count > 0);
+        if (activeWithMessages) {
+          await get().selectConversation(activeWithMessages.id);
+          return;
+        }
+
+        // Priority 3: Fall back to first in list
         await get().selectConversation(list[0].id);
         return;
       }

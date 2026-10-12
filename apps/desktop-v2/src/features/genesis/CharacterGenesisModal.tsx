@@ -334,10 +334,10 @@ export const CharacterGenesisModal: React.FC<CharacterGenesisModalProps> = ({
         {/* Step Indicator */}
         <div className="genesis-stepper">
           {[
-            { step: 1, label: "基础身份与生活脉络", tag: "Identity" },
-            { step: 2, label: "灵魂特质与认知起源", tag: "Cognition" },
-            { step: 3, label: "相遇故事与初始契约", tag: "Genesis" },
-            { step: 4, label: "创世蓝图确认与苏醒", tag: "Awakening" },
+            { step: 1, label: "基础身份与生活脉络", tag: "Identity", shortLabel: "身份脉络" },
+            { step: 2, label: "灵魂特质与认知起源", tag: "Cognition", shortLabel: "特质认知" },
+            { step: 3, label: "相遇故事与初始契约", tag: "Genesis", shortLabel: "相遇契约" },
+            { step: 4, label: "创世蓝图确认与苏醒", tag: "Awakening", shortLabel: "确认苏醒" },
           ].map((item) => (
             <div
               key={item.step}
@@ -349,7 +349,10 @@ export const CharacterGenesisModal: React.FC<CharacterGenesisModalProps> = ({
               <div className="step-number">{currentStep > item.step ? "✓" : item.step}</div>
               <div className="step-text">
                 <span className="step-tag">{item.tag}</span>
-                <span className="step-title">{item.label}</span>
+                <span className="step-title">
+                  <span className="title-full">{item.label}</span>
+                  <span className="title-short">{item.shortLabel}</span>
+                </span>
               </div>
             </div>
           ))}
@@ -989,7 +992,15 @@ export const CharacterGenesisModal: React.FC<CharacterGenesisModalProps> = ({
         {!genesisResult && (
           <div className="genesis-modal-footer">
             <div className="footer-left">
-              <span className="step-count-indicator">Step {currentStep} / 4</span>
+              <button
+                type="button"
+                className="genesis-btn secondary genesis-footer-close-btn"
+                onClick={onClose}
+                title="关闭并退出创世窗口"
+              >
+                ✕ 退出
+              </button>
+              <span className="step-count-indicator">{currentStep} / 4</span>
             </div>
             <div className="footer-right">
               {currentStep > 1 && (

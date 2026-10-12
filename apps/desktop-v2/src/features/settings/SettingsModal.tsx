@@ -340,11 +340,14 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
   return (
     <div className="desktop-settings-backdrop" onClick={onClose}>
       <div className="desktop-settings-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Mobile Pull / Drag Indicator */}
+        <div className="modal-drag-indicator" onClick={onClose} title="点击关闭" />
+
         {/* Header */}
         <div className="modal-header">
           <div className="modal-title-row">
             <h2>伴侣个性化偏好与系统设置</h2>
-            <button className="close-btn" onClick={onClose} title="关闭">
+            <button className="close-btn" onClick={onClose} title="关闭" aria-label="关闭设置">
               ✕
             </button>
           </div>
@@ -815,14 +818,15 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                     手机 App 与电脑客户端通过此地址连接 Aevum 心智中枢。当前配置：
                   </p>
 
-                  <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+                  <div className="backend-url-input-group" style={{ display: "flex", gap: "8px", marginBottom: "10px", flexWrap: "wrap" }}>
                     <input
                       type="text"
                       value={backendUrl}
                       onChange={(e) => setBackendUrl(e.target.value)}
                       placeholder="https://..."
                       style={{
-                        flex: 1,
+                        flex: "1 1 200px",
+                        minWidth: "160px",
                         padding: "8px 12px",
                         background: "rgba(0, 0, 0, 0.4)",
                         border: "1px solid rgba(255, 255, 255, 0.15)",
@@ -831,40 +835,42 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                         fontSize: "13px",
                       }}
                     />
-                    <button
-                      type="button"
-                      onClick={handleTestConnection}
-                      disabled={isTestingConn}
-                      style={{
-                        padding: "8px 14px",
-                        borderRadius: "8px",
-                        background: "rgba(56, 189, 248, 0.2)",
-                        border: "1px solid rgba(56, 189, 248, 0.4)",
-                        color: "#38bdf8",
-                        cursor: "pointer",
-                        fontSize: "13px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {isTestingConn ? "探测中..." : "测试连接"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveBackendUrl}
-                      style={{
-                        padding: "8px 14px",
-                        borderRadius: "8px",
-                        background: "#0284c7",
-                        border: "none",
-                        color: "#fff",
-                        cursor: "pointer",
-                        fontWeight: 600,
-                        fontSize: "13px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      保存生效
-                    </button>
+                    <div style={{ display: "flex", gap: "8px", flex: "0 0 auto" }}>
+                      <button
+                        type="button"
+                        onClick={handleTestConnection}
+                        disabled={isTestingConn}
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: "8px",
+                          background: "rgba(56, 189, 248, 0.2)",
+                          border: "1px solid rgba(56, 189, 248, 0.4)",
+                          color: "#38bdf8",
+                          cursor: "pointer",
+                          fontSize: "13px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {isTestingConn ? "探测中..." : "测试连接"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveBackendUrl}
+                        style={{
+                          padding: "8px 14px",
+                          borderRadius: "8px",
+                          background: "#0284c7",
+                          border: "none",
+                          color: "#fff",
+                          cursor: "pointer",
+                          fontWeight: 600,
+                          fontSize: "13px",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        保存生效
+                      </button>
+                    </div>
                   </div>
 
                   {testConnStatus && (

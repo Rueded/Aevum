@@ -31,7 +31,11 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({ compac
     try {
       await requestPermission();
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "无法获取麦克风权限");
+      setErrorMsg(
+        err instanceof Error
+          ? `授权未完成: ${err.message}。若在手机 App 请在系统设置 -> 应用权限中允许 Aevum 麦克风权限。`
+          : "无法获取麦克风权限，请检查系统设置"
+      );
     } finally {
       setPermLoading(false);
     }
@@ -39,36 +43,98 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({ compac
 
   return (
     <div className={`audio-device-selector-container ${compact ? "compact" : ""}`}>
-      {!hasPermission && (
-        <div className="audio-permission-banner" style={{
-          background: "rgba(234, 179, 8, 0.15)",
-          border: "1px solid rgba(234, 179, 8, 0.3)",
-          borderRadius: "8px",
-          padding: "10px 14px",
+      {/* Audio Device Readiness Summary */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "8px",
           marginBottom: "12px",
-          fontSize: "13px",
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-            <span>🎙️ 尚未获取音频设备访问权限，设备名称当前显示为通用标签。</span>
+          fontSize: "12px",
+        }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: "4px 10px",
+            borderRadius: "6px",
+            background: "rgba(16, 185, 129, 0.12)",
+            border: "1px solid rgba(16, 185, 129, 0.3)",
+            color: "#6ee7b7",
+          }}
+        >
+          🔊 扬声器/耳机输出：<strong>正常可用 (无需授权)</strong>
+        </span>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: "4px 10px",
+            borderRadius: "6px",
+            background: hasPermission
+              ? "rgba(16, 185, 129, 0.12)"
+              : "rgba(234, 179, 8, 0.12)",
+            border: hasPermission
+              ? "1px solid rgba(16, 185, 129, 0.3)"
+              : "1px solid rgba(234, 179, 8, 0.3)",
+            color: hasPermission ? "#6ee7b7" : "#fde047",
+          }}
+        >
+          🎙️ 麦克风输入：<strong>{hasPermission ? "已获取权限" : "待授权 (语音输入)"}</strong>
+        </span>
+      </div>
+
+      {!hasPermission && (
+        <div
+          className="audio-permission-banner"
+          style={{
+            background: "rgba(234, 179, 8, 0.12)",
+            border: "1px solid rgba(234, 179, 8, 0.3)",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            marginBottom: "14px",
+            fontSize: "13px",
+            lineHeight: "1.5",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ flex: 1, minWidth: "200px" }}>
+              <div style={{ fontWeight: 600, color: "#fde047", marginBottom: "2px" }}>
+                💡 为什么麦克风显示为待授权？
+              </div>
+              <div style={{ color: "rgba(255, 255, 255, 0.8)", fontSize: "12px" }}>
+                手机与浏览器为保护隐私，默认隐藏具体硬件型号名称。伴侣语音播放走扬声器可直接发声；若要启用语音对讲或显示真实麦克风名称，请点击右侧授权。
+              </div>
+            </div>
             <button
               type="button"
               onClick={handleGrantPermission}
               disabled={permLoading}
               style={{
-                background: "#eab308",
+                background: "linear-gradient(135deg, #eab308, #ca8a04)",
                 color: "#18181b",
                 border: "none",
-                borderRadius: "4px",
-                padding: "6px 12px",
-                fontWeight: 600,
+                borderRadius: "6px",
+                padding: "8px 14px",
+                fontWeight: 700,
+                fontSize: "12.5px",
                 cursor: "pointer",
                 touchAction: "manipulation",
+                whiteSpace: "nowrap",
+                boxShadow: "0 2px 8px rgba(234, 179, 8, 0.25)",
               }}
             >
-              {permLoading ? "请求中..." : "授权并读取设备"}
+              {permLoading ? "正在唤起授权..." : "🎙️ 请求麦克风授权"}
             </button>
           </div>
-          {errorMsg && <p style={{ color: "#ef4444", marginTop: "6px" }}>{errorMsg}</p>}
+          {errorMsg && (
+            <div style={{ color: "#f87171", marginTop: "8px", fontSize: "12px", background: "rgba(239, 68, 68, 0.15)", padding: "6px 10px", borderRadius: "4px" }}>
+              {errorMsg}
+            </div>
+          )}
         </div>
       )}
 

@@ -50,13 +50,13 @@ export function useAudioDevices() {
         if (dev.kind === "audioinput") {
           inputs.push({
             deviceId: dev.deviceId || `input-${index}`,
-            label: dev.label || `麦克风输入设备 ${inputs.length + 1} (请先授权获取名称)`,
+            label: dev.label || `麦克风输入设备 ${inputs.length + 1}${hasRealLabels ? "" : " (待授权读取型号)"}`,
             groupId: dev.groupId,
           });
         } else if (dev.kind === "audiooutput") {
           outputs.push({
             deviceId: dev.deviceId || `output-${index}`,
-            label: dev.label || `扬声器/耳机输出设备 ${outputs.length + 1}`,
+            label: dev.label || `扬声器 / 耳机输出设备 ${outputs.length + 1} (系统音频 · 正常可用)`,
             groupId: dev.groupId,
           });
         }

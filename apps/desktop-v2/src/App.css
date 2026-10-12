@@ -1419,7 +1419,22 @@ input:checked + .slider:before {
   background: #0369a1;
 }
 
+.modal-drag-indicator {
+  display: none;
+}
+
 @media (max-width: 640px) {
+  .modal-drag-indicator {
+    display: block;
+    width: 38px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    margin: 8px auto 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
   .desktop-settings-backdrop {
     padding: 0;
     align-items: flex-end;
@@ -1428,45 +1443,64 @@ input:checked + .slider:before {
   .desktop-settings-modal {
     width: 100vw;
     max-width: 100vw;
-    height: 92dvh;
-    max-height: 92dvh;
+    height: 94dvh;
+    max-height: 94dvh;
     border-radius: 20px 20px 0 0;
     border-left: none;
     border-right: none;
     border-bottom: none;
+    overscroll-behavior: contain;
   }
 
   .modal-header {
-    padding: 14px 16px 12px;
+    padding: 8px 16px 10px;
   }
 
   .modal-title-row h2 {
-    font-size: 16px;
+    font-size: 15px;
+  }
+
+  .modal-subtitle {
+    font-size: 11.5px;
+    margin-top: 2px;
   }
 
   .close-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    font-size: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary, #ffffff);
   }
 
   .settings-nav-tabs {
-    padding: 0 10px;
+    padding: 0 8px;
     gap: 4px;
     -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+
+  .settings-nav-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .settings-nav-tab {
-    padding: 10px 12px;
-    font-size: 13px;
+    padding: 9px 12px;
+    font-size: 12.5px;
+    flex: 0 0 auto;
   }
 
   .settings-scroll-body {
-    padding: 14px 16px;
-    gap: 16px;
+    padding: 12px 14px;
+    gap: 14px;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -1474,7 +1508,7 @@ input:checked + .slider:before {
     position: sticky;
     bottom: 0;
     background: var(--bg-primary, #1e1e24);
-    padding: 10px 16px;
+    padding: 10px 14px;
     padding-bottom: max(12px, env(safe-area-inset-bottom));
     border-top: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
     z-index: 10;
@@ -1483,7 +1517,7 @@ input:checked + .slider:before {
   .save-settings-btn {
     width: 100%;
     min-height: 42px;
-    font-size: 14px;
+    font-size: 13.5px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1527,12 +1561,15 @@ input:checked + .slider:before {
   margin-top: 10px;
   max-height: 240px;
   overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
   border-radius: 6px;
 }
 
 .audit-table {
   width: 100%;
+  min-width: 520px;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -3121,6 +3158,14 @@ input:checked + .slider:before {
   color: var(--text-primary);
 }
 
+.step-title .title-short {
+  display: none;
+}
+
+.step-title .title-full {
+  display: inline;
+}
+
 /* Modal Body */
 .genesis-modal-body {
   flex: 1;
@@ -3943,6 +3988,274 @@ input:checked + .slider:before {
 .genesis-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* =============================================================================
+   Phase 17/Mobile: Character Genesis Modal Responsive Mobile Styles
+   ============================================================================= */
+
+@media (max-width: 640px) {
+  .genesis-modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .genesis-modal-container {
+    width: 100vw;
+    max-width: 100vw;
+    height: 95dvh;
+    max-height: 95dvh;
+    border-radius: 20px 20px 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    overscroll-behavior: contain;
+  }
+
+  .genesis-modal-header {
+    padding: 12px 14px 10px;
+  }
+
+  .genesis-header-brand {
+    gap: 10px;
+  }
+
+  .genesis-logo-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .genesis-modal-header h2 {
+    font-size: 14px;
+  }
+
+  .genesis-subtitle {
+    display: none;
+  }
+
+  .genesis-close-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+  }
+
+  /* Compact scrollable stepper */
+  .genesis-stepper {
+    padding: 8px 10px;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .genesis-stepper::-webkit-scrollbar {
+    display: none;
+  }
+
+  .genesis-step-item {
+    flex: 0 0 auto;
+    padding: 5px 10px;
+    gap: 6px;
+  }
+
+  .step-number {
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+  }
+
+  .step-tag {
+    display: none;
+  }
+
+  .step-title .title-full {
+    display: none;
+  }
+
+  .step-title .title-short {
+    display: inline;
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+
+  /* AI Magic Generator Bar */
+  .genesis-ai-magic-bar {
+    margin: 8px 12px 2px;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .genesis-ai-tip {
+    display: none;
+  }
+
+  .genesis-ai-brand {
+    font-size: 12px;
+  }
+
+  .genesis-ai-input-wrapper {
+    gap: 6px;
+  }
+
+  .genesis-ai-text-input {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  .genesis-ai-submit-btn {
+    padding: 7px 12px;
+    font-size: 11.5px;
+  }
+
+  .genesis-ai-quick-presets {
+    gap: 4px;
+  }
+
+  .genesis-ai-quick-tag {
+    font-size: 10.5px;
+    padding: 2px 7px;
+  }
+
+  /* Body */
+  .genesis-modal-body {
+    padding: 12px 14px;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .genesis-section-intro h3 {
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .genesis-section-intro p {
+    font-size: 11.5px;
+    line-height: 1.4;
+  }
+
+  /* Convert two-column form to single column */
+  .genesis-form-row.two-col {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .genesis-field {
+    margin-bottom: 10px;
+  }
+
+  .genesis-field label {
+    font-size: 11.5px;
+  }
+
+  .genesis-field input,
+  .genesis-field textarea,
+  .genesis-field select {
+    padding: 8px 10px;
+    font-size: 12.5px;
+  }
+
+  /* Epistemic Seeds Table */
+  .genesis-seeds-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .seeds-header-row,
+  .seeds-data-row {
+    min-width: 380px;
+  }
+
+  .seeds-add-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .seeds-add-row input:first-child {
+    flex: 1 1 42%;
+    min-width: 100px;
+  }
+
+  .seeds-add-row select {
+    flex: 1 1 42%;
+    min-width: 100px;
+  }
+
+  .seeds-add-row input:nth-child(3) {
+    flex: 1 1 60%;
+    min-width: 140px;
+  }
+
+  .seeds-add-row .seed-add-btn {
+    flex: 1 1 30%;
+    min-width: 65px;
+  }
+
+  /* Archetype Grid */
+  .genesis-archetype-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .archetype-card {
+    padding: 10px;
+  }
+
+  /* Awakening View */
+  .awakening-greeting-card {
+    padding: 14px 16px;
+  }
+
+  .greeting-dialogue {
+    font-size: 14px;
+  }
+
+  /* Sticky Footer */
+  .genesis-modal-footer {
+    padding: 10px 14px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    position: sticky;
+    bottom: 0;
+    background: rgba(16, 21, 34, 0.98);
+    z-index: 10;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .genesis-footer-close-btn {
+    padding: 7px 12px !important;
+    font-size: 11.5px !important;
+    min-height: 36px;
+  }
+
+  .step-count-indicator {
+    font-size: 11px;
+  }
+
+  .footer-right {
+    gap: 6px;
+  }
+
+  .genesis-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+    min-height: 38px;
+  }
 }
 
 /* Settings Blueprint & Relationship Lock Styles */

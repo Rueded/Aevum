@@ -39,7 +39,7 @@ Aevum is engineered from the ground up to explore a fundamental architectural pr
 
 ---
 
-### 3. Current Status & Realized Capabilities (Truthful & Unexaggerated)
+### 3. Current Status & Realized Capabilities
 
 Aevum has progressed through **21 architectural milestones**, evolving from foundational blueprints into an integrated, multimodal companion system verified by thousands of automated regression tests and empirical benchmarks.
 
@@ -101,7 +101,7 @@ Aevum 的底层设计建立在一条严格的架构公理之上：**语言生成
 
 ---
 
-### 3. 当前进展与已实现能力（如实记述，不作夸大）
+### 3. 当前进展与已实现能力
 
 Aevum 已经历 **21 个核心架构阶段** 的严密演进，从底层蓝图跨越到集认知治理、多模态具身、多角色隔离与跨端协同于一体的完整数字生命系统。全套系统拥有数千项自动化回归测试及 Golden Suite 基准验证。
 

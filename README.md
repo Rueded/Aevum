@@ -1,12 +1,20 @@
 # Aevum — A Persistent Autonomous Digital Life / 持久化自主数字生命
 
 <p align="center">
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
+  <img src="https://img.shields.io/badge/Python-3.11+-3776AB.svg?logo=python&logoColor=white" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/Tauri-v2-24C8DB.svg?logo=tauri&logoColor=white" alt="Tauri 2">
+  <img src="https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Gemini-2.5--Flash-4E75A0.svg?logo=google&logoColor=white" alt="Gemini">
+</p>
+
+<p align="center">
   <b>"The application owns reality; the LLM generates language."</b><br>
   <b>“程序拥有现实；LLM 仅表达语言。”</b>
 </p>
 
 <p align="center">
-  <a href="#english">English</a> • <a href="#中文说明">中文说明</a> • <a href="#architecture--系统架构">Architecture</a> • <a href="#current-status--progress-如实现状与进展">Progress</a> • <a href="#quick-start--快速开始">Quick Start</a>
+  <a href="#english">English</a> • <a href="#中文说明">中文说明</a> • <a href="#architecture--系统架构">Architecture</a> • <a href="#current-status--progress-如实现状与进展">Progress</a> • <a href="#quick-start--快速开始">Quick Start</a> • <a href="#license--community--开源协议与声明">License</a>
 </p>
 
 ---
@@ -284,6 +292,9 @@ npm run dev
 
 ## License & Community / 开源协议与声明
 
-* **License**: Project Aevum 采用开放的学术与个人探索协议。
-* **Privacy Assurance**: Aevum 严格坚守用户隐私边界，未获明确授权绝不静默读取本地隐私文件、麦克风或摄像头。
-* **Development Rules**: 所有自动化代理与代码修改必须严格遵守项目规则库 [`AGENTS.md`](./AGENTS.md)。
+* **Open Source License / 开源协议**:
+  * **English**: This project is licensed under the [MIT License](./LICENSE) — free for personal, academic, and non-commercial research and development.
+  * **中文**: 本项目遵循 [MIT 开源许可证](./LICENSE)，支持个人学习、学术研究与二次探索。
+* **Privacy Assurance / 隐私保证**: Aevum 严格坚守本地用户隐私边界，未获明确用户授权绝不静默读取本地隐私文件、麦克风或摄像头。
+* **Development Rules / 开发规范**: 所有贡献者与自动化 AI 代理在提出或执行代码修改时必须严格遵守 [`AGENTS.md`](./AGENTS.md) 规则。
+

@@ -792,4 +792,82 @@ async def test_conversational_situational_progression(
     assert "散步" in state3["current_activity"] or "闲逛" in state3["current_activity"]
 
 
+@pytest.mark.asyncio
+async def test_sleep_realism_single_reply_no_duplicate_message(
+    client: AsyncClient,
+    fake_provider: FakeLLMProvider,
+):
+    """Verify that when companion is sleeping, user message returns exactly ONE assistant sleep response."""
+    # Ensure sleep state
+    await client.patch(
+        "/character/state",
+        json={"current_activity": "深度睡眠中 (Night Sleep)"},
+    )
+
+    conv_res = await client.post("/conversations")
+    conv_id = conv_res.json()["id"]
+
+    fake_provider.response_text = "Should not be called because she is sleeping!"
+
+    msg_res = await client.post(
+        f"/conversations/{conv_id}/messages",
+        json={"role": "user", "content": "早"},
+    )
+    assert msg_res.status_code == 201
+
+    data = msg_res.json()
+    assert "message" in data
+    assert data["message"]["content"] == "早"
+    assert "assistant_response" in data
+    assert data["assistant_response"] is not None
+    assert "深度睡眠" in data["assistant_response"]["content"]
+
+    # CRITICAL: Verify conversation has exactly 2 messages in DB (1 user, 1 assistant), NOT 3!
+    get_res = await client.get(f"/conversations/{conv_id}")
+    assert get_res.status_code == 200
+    messages = get_res.json()["messages"]
+    assert len(messages) == 2, f"Expected exactly 2 messages, but found {len(messages)}: {[m['content'] for m in messages]}"
+    assert messages[0]["role"] == "user"
+    assert messages[1]["role"] == "assistant"
+    assert "深度睡眠" in messages[1]["content"]
+
+
+@pytest.mark.asyncio
+async def test_rapid_duplicate_submission_debounce(
+    client: AsyncClient,
+    fake_provider: FakeLLMProvider,
+):
+    """Verify rapid duplicate submissions within 1.5 seconds are cleanly debounced."""
+    # Ensure awake
+    await client.patch(
+        "/character/state",
+        json={"current_activity": "在书房看书"},
+    )
+
+    conv_res = await client.post("/conversations")
+    conv_id = conv_res.json()["id"]
+
+    fake_provider.response_text = "你好呀！"
+
+    # Send first message
+    res1 = await client.post(
+        f"/conversations/{conv_id}/messages",
+        json={"role": "user", "content": "你好"},
+    )
+    assert res1.status_code == 201
+
+    # Send exact same message immediately (simulate rapid double-tap)
+    res2 = await client.post(
+        f"/conversations/{conv_id}/messages",
+        json={"role": "user", "content": "你好"},
+    )
+    assert res2.status_code == 201
+
+    # Check conversation messages - should not have duplicate user turn
+    get_res = await client.get(f"/conversations/{conv_id}")
+    messages = get_res.json()["messages"]
+    assert len(messages) == 2, f"Expected 2 messages after debounced duplicate, but found {len(messages)}"
+
+
+
 

@@ -609,11 +609,11 @@ class LifeScheduleEngine:
             local_msg_time = msg_time.astimezone(tz)
             local_now = dt_utc.astimezone(tz)
 
-            # Check if message happened last night (within past 14 hours) and between 00:30 and 05:00
+            # Check if message happened last night (within past 16 hours) and was late night (after 23:00 or before 05:30)
             diff_hours = (local_now - local_msg_time).total_seconds() / 3600.0
-            if 0.5 <= diff_hours <= 14.0:
+            if 0.5 <= diff_hours <= 16.0:
                 h = local_msg_time.hour + (local_msg_time.minute / 60.0)
-                if 0.5 <= h <= 5.5:
+                if h >= 23.0 or h <= 5.5:
                     return True
         except Exception as err:
             logger.debug("Sleep debt check safe skip: %s", err)
@@ -665,7 +665,13 @@ class LifeScheduleEngine:
                 if exp_time.tzinfo is None:
                     exp_time = exp_time.replace(tzinfo=timezone.utc)
                 if dt_utc < exp_time:
-                    # Still within active contingency period - preserve state!
+                    # Still within active contingency period - preserve state and sync CharacterStateRecord!
+                    stmt_char = select(CharacterStateRecord).where(CharacterStateRecord.id == character_id)
+                    char_rec = (await session.scalars(stmt_char)).first()
+                    if char_rec and (char_rec.current_activity != life_record.current_activity or char_rec.current_location != life_record.current_location):
+                        char_rec.current_activity = life_record.current_activity
+                        char_rec.current_location = life_record.current_location
+                        await session.flush()
                     return life_record
 
             # Contingency expired: clear it and record a resolution event

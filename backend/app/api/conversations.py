@@ -227,6 +227,37 @@ async def create_message(
             detail=f"Conversation '{conversation_id}' not found.",
         )
 
+    # 1c. Rapid duplicate submission debounce (prevents mobile double-tap ghost turns)
+    recent_dup_query = (
+        select(Message)
+        .where(
+            Message.conversation_id == conversation_id,
+            Message.role == MessageRole.USER.value,
+        )
+        .order_by(Message.created_at.desc())
+        .limit(1)
+    )
+    last_user_msg = (await db.scalars(recent_dup_query)).first()
+    if last_user_msg and last_user_msg.content == payload.content:
+        now_check = datetime.now(timezone.utc)
+        l_time = last_user_msg.created_at if last_user_msg.created_at.tzinfo else last_user_msg.created_at.replace(tzinfo=timezone.utc)
+        if (now_check - l_time).total_seconds() < 1.5:
+            last_ast_query = (
+                select(Message)
+                .where(
+                    Message.conversation_id == conversation_id,
+                    Message.role == MessageRole.ASSISTANT.value,
+                )
+                .order_by(Message.created_at.desc())
+                .limit(1)
+            )
+            last_ast_msg = (await db.scalars(last_ast_query)).first()
+            return MessageCreateResponse(
+                message=MessageRead.model_validate(last_user_msg),
+                assistant_response=MessageRead.model_validate(last_ast_msg) if last_ast_msg else None,
+                assistant_status="generated",
+            )
+
     # 2. Persist the incoming user message immediately
     user_msg = Message(
         conversation_id=conversation_id,
@@ -296,6 +327,8 @@ async def create_message(
         ) from exc
 
     # 4.5. Sleep Realism & DND Logic (Respects quiet hours & deep sleep)
+    is_sound_asleep_suppressed = False
+    sleep_response_to_return = None
     try:
         from app.desktop.service import DesktopService
         desktop_service = DesktopService(db)
@@ -303,7 +336,7 @@ async def create_message(
         sleep_realism = getattr(desktop_settings, "sleep_realism_enabled", True)
 
         current_act = (response_context.character_state.current_activity or "").lower()
-        is_sleeping = any(k in current_act for k in ("sleep", "night_sleep", "deep_sleep", "睡觉", "睡眠", "小憩"))
+        is_sleeping = any(k in current_act for k in ("sleep", "night_sleep", "deep_sleep", "睡觉", "睡眠", "小憩", "熟睡"))
 
         if sleep_realism and is_sleeping:
             now_utc = datetime.now(timezone.utc)
@@ -328,17 +361,25 @@ async def create_message(
 
                 user_read = MessageRead.model_validate(user_msg)
                 assistant_read = MessageRead.model_validate(sleep_msg)
-                return MessageCreateResponse(
-                    user_message=user_read,
-                    assistant_message=assistant_read,
+                is_sound_asleep_suppressed = True
+                sleep_response_to_return = MessageCreateResponse(
+                    message=user_read,
+                    assistant_response=assistant_read,
+                    assistant_status="generated",
                 )
             else:
                 # User sent 3+ messages in 90s: phone vibrations wake her up!
-                state_svc = CharacterStateService(db)
-                await state_svc.update_state(
-                    "aevum",
-                    current_activity="被消息吵醒",
-                    current_location=response_context.character_state.current_location,
+                from app.life.dialogue_situation import DialogueSituation, DialogueSituationAppraisalService
+                await DialogueSituationAppraisalService.apply_situation(
+                    session=db,
+                    character_id="aevum",
+                    situation=DialogueSituation(
+                        activity="被消息吵醒/迷糊赖床中",
+                        location="老家-卧室床上",
+                        status="REST",
+                        duration_minutes=60,
+                        idempotency_title="连续消息震动吵醒",
+                    ),
                 )
                 waking_guidance = (
                     "\n【真实作息突发事件】：你本来在深度睡眠中，但对方在短时间内连续发了多条消息，"
@@ -349,6 +390,9 @@ async def create_message(
                     response_context.arbitration_guidance += waking_guidance
     except Exception as sleep_check_err:
         logger.warning("Sleep realism check skipped with error: %s", sleep_check_err)
+
+    if is_sound_asleep_suppressed and sleep_response_to_return is not None:
+        return sleep_response_to_return
 
     # 5. Convert into provider-neutral ChatMessage format
     chat_messages = [
@@ -493,103 +537,19 @@ async def create_message(
             exc,
         )
 
-    # 9e. Non-critical post-turn processing: Situational & Dating Commitment Extraction
+    # 9e. Non-critical post-turn processing: Situational & Dialogue Commitment Extraction
     try:
-        from app.db.models import CharacterStateRecord, LifeStateRecord, LifeEventRecord
-        from app.life.models import LifeEventType
-
-        detected_situation = None
-        ast_lower = assistant_msg.content.lower()
-        usr_lower = payload.content.lower()
-        combined_text = f"{usr_lower} {ast_lower}"
-
-        # Future plan discussion guard (e.g. discussing tomorrow's itinerary late at night)
-        is_future = any(w in combined_text for w in ("明天", "后天", "下次", "改天")) and not any(
-            now_w in combined_text for now_w in ("现在", "这就去", "马上", "已经到了", "出发了", "开吃了", "出发吧")
+        from app.life.dialogue_situation import DialogueSituationAppraisalService
+        detected_situation = DialogueSituationAppraisalService.extract_situation(
+            user_input=payload.content,
+            assistant_response=assistant_msg.content,
         )
-        if is_future and any(k in combined_text for k in ("行程", "计划", "去哪", "玩", "出去", "安排")):
-            detected_situation = ("在卧室和对方商量明天的约会行程", "老家-卧室", "ACTIVE")
-        # 1. Finishing dining & leaving restaurant / shopping
-        elif any(k in combined_text for k in ("吃饱了", "买单", "结账", "吃得好撑", "走吧去逛逛", "逛街", "吃完了走吧")):
-            detected_situation = ("商场闲逛散步/前往影城途中", "商场 (The Intermark Mall / Pavilion)", "ACTIVE")
-        # 2. Cinema / Movie in progress
-        elif any(k in combined_text for k in ("开场了", "检票", "放映厅", "电影开始了", "爆米花", "看电影中", "散场")):
-            detected_situation = ("商场影城看电影放映中", "商场影城 (GSC/TGV Cinemas)", "ACTIVE")
-        # 3. Heading to / deciding on cinema
-        elif any(k in combined_text for k in ("看电影", "影院", "gsc", "tgv", "电影院", "选座", "买票")):
-            detected_situation = ("商场影城准备看电影/选座购票中", "商场影城 (GSC/TGV Cinemas)", "ACTIVE")
-        # 4. En route / picking restaurant / traveling to meet
-        elif any(k in combined_text for k in ("出发吧", "想吃", "要不要去试试", "叫什么名字", "选餐厅", "在车上", "去吃", "去哪吃", "没找到", "换一间", "离这里不远", "商量")):
-            detected_situation = ("外出赴约途中/商量挑选约会餐厅", "雪隆外出途中 (商场/车上)", "ACTIVE")
-        # 5. Dining / at restaurant / eating / ordering
-        elif any(k in combined_text for k in ("点菜", "菜单", "入座", "好香", "上菜", "吃寿司", "开吃", "坐下", "这道菜", "尝尝", "进店", "到店里", "在店里")):
-            detected_situation = ("在日料店共进午餐/约会用餐中", "商场日料店 (The Intermark Mall Hanare)", "ACTIVE")
-        # 6. Meeting up at doorway / opening door
-        elif any(k in ast_lower for k in ("开门", "来开门", "给你开门", "动作倒是挺快", "马上开门", "到门口")) or (
-            any(k in usr_lower for k in ("开门", "我到了", "敲门", "到你家楼下", "到门口")) and any(k in ast_lower for k in ("来", "快", "走", "好", "门"))
-        ):
-            detected_situation = ("在玄关开门迎接/准备出发", "老家-玄关门口", "ACTIVE")
-        # 7. Ready & waiting in living room
-        elif any(k in ast_lower for k in ("已经在客厅", "在客厅等", "在客厅坐", "在沙发上等", "已经在等", "我好啦", "我好了", "随时可以出发")):
-            detected_situation = ("在客厅等待出发赴约", "老家-客厅沙发", "ACTIVE")
-        # 8. Dressing up & getting ready to go out
-        elif any(k in ast_lower for k in ("收拾一下", "去收拾", "准备准备", "等等我哈", "等我换衣服", "化个妆", "我这就去", "去准备", "我很快", "化得比较快")):
-            detected_situation = ("在更衣室梳妆打扮/准备出门", "老家-卧室/浴室更衣室", "BUSY")
-        # 9. Returning home / back home
-        elif any(k in combined_text for k in ("送我回家", "到家了", "回房", "换睡衣", "累瘫了", "洗完澡了", "躺床上了", "在床上了")):
-            detected_situation = ("约会结束返家休息/换上睡衣", "老家-卧室", "REST")
-        # 10. Coding / study desk
-        elif any(k in combined_text for k in ("写代码", "敲代码", "捣鼓新代码", "改bug", "独立游戏")):
-            detected_situation = ("在书房电脑前写代码敲键盘", "老家-书房电脑前", "ACTIVE")
-        # 11. Piano practice
-        elif any(k in combined_text for k in ("练琴", "扒谱", "弹琴", "乐理", "肖邦", "琴谱")):
-            detected_situation = ("古典钢琴练习与扒谱", "家中钢琴房", "ACTIVE")
-        # 12. Feeding / playing with cat
-        elif any(k in combined_text for k in ("喂小橘", "喂猫", "倒猫粮", "逗猫", "小橘在")):
-            detected_situation = ("陪伴小猫小橘/在客厅互动", "老家-客厅沙发", "ACTIVE")
-        # 13. Cafe chill
-        elif any(k in combined_text for k in ("喝咖啡", "咖啡馆", "点杯拿铁", "奶茶", "坐会儿")):
-            detected_situation = ("在海边咖啡馆悠闲喝下午茶", "街角海边咖啡馆", "ACTIVE")
-        # 14. Gaming
-        elif any(k in combined_text for k in ("上号", "联机", "开黑", "连麦打游戏", "打崩铁", "双排", "原神")):
-            detected_situation = ("电脑前联机游戏中", "老家-书房电脑前", "ACTIVE")
-
         if detected_situation:
-            det_act, det_loc, det_status = detected_situation
-            now_utc = datetime.now(timezone.utc)
-            exp_time = now_utc + timedelta(hours=2)
-
-            stmt_life = select(LifeStateRecord).where(LifeStateRecord.character_id == "aevum")
-            life_rec = (await db.scalars(stmt_life)).first()
-            if life_rec:
-                life_rec.current_activity = det_act
-                life_rec.current_location = det_loc
-                life_rec.status = det_status
-                life_rec.active_contingency_id = "conversational_situation"
-                life_rec.active_contingency_title = f"{det_act} @ {det_loc}"
-                life_rec.contingency_expires_at = exp_time
-                life_rec.version += 1
-                life_rec.updated_at = now_utc
-
-            stmt_char = select(CharacterStateRecord).where(CharacterStateRecord.id == "aevum")
-            char_rec = (await db.scalars(stmt_char)).first()
-            if char_rec:
-                char_rec.current_activity = det_act
-                char_rec.current_location = det_loc
-
-            sit_event_key = f"situation_update:aevum:{uuid4()}"
-            session_event = LifeEventRecord(
+            await DialogueSituationAppraisalService.apply_situation(
+                session=db,
                 character_id="aevum",
-                event_type=LifeEventType.OTHER.value,
-                title=f"动态情境变动: {det_act}",
-                description=f"苏棠当前处于: {det_act} (地点: {det_loc})",
-                significance=0.3,
-                occurred_at=now_utc,
-                idempotency_key=sit_event_key,
+                situation=detected_situation,
             )
-            db.add(session_event)
-            await db.commit()
-            logger.info("Dialogue situational commitment applied: %s @ %s", det_act, det_loc)
     except Exception as sit_err:
         await db.rollback()
         logger.warning("Dialogue situational commitment extraction error: %s", sit_err)

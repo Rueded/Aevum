@@ -6,6 +6,7 @@ Backend owns reality; frontend is purely a projection layer.
 """
 
 import logging
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request
@@ -339,16 +340,33 @@ async def update_character_state(
         updated_state = current_state.model_copy(update=update_dict)
         await state_service.update_state(updated_state, character_id="aevum", commit=False)
 
-        # Also sync LifeStateRecord if activity or location modified directly
+        # Also sync LifeStateRecord and lock situational contingency if activity or location modified directly
         if payload.current_activity is not None or payload.current_location is not None:
-            life_service = LifeService(db)
-            curr_life = await life_service.get_life_state("aevum")
-            await life_service.update_life_state(
-                "aevum",
-                current_activity=payload.current_activity or curr_life.current_activity,
-                current_location=payload.current_location or curr_life.current_location,
-                expected_version=curr_life.version,
-            )
+            from app.db.models import LifeStateRecord
+            stmt_life = select(LifeStateRecord).where(LifeStateRecord.character_id == "aevum")
+            life_rec = (await db.scalars(stmt_life)).first()
+            if life_rec is None:
+                life_rec = LifeStateRecord(
+                    id="aevum",
+                    character_id="aevum",
+                    current_activity=payload.current_activity or "resting",
+                    current_location=payload.current_location or "home",
+                    status="REST" if any(k in (payload.current_activity or "").lower() for k in ("sleep", "睡")) else "ACTIVE",
+                    active_contingency_id="conversational_situation",
+                    active_contingency_title=f"{payload.current_activity} @ {payload.current_location}",
+                    contingency_expires_at=datetime.now(timezone.utc) + timedelta(hours=2),
+                    version=1,
+                )
+                db.add(life_rec)
+            else:
+                if payload.current_activity is not None:
+                    life_rec.current_activity = payload.current_activity
+                if payload.current_location is not None:
+                    life_rec.current_location = payload.current_location
+                life_rec.active_contingency_id = "conversational_situation"
+                life_rec.active_contingency_title = f"{life_rec.current_activity} @ {life_rec.current_location}"
+                life_rec.contingency_expires_at = datetime.now(timezone.utc) + timedelta(hours=2)
+                life_rec.version += 1
 
     if payload.emotion_type is not None:
         emotion_service = EmotionService(db)

@@ -26,6 +26,26 @@ class CharacterMood(str, enum.Enum):
     TIRED = "tired"
     FOCUSED = "focused"
 
+    @classmethod
+    def _missing_(cls, value: object) -> "CharacterMood":
+        if isinstance(value, str):
+            v_lower = value.strip().lower()
+            if v_lower in cls._value2member_map_:
+                return cls._value2member_map_[v_lower]
+            if v_lower in ("playful", "happy", "joyful", "cheerful", "excited", "delighted", "sweet"):
+                return cls.GOOD
+            if v_lower in ("relaxed", "peaceful", "serene", "chill"):
+                return cls.CALM
+            if v_lower in ("sad", "gloomy", "unhappy"):
+                return cls.LOW
+            if v_lower in ("angry", "annoyed", "mad", "upset"):
+                return cls.IRRITATED
+            if v_lower in ("sleepy", "exhausted", "drowsy"):
+                return cls.TIRED
+            if v_lower in ("busy", "working", "concentrated", "studying"):
+                return cls.FOCUSED
+        return cls.GOOD
+
 
 class CharacterState(BaseModel):
     """Immutable aggregate representing current mutable character state.

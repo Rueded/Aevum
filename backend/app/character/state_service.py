@@ -288,11 +288,18 @@ class CharacterStateService:
 
     def _record_to_domain(self, record: CharacterStateRecord) -> CharacterState:
         """Convert an SQLAlchemy CharacterStateRecord into an immutable CharacterState domain model."""
+        mood = CharacterMood.NEUTRAL
+        if record.mood:
+            try:
+                mood = CharacterMood(record.mood.lower())
+            except (ValueError, KeyError):
+                mood = CharacterMood.GOOD
+
         return CharacterState(
             id=record.id,
             version=record.version,
             updated_at=_ensure_utc(record.updated_at),
-            mood=CharacterMood(record.mood.lower()) if record.mood else CharacterMood.NEUTRAL,
+            mood=mood,
             energy=record.energy,
             stress=record.stress,
             social_energy=record.social_energy,

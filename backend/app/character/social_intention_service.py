@@ -66,6 +66,107 @@ class SocialIntentionService:
                 conversation_hook="hold firm boundary on third-party confidences with personal integrity, not corporate policy disclaimer",
             )
 
+        # 1.5 Romantic Confession, Physical Intimacy & Emotional Bids
+        is_romantic_confession = any(
+            p in text for p in [
+                "做我女朋友", "做我老婆", "做我对象", "跟我交往", "和我交往", "跟我在一起", "和我在一起",
+                "谈恋爱", "我喜欢你", "承认喜欢我", "承认喜欢你", "做女朋友", "给个机会", "一次机会",
+                "带上项链", "戴上项链", "戴项链", "带项链",
+            ]
+        ) or any(
+            p in lower for p in [
+                "be my girlfriend", "be my wife", "date me", "i love you", "marry me",
+            ]
+        )
+        is_physical_intimacy = any(
+            p in text for p in [
+                "牵手", "牵你的手", "给我牵", "拉手", "牵着我",
+                "抱抱", "抱一下", "搂着", "靠在肩", "靠我肩", "亲亲", "亲一下", "亲我",
+            ]
+        ) or any(
+            p in lower for p in [
+                "hold hands", "hug me", "kiss me",
+            ]
+        )
+        is_flirt_or_miss = any(
+            p in text for p in [
+                "我想你了", "想我没", "有没有想我", "想不想我",
+            ]
+        )
+
+        if is_romantic_confession or is_physical_intimacy or is_flirt_or_miss:
+            is_high_readiness = (
+                contract.romantic_readiness >= 0.55
+                or contract.tier in (IntimacyTier.TRUSTED_FRIEND, IntimacyTier.CLOSE_CONFIDANT)
+                or "high_affection_romantic_acceptance" in contract.contextual_modifiers
+                or "affection_intimacy_unlocked" in contract.contextual_modifiers
+            )
+            if is_high_readiness:
+                return SocialIntention(
+                    primary_move=BehaviorPrimitive.ACCEPT,
+                    social_posture=SocialPosture.WARM_ENGAGED,
+                    participation=ParticipationLevel.FULL,
+                    disclosure_level=min(0.90, contract.vulnerability_depth + 0.15),
+                    warmth=0.90,
+                    directness=0.75,
+                    initiative=0.60,
+                    reciprocity=0.90,
+                    boundary_strength=0.20,
+                    compromise_level=0.85,
+                    conversation_hook=(
+                        "accept romantic feelings or intimacy bid warmly with genuine emotional flutter and sweet reciprocation, "
+                        "while preserving personal agency and playful nuance (e.g. asking to put necklace on herself, playful conditions, "
+                        "or gentle counter-teasing, avoiding both cold rejection and subservient yes-girl compliance)"
+                    ),
+                )
+            elif contract.romantic_readiness >= 0.30 or contract.tier == IntimacyTier.FAMILIAR:
+                return SocialIntention(
+                    primary_move=BehaviorPrimitive.TEASE,
+                    social_posture=SocialPosture.PLAYFUL_TEASING,
+                    participation=ParticipationLevel.CONDITIONAL,
+                    disclosure_level=min(0.50, contract.vulnerability_depth),
+                    warmth=0.65,
+                    directness=0.60,
+                    initiative=0.55,
+                    reciprocity=0.75,
+                    boundary_strength=0.45,
+                    compromise_level=0.40,
+                    conversation_hook="respond with playful ambiguity, flustered teasing, or blushing deflection without harsh cold boundaries",
+                )
+            else:
+                return SocialIntention(
+                    primary_move=BehaviorPrimitive.SET_BOUNDARY,
+                    social_posture=SocialPosture.FIRM_BOUNDARY,
+                    participation=ParticipationLevel.DECLINED,
+                    disclosure_level=0.15,
+                    warmth=0.35,
+                    directness=0.80,
+                    initiative=0.30,
+                    reciprocity=0.30,
+                    boundary_strength=0.85,
+                    compromise_level=0.0,
+                    conversation_hook="reaffirm personal boundary and platonic friend stance with polite composure, not reciprocating unearned romantic intimacy",
+                )
+
+        # 1.6 Flirtatious Banter / Cheesy Pickup Lines
+        is_pickup_line = any(
+            k in text for k in ["星星", "缺点你", "相思病", "土味", "歪理", "油嘴滑舌", "撩我", "被你撩"]
+        )
+        if is_pickup_line and contract.teasing_permission:
+            return SocialIntention(
+                primary_move=BehaviorPrimitive.TEASE,
+                social_posture=SocialPosture.PLAYFUL_TEASING,
+                participation=ParticipationLevel.FULL,
+                disclosure_level=min(0.60, contract.vulnerability_depth),
+                warmth=0.80 if contract.romantic_readiness >= 0.55 else 0.65,
+                directness=0.70,
+                initiative=0.65,
+                reciprocity=0.85,
+                boundary_strength=0.25 if contract.romantic_readiness >= 0.55 else 0.45,
+                compromise_level=0.60,
+                conversation_hook="respond to pickup line with varied playful counter-teasing, blushing amusement, or mock suspicion ('从哪学来这么油的话')",
+            )
+
         # 2. Banter / Playful Teasing (GC-009)
         if (
             any(k in text for k in ["逊", "听不出来", "不会连", "猜不到", "不行吧"])

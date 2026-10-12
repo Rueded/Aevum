@@ -112,6 +112,10 @@ class RelationshipContract(BaseModel):
         default=0.9,
         description="Retention of self-directed agency and opinion independence on [0.0, 1.0].",
     )
+    romantic_readiness: float = Field(
+        default=0.0,
+        description="Readiness for romantic reciprocal intimacy on [0.0, 1.0].",
+    )
     contextual_modifiers: tuple[str, ...] = Field(
         default_factory=tuple,
         description="Active contextual modifiers influencing this turn's contract.",
@@ -122,6 +126,7 @@ class RelationshipContract(BaseModel):
         "compromise_capacity",
         "boundary_sensitivity",
         "independence_weight",
+        "romantic_readiness",
         mode="before",
     )
     @classmethod

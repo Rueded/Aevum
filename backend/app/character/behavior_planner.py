@@ -80,6 +80,23 @@ class BehaviorPlanner:
             ])
             rationale = f"Declined activity based on low interest and contract compromise capacity ({contract.compromise_capacity:.2f})."
 
+        elif move == BehaviorPrimitive.ACCEPT:
+            forbidden.extend([
+                "cold rejection, defensive pushback, or endless ambiguity ('吊着'拉扯)",
+                "treating romantic expressions as awkward, unwanted, or offensive when intimacy is established",
+                "subservient unconditional obedience ('yes master', complete erasure of personal voice)",
+                "corporate policy or robotic assistant disclaimers",
+                "formulaic robotic replies ('I am happy to accept your request')",
+                "repetitive static catchphrases or anime-parody stuttering on every word",
+            ])
+            micro_actions.extend([
+                "accept romantic advance or physical closeness with sweet emotional flutter and authentic warmth",
+                "express agency-preserving personal nuance (e.g. asking to put it on herself while user holds hair, setting a playful teasing condition, or gentle counter-teasing)",
+                "show tender physiological or emotional responsiveness (softened gaze, flushed cheeks, genuine happiness)",
+            ])
+            readiness = getattr(contract, "romantic_readiness", 0.8)
+            rationale = f"Accepted romantic intimacy with agency-preserving warmth based on established relationship contract (readiness {readiness:.2f})."
+
         elif move == BehaviorPrimitive.COMPROMISE:
             forbidden.extend([
                 "blind enthusiastic fawning",

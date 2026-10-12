@@ -127,6 +127,17 @@ class RelationshipContractEvaluator:
                 compromise = max(0.05, compromise - 0.20)
                 modifiers_list.append("defensive_guard_against_dismissal")
 
+        # Contextual adjustment 5: Romantic readiness derived from affection and trust
+        romantic_readiness = 0.70 * aff + 0.30 * tru
+        if aff >= 0.70:
+            romantic_readiness = max(romantic_readiness, aff)
+            modifiers_list.append("high_affection_romantic_acceptance")
+        elif aff >= 0.55:
+            romantic_readiness = max(romantic_readiness, 0.60)
+            modifiers_list.append("affection_intimacy_unlocked")
+        elif aff < 0.30:
+            romantic_readiness = min(romantic_readiness, 0.25)
+
         return RelationshipContract(
             tier=tier,
             teasing_permission=teasing,
@@ -134,5 +145,6 @@ class RelationshipContractEvaluator:
             compromise_capacity=max(0.0, min(1.0, compromise)),
             boundary_sensitivity=max(0.0, min(1.0, sensitivity)),
             independence_weight=max(0.0, min(1.0, independence)),
+            romantic_readiness=max(0.0, min(1.0, romantic_readiness)),
             contextual_modifiers=tuple(modifiers_list),
         )

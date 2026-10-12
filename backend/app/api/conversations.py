@@ -77,10 +77,15 @@ router = APIRouter(prefix="/conversations", tags=["Conversations"])
     summary="Create a new conversation",
 )
 async def create_conversation(
+    character_id: str | None = None,
     db: AsyncSession = Depends(get_db_session),
 ) -> ConversationRead:
     """Create and persist a new conversation session."""
-    conversation = Conversation()
+    if not character_id:
+        from app.character.active_service import get_active_character_id
+        character_id = await get_active_character_id(db)
+
+    conversation = Conversation(character_id=character_id)
     db.add(conversation)
     await db.commit()
     await db.refresh(conversation)
@@ -94,18 +99,37 @@ async def create_conversation(
     summary="List all conversations ordered by recent activity",
 )
 async def list_conversations(
+    character_id: str | None = None,
     limit: int = 50,
     db: AsyncSession = Depends(get_db_session),
 ) -> list[ConversationListItem]:
     """Retrieve all conversations with message count and preview snippet."""
+    if not character_id:
+        from app.character.active_service import get_active_character_id
+        character_id = await get_active_character_id(db)
+
+    if character_id == "aevum":
+        condition = (Conversation.character_id == "aevum") | (Conversation.character_id.is_(None))
+    else:
+        condition = Conversation.character_id == character_id
+
     stmt = (
         select(Conversation)
+        .where(condition)
         .options(selectinload(Conversation.messages))
         .order_by(Conversation.updated_at.desc())
         .limit(limit)
     )
     result = await db.execute(stmt)
-    conversations = result.scalars().all()
+    conversations = list(result.scalars().all())
+
+    # If no conversation exists for this character yet, create a fresh one
+    if not conversations:
+        new_conv = Conversation(character_id=character_id)
+        db.add(new_conv)
+        await db.commit()
+        await db.refresh(new_conv)
+        conversations = [new_conv]
 
     items: list[ConversationListItem] = []
     for conv in conversations:
@@ -330,9 +354,12 @@ async def create_message(
                 )
 
     # 4. Build CharacterResponseContext using CharacterEngine (Phase 6.3)
+    target_char_id = getattr(conversation, "character_id", None) or "aevum"
+    rel_id = "user" if target_char_id == "aevum" else target_char_id
+
     try:
         from app.life.schedule_engine import LifeScheduleEngine
-        await LifeScheduleEngine.reconcile_schedule(db, "aevum")
+        await LifeScheduleEngine.reconcile_schedule(db, target_char_id)
     except Exception as sched_err:
         logger.warning("Dynamic schedule reconcile in create_message skipped: %s", sched_err)
 
@@ -340,7 +367,7 @@ async def create_message(
         char_engine = CharacterEngine(session=db, embedding_provider=embedding_provider)
         response_context = await char_engine.build_response_context(
             user_input=payload.content,
-            character_id="aevum",
+            character_id=target_char_id,
             user_id="user",
             elapsed_time_description=elapsed_time_desc,
         )
@@ -357,7 +384,7 @@ async def create_message(
     try:
         from app.desktop.service import DesktopService
         desktop_service = DesktopService(db)
-        desktop_settings = await desktop_service.get_settings("aevum")
+        desktop_settings = await desktop_service.get_settings(target_char_id)
         sleep_realism = getattr(desktop_settings, "sleep_realism_enabled", True)
 
         current_act = (response_context.character_state.current_activity or "").lower()
@@ -372,12 +399,16 @@ async def create_message(
                 and (now_utc - (m.created_at if m.created_at.tzinfo else m.created_at.replace(tzinfo=timezone.utc))).total_seconds() <= 90
             ]
 
+            char_name = "苏棠"
+            if hasattr(response_context, "character_definition") and response_context.character_definition:
+                char_name = getattr(response_context.character_definition, "name", "苏棠")
+
             # If user sent fewer than 3 messages in 90 seconds: she remains sound asleep!
             if len(recent_user_turns) < 3:
                 sleep_msg = Message(
                     conversation_id=conversation_id,
                     role=MessageRole.ASSISTANT.value,
-                    content="（苏棠正在深度睡眠中……呼吸平稳安静，没有被消息吵醒。若有急事可尝试连续发消息或拨打语音通话）",
+                    content=f"（{char_name}正在深度睡眠中……呼吸平稳安静，没有被消息吵醒。若有急事可尝试连续发消息或拨打语音通话）",
                 )
                 db.add(sleep_msg)
                 conversation.updated_at = now_utc
@@ -397,10 +428,10 @@ async def create_message(
                 from app.life.dialogue_situation import DialogueSituation, DialogueSituationAppraisalService
                 await DialogueSituationAppraisalService.apply_situation(
                     session=db,
-                    character_id="aevum",
+                    character_id=target_char_id,
                     situation=DialogueSituation(
                         activity="被消息吵醒/迷糊赖床中",
-                        location="老家-卧室床上",
+                        location="卧室床上",
                         status="REST",
                         duration_minutes=60,
                         idempotency_title="连续消息震动吵醒",
@@ -475,7 +506,7 @@ async def create_message(
         extraction_result = await extraction_service.extract_signals(interaction_context)
         if extraction_result.is_success and extraction_result.signals:
             rel_service = RelationshipService(db)
-            current_rel = await rel_service.get_relationship_state(relationship_id="user")
+            current_rel = await rel_service.get_relationship_state(relationship_id=rel_id)
             rel_update = apply_relationship_signals(
                 state=current_rel,
                 signals=extraction_result.signals,
@@ -484,14 +515,14 @@ async def create_message(
                 await rel_service.apply_update(
                     update_data=rel_update,
                     expected_version=current_rel.version,
-                    relationship_id="user",
+                    relationship_id=rel_id,
                 )
 
             # Record accepted relationship experiences (Phase 4.4)
             exp_service = RelationshipExperienceService(db)
             await exp_service.record_signals(
                 signals=extraction_result.signals,
-                relationship_id="user",
+                relationship_id=rel_id,
             )
     except Exception as exc:
         await db.rollback()
@@ -509,12 +540,13 @@ async def create_message(
         mem_extraction_service = MemoryExtractionService(
             session=db,
             llm_provider=llm_provider,
+            character_id=target_char_id,
         )
         mem_extract_res = await mem_extraction_service.extract_and_create_candidates(
             messages=interaction_context,
         )
         if mem_extract_res.is_success and mem_extract_res.candidate_ids:
-            curation_service = MemoryCurationService(session=db)
+            curation_service = MemoryCurationService(session=db, character_id=target_char_id)
             for cid in mem_extract_res.candidate_ids:
                 try:
                     await curation_service.curate_candidate(cid)
@@ -537,7 +569,7 @@ async def create_message(
             user_input=payload.content,
             assistant_response=assistant_msg.content,
             response_context=response_context,
-            character_id="aevum",
+            character_id=target_char_id,
         )
     except Exception as exc:
         await db.rollback()
@@ -577,7 +609,7 @@ async def create_message(
         if detected_situation:
             await DialogueSituationAppraisalService.apply_situation(
                 session=db,
-                character_id="aevum",
+                character_id=target_char_id,
                 situation=detected_situation,
             )
     except Exception as sit_err:

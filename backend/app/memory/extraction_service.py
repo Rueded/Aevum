@@ -62,12 +62,14 @@ class MemoryExtractionService:
         llm_provider: LLMProvider,
         max_proposals: int = MAX_PROPOSALS_PER_EXTRACTION,
         max_context_messages: int = DEFAULT_MAX_EXTRACTION_MESSAGES,
+        character_id: str = "aevum",
     ) -> None:
         self._session = session
         self._llm_provider = llm_provider
         self._max_proposals = max_proposals
         self._max_context_messages = max_context_messages
-        self._curation_service = MemoryCurationService(session)
+        self._character_id = character_id
+        self._curation_service = MemoryCurationService(session, character_id=character_id)
 
     async def extract_and_create_candidates(
         self,

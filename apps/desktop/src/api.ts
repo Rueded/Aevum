@@ -33,6 +33,8 @@ import {
   GenesisPresetsResponse,
   BlueprintUpdateRequest,
   ResolveLocalModelResponse,
+  CompanionOverviewResponse,
+  CreateCompanionRequest,
 } from "./types";
 
 export const CLOUD_BACKEND_URL = "https://aevum-1mcy.onrender.com";
@@ -119,14 +121,19 @@ export const api = {
     return fetchJson<HealthData>("/health");
   },
 
-  createConversation: (): Promise<{ id: string; created_at: string; updated_at: string }> => {
-    return fetchJson<{ id: string; created_at: string; updated_at: string }>("/conversations", {
+  createConversation: (characterId?: string): Promise<{ id: string; created_at: string; updated_at: string }> => {
+    const query = characterId ? `?character_id=${encodeURIComponent(characterId)}` : "";
+    return fetchJson<{ id: string; created_at: string; updated_at: string }>(`/conversations${query}`, {
       method: "POST",
     });
   },
 
-  getConversations: (limit: number = 50): Promise<ConversationListItem[]> => {
-    return fetchJson<ConversationListItem[]>(`/conversations?limit=${limit}`);
+  getConversations: (limit: number = 50, characterId?: string): Promise<ConversationListItem[]> => {
+    let url = `/conversations?limit=${limit}`;
+    if (characterId) {
+      url += `&character_id=${encodeURIComponent(characterId)}`;
+    }
+    return fetchJson<ConversationListItem[]>(url);
   },
 
   deleteConversation: (conversationId: string): Promise<void> => {
@@ -159,8 +166,9 @@ export const api = {
     );
   },
 
-  getCharacterState: (): Promise<CharacterStateResponse> => {
-    return fetchJson<CharacterStateResponse>("/character/state");
+  getCharacterState: (characterId?: string): Promise<CharacterStateResponse> => {
+    const query = characterId ? `?character_id=${encodeURIComponent(characterId)}` : "";
+    return fetchJson<CharacterStateResponse>(`/character/state${query}`);
   },
 
   updateCharacterState: (payload: {
@@ -180,8 +188,9 @@ export const api = {
     });
   },
 
-  getRelationship: (): Promise<RelationshipResponse> => {
-    return fetchJson<RelationshipResponse>("/character/relationship");
+  getRelationship: (characterId?: string): Promise<RelationshipResponse> => {
+    const query = characterId ? `?character_id=${encodeURIComponent(characterId)}` : "";
+    return fetchJson<RelationshipResponse>(`/character/relationship${query}`);
   },
 
   updateRelationship: (payload: RelationshipUpdateRequest): Promise<RelationshipResponse> => {
@@ -192,12 +201,32 @@ export const api = {
     });
   },
 
-  getLife: (): Promise<LifeResponse> => {
-    return fetchJson<LifeResponse>("/character/life");
+  getLife: (characterId?: string): Promise<LifeResponse> => {
+    const query = characterId ? `?character_id=${encodeURIComponent(characterId)}` : "";
+    return fetchJson<LifeResponse>(`/character/life${query}`);
   },
 
-  getMemories: (): Promise<MemoryItem[]> => {
-    return fetchJson<MemoryItem[]>("/character/memories");
+  getMemories: (characterId?: string): Promise<MemoryItem[]> => {
+    const query = characterId ? `?character_id=${encodeURIComponent(characterId)}` : "";
+    return fetchJson<MemoryItem[]>(`/character/memories${query}`);
+  },
+
+  getAllCompanions: (): Promise<CompanionOverviewResponse> => {
+    return fetchJson<CompanionOverviewResponse>("/character/all");
+  },
+
+  switchCompanion: (characterId: string): Promise<CompanionOverviewResponse> => {
+    return fetchJson<CompanionOverviewResponse>(`/character/switch/${encodeURIComponent(characterId)}`, {
+      method: "POST",
+    });
+  },
+
+  createNewCompanion: (payload: CreateCompanionRequest): Promise<any> => {
+    return fetchJson<any>("/character/create-new", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
   },
 
   deleteMemory: (memoryId: string): Promise<{ status: string; id: string }> => {

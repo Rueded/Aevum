@@ -43,6 +43,12 @@ class Conversation(Base):
         onupdate=utc_now,
         nullable=False,
     )
+    character_id: Mapped[str] = mapped_column(
+        String(36),
+        default="aevum",
+        nullable=False,
+        index=True,
+    )
 
     # Relationship to messages, ordered chronologically
     messages: Mapped[list["Message"]] = relationship(
@@ -109,6 +115,11 @@ class ApplicationStateRecord(Base):
         DateTime(timezone=True),
         default=utc_now,
         onupdate=utc_now,
+        nullable=False,
+    )
+    active_character_id: Mapped[str] = mapped_column(
+        String(36),
+        default="aevum",
         nullable=False,
     )
 
@@ -385,6 +396,12 @@ class MemoryRecord(Base):
         String(32),
         nullable=False,
         default="USER",
+        index=True,
+    )
+    character_id: Mapped[str] = mapped_column(
+        String(36),
+        nullable=False,
+        default="aevum",
         index=True,
     )
     content: Mapped[str] = mapped_column(

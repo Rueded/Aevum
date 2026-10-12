@@ -16,6 +16,7 @@ interface PresenceHeaderProps {
   onOpenGenesis?: () => void;
   onOpenPresentationSandbox?: () => void;
   onOpenDevInspector?: () => void;
+  onOpenCompanionSwitcher?: () => void;
 }
 
 const ACTIVITY_LABELS_ZH: Record<string, string> = {
@@ -63,6 +64,7 @@ export const PresenceHeader: React.FC<PresenceHeaderProps> = ({
   isStageVisible,
   onToggleStage,
   onOpenSettings,
+  onOpenCompanionSwitcher,
 }) => {
   const isOnline = health?.status === "ok";
 
@@ -87,12 +89,22 @@ export const PresenceHeader: React.FC<PresenceHeaderProps> = ({
   return (
     <header className="presence-header">
       <div className="presence-left">
-        <div className={`avatar-container ${isGenerating ? "generating" : isOnline ? "online" : "offline"}`}>
+        <div
+          className={`avatar-container ${isGenerating ? "generating" : isOnline ? "online" : "offline"}`}
+          onClick={onOpenCompanionSwitcher}
+          style={{ cursor: onOpenCompanionSwitcher ? "pointer" : "default" }}
+          title={onOpenCompanionSwitcher ? "点击切换伴侣人设" : undefined}
+        >
           <div className="avatar">{characterState?.name ? characterState.name[0] : "棠"}</div>
           <span className="status-dot" />
         </div>
         <div className="character-info">
-          <div className="name-row">
+          <div
+            className="name-row"
+            onClick={onOpenCompanionSwitcher}
+            style={{ cursor: onOpenCompanionSwitcher ? "pointer" : "default" }}
+            title={onOpenCompanionSwitcher ? "点击切换伴侣人设" : undefined}
+          >
             <span className="character-name">{characterState?.name || "Aevum · 苏棠"}</span>
             <span className={`health-badge ${isOnline ? "online" : "offline"}`}>
               {isOnline ? "在线" : "连接中"}
@@ -114,6 +126,27 @@ export const PresenceHeader: React.FC<PresenceHeaderProps> = ({
       </div>
 
       <div className="presence-actions">
+        {onOpenCompanionSwitcher && (
+          <button
+            className="header-btn"
+            onClick={onOpenCompanionSwitcher}
+            title="选择或切换伴侣人设（支持苏棠与全新独立新人设）"
+            style={{
+              background: "rgba(99, 102, 241, 0.15)",
+              borderColor: "rgba(99, 102, 241, 0.35)",
+              color: "#c7d2fe",
+            }}
+          >
+            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 00-3-3.87" />
+              <path d="M16 3.13a4 4 0 010 7.75" />
+            </svg>
+            <span className="btn-text">换人设</span>
+          </button>
+        )}
+
         <button
           className="header-btn"
           onClick={onNewConversation}

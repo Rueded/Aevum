@@ -14,6 +14,7 @@ interface PresenceHeaderProps {
   onOpenSettings: () => void;
   onOpenDevInspector?: () => void;
   onSwitchToMobile?: () => void;
+  onOpenCompanionSwitcher?: () => void;
 }
 
 const ACTIVITY_LABELS_ZH: Record<string, string> = {
@@ -57,6 +58,7 @@ export const PresenceHeader: React.FC<PresenceHeaderProps> = ({
   onOpenSettings,
   onOpenDevInspector,
   onSwitchToMobile,
+  onOpenCompanionSwitcher,
 }) => {
   const [isDatingModalOpen, setIsDatingModalOpen] = React.useState<boolean>(false);
   const isBackendOnline = useHealthStore((s) => s.isBackendOnline);
@@ -87,13 +89,23 @@ export const PresenceHeader: React.FC<PresenceHeaderProps> = ({
   return (
     <header className={styles.header}>
       <div className={styles.leftSection}>
-        <div className={styles.avatarContainer}>
+        <div
+          className={styles.avatarContainer}
+          onClick={onOpenCompanionSwitcher}
+          style={{ cursor: onOpenCompanionSwitcher ? "pointer" : "default" }}
+          title={onOpenCompanionSwitcher ? "点击切换伴侣人设" : undefined}
+        >
           <div className={styles.avatar}>{avatarLetter}</div>
           <span className={`${styles.statusDot} ${statusClass}`} />
         </div>
 
         <div className={styles.metaInfo}>
-          <div className={styles.titleRow}>
+          <div
+            className={styles.titleRow}
+            onClick={onOpenCompanionSwitcher}
+            style={{ cursor: onOpenCompanionSwitcher ? "pointer" : "default" }}
+            title={onOpenCompanionSwitcher ? "点击切换伴侣人设" : undefined}
+          >
             <span className={styles.companionName}>{characterName}</span>
             <span
               className={`${styles.healthBadge} ${
@@ -118,6 +130,17 @@ export const PresenceHeader: React.FC<PresenceHeaderProps> = ({
       </div>
 
       <div className={styles.rightSection}>
+        {onOpenCompanionSwitcher && (
+          <button
+            className={styles.actionBtn}
+            onClick={onOpenCompanionSwitcher}
+            title="切换或创建独立新人设"
+          >
+            <span style={{ fontSize: "14px" }}>👥</span>
+            <span>换人设</span>
+          </button>
+        )}
+
         <button
           className={styles.actionBtn}
           onClick={() => createConversation()}

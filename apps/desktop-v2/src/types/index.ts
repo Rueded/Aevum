@@ -640,3 +640,38 @@ export interface ResolveLocalModelResponse {
   model_serve_url?: string | null;
   message: string;
 }
+
+// =============================================================================
+// Multi-Companion Switcher & Overview
+// =============================================================================
+export interface CompanionOverviewItem {
+  id: string;
+  name: string;
+  avatar_url?: string;
+  role?: string;
+  description?: string;
+  conversation_count: number;
+  message_count: number;
+  memory_count: number;
+  affection: number;
+  trust: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CompanionOverviewResponse {
+  active_character_id: string;
+  companions: CompanionOverviewItem[];
+}
+
+export interface CreateCompanionRequest {
+  id?: string;
+  name: string;
+  role?: string;
+  description?: string;
+  speaking_style?: string[];
+  lifestyle_rhythm?: string;
+  initial_location?: string;
+  initial_activity?: string;
+}
+

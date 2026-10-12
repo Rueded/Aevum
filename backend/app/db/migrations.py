@@ -12,8 +12,15 @@ logger = logging.getLogger(__name__)
 
 # Mapping of table_name -> list of (column_name, column_sql_definition)
 SCHEMA_MIGRATIONS: dict[str, list[tuple[str, str]]] = {
+    "application_state": [
+        ("active_character_id", "VARCHAR(36) NOT NULL DEFAULT 'aevum'"),
+    ],
+    "conversations": [
+        ("character_id", "VARCHAR(36) NOT NULL DEFAULT 'aevum'"),
+    ],
     "memories": [
         ("subject_entity", "VARCHAR NOT NULL DEFAULT 'USER'"),
+        ("character_id", "VARCHAR(36) NOT NULL DEFAULT 'aevum'"),
     ],
     "memory_candidates": [
         ("subject_entity", "VARCHAR NOT NULL DEFAULT 'USER'"),

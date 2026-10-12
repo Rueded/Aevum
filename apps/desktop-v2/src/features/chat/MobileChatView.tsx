@@ -26,6 +26,7 @@ interface MobileChatViewProps {
   onStartCall: () => void;
   onEndCall: () => void;
   onBargeIn: () => void;
+  onOpenCompanionSwitcher?: () => void;
 }
 
 export const MobileChatView: React.FC<MobileChatViewProps> = ({
@@ -38,6 +39,7 @@ export const MobileChatView: React.FC<MobileChatViewProps> = ({
   onStartCall,
   onEndCall,
   onBargeIn,
+  onOpenCompanionSwitcher,
 }) => {
   const characterState = useCharacterStore((s) => s.characterState);
   const relationship = useCharacterStore((s) => s.relationship);
@@ -69,7 +71,12 @@ export const MobileChatView: React.FC<MobileChatViewProps> = ({
       {/* Mobile Top Navigation & Status Bar */}
       <header className={styles.mobileHeader}>
         <div className={styles.leftInfo}>
-          <div className={styles.avatarWrap}>
+          <div
+            className={styles.avatarWrap}
+            onClick={onOpenCompanionSwitcher}
+            style={{ cursor: onOpenCompanionSwitcher ? "pointer" : "default" }}
+            title={onOpenCompanionSwitcher ? "切换伴侣人设" : undefined}
+          >
             <div className={styles.avatarCircle}>{avatarLetter}</div>
             <span
               className={`${styles.onlineDot} ${
@@ -79,7 +86,14 @@ export const MobileChatView: React.FC<MobileChatViewProps> = ({
           </div>
           <div className={styles.nameMeta}>
             <div className={styles.nameRow}>
-              <span className={styles.companionName}>{characterName}</span>
+              <span
+                className={styles.companionName}
+                onClick={onOpenCompanionSwitcher}
+                style={{ cursor: onOpenCompanionSwitcher ? "pointer" : "default" }}
+                title={onOpenCompanionSwitcher ? "切换伴侣人设" : undefined}
+              >
+                {characterName}
+              </span>
               <span className={styles.moodBadge}>
                 {characterState?.natural_mood || characterState?.mood || "平静"}
               </span>
@@ -108,6 +122,17 @@ export const MobileChatView: React.FC<MobileChatViewProps> = ({
         </div>
 
         <div className={styles.rightActions}>
+          {onOpenCompanionSwitcher && (
+            <button
+              type="button"
+              className={styles.iconBtn}
+              onClick={onOpenCompanionSwitcher}
+              title="切换/创建伴侣人设"
+              aria-label="切换人设"
+            >
+              👥
+            </button>
+          )}
           <button
             type="button"
             className={`${styles.iconBtn} ${styles.callBtn}`}

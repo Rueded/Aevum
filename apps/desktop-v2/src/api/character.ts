@@ -8,11 +8,14 @@ import type {
   MemoryItem,
   CharacterDebugResponse,
   LongitudinalMemoryResponse,
+  CompanionOverviewResponse,
+  CreateCompanionRequest,
 } from "../types";
 
 export const characterApi = {
-  getState: (): Promise<CharacterStateResponse> => {
-    return fetchJson<CharacterStateResponse>("/character/state");
+  getState: (characterId?: string): Promise<CharacterStateResponse> => {
+    const query = characterId ? `?character_id=${encodeURIComponent(characterId)}` : "";
+    return fetchJson<CharacterStateResponse>(`/character/state${query}`);
   },
 
   updateState: (payload: CharacterStateUpdateRequest): Promise<CharacterStateResponse> => {
@@ -23,24 +26,45 @@ export const characterApi = {
     });
   },
 
-  getRelationship: (): Promise<RelationshipResponse> => {
-    return fetchJson<RelationshipResponse>("/character/relationship");
+  getRelationship: (characterId?: string): Promise<RelationshipResponse> => {
+    const query = characterId ? `?character_id=${encodeURIComponent(characterId)}` : "";
+    return fetchJson<RelationshipResponse>(`/character/relationship${query}`);
   },
 
   updateRelationship: (payload: RelationshipUpdateRequest): Promise<RelationshipResponse> => {
-    return fetchJson<RelationshipResponse>("/character/relationship", {
+    return fetchJson<RelationshipResponse>(`/character/relationship`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
   },
 
-  getLife: (): Promise<LifeResponse> => {
-    return fetchJson<LifeResponse>("/character/life");
+  getLife: (characterId?: string): Promise<LifeResponse> => {
+    const query = characterId ? `?character_id=${encodeURIComponent(characterId)}` : "";
+    return fetchJson<LifeResponse>(`/character/life${query}`);
   },
 
-  getMemories: (): Promise<MemoryItem[]> => {
-    return fetchJson<MemoryItem[]>("/character/memories");
+  getMemories: (characterId?: string): Promise<MemoryItem[]> => {
+    const query = characterId ? `?character_id=${encodeURIComponent(characterId)}` : "";
+    return fetchJson<MemoryItem[]>(`/character/memories${query}`);
+  },
+
+  getAllCompanions: (): Promise<CompanionOverviewResponse> => {
+    return fetchJson<CompanionOverviewResponse>("/character/all");
+  },
+
+  switchCompanion: (characterId: string): Promise<CompanionOverviewResponse> => {
+    return fetchJson<CompanionOverviewResponse>(`/character/switch/${encodeURIComponent(characterId)}`, {
+      method: "POST",
+    });
+  },
+
+  createNewCompanion: (payload: CreateCompanionRequest): Promise<any> => {
+    return fetchJson<any>("/character/create-new", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
   },
 
   deleteMemory: (memoryId: string): Promise<{ status: string; id: string }> => {
@@ -70,3 +94,4 @@ export const characterApi = {
     });
   },
 };
+

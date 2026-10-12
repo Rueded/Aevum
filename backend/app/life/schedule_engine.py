@@ -664,8 +664,13 @@ class LifeScheduleEngine:
             if exp_time:
                 if exp_time.tzinfo is None:
                     exp_time = exp_time.replace(tzinfo=timezone.utc)
-                if dt_utc < exp_time:
-                    # Still within active contingency period - preserve state and sync CharacterStateRecord!
+                # Check for absurd diurnal clashes (e.g. morning wakeup contingency persisting into 18:46 evening)
+                act_str = (life_record.current_activity or "")
+                is_morning_contingency = any(k in act_str for k in ("起床", "洗漱", "赖床", "早饭", "早午餐"))
+                is_diurnal_clash = is_morning_contingency and (local_hour >= 17.0 or local_hour < 6.0)
+
+                if dt_utc < exp_time and not force and not is_diurnal_clash:
+                    # Still legitimately within active contingency period - preserve state and sync CharacterStateRecord!
                     stmt_char = select(CharacterStateRecord).where(CharacterStateRecord.id == character_id)
                     char_rec = (await session.scalars(stmt_char)).first()
                     if char_rec and (char_rec.current_activity != life_record.current_activity or char_rec.current_location != life_record.current_location):

@@ -62,6 +62,7 @@ class MemoryService:
         emotional_weight: float = 0.0,
         memory_id: str | None = None,
         subject_entity: MemorySubjectEntity | None = None,
+        character_id: str = "aevum",
     ) -> Memory:
         """Create and persist a new long-term memory record."""
         stable_id = memory_id or str(uuid.uuid4())
@@ -90,6 +91,7 @@ class MemoryService:
             id=domain_mem.id,
             category=domain_mem.category.value,
             subject_entity=domain_mem.subject_entity.value,
+            character_id=character_id,
             content=domain_mem.content,
             importance=domain_mem.importance,
             confidence=domain_mem.confidence,
@@ -120,9 +122,12 @@ class MemoryService:
         subject_entity: MemorySubjectEntity | None = None,
         limit: int = 100,
         offset: int = 0,
+        character_id: str | None = None,
     ) -> list[Memory]:
-        """Deterministically list memories with optional category and subject filters."""
+        """Deterministically list memories with optional category, subject, and character filters."""
         query = select(MemoryRecord)
+        if character_id is not None:
+            query = query.where(MemoryRecord.character_id == character_id)
         if category is not None:
             cat_val = category.value if hasattr(category, "value") else str(category)
             query = query.where(MemoryRecord.category == cat_val)

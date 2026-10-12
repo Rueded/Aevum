@@ -167,8 +167,9 @@ class CandidateTerminalStateError(Exception):
 class MemoryCurationService:
     """Service managing memory candidate proposal, updates, and curation decisions."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, character_id: str = "aevum") -> None:
         self._session = session
+        self._character_id = character_id
 
     async def create_candidate(
         self,
@@ -399,7 +400,7 @@ class MemoryCurationService:
         normalized_content = existing.content.strip()
 
         # 1. Deterministic duplicate detection against persistent memories table
-        all_mems_query = select(MemoryRecord)
+        all_mems_query = select(MemoryRecord).where(MemoryRecord.character_id == self._character_id)
         all_mems = list((await self._session.scalars(all_mems_query)).all())
         dup, dup_reason = check_memory_duplicate(
             content=normalized_content,
@@ -444,6 +445,7 @@ class MemoryCurationService:
             new_memory_id = str(uuid.uuid4())
             memory_record = MemoryRecord(
                 id=new_memory_id,
+                character_id=self._character_id,
                 category=existing.category.value,
                 subject_entity=existing.subject_entity.value,
                 content=normalized_content,

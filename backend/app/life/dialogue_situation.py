@@ -108,31 +108,59 @@ class DialogueSituationAppraisalService:
 
         # -------------------------------------------------------------
         # -------------------------------------------------------------
-        # 4. Washing Up / Living Room Sofa / Petting Xiao Ju (Cat)
+        # 4. Washing Up / Morning Routine (Explicit Waking Up)
         # -------------------------------------------------------------
-        if (
-            any(k in ast_lower for k in (
-                "刚起来", "刚起床", "洗漱完", "洗完脸", "刷完牙", "揉小橘",
-                "揉猫", "撸猫", "抱小橘", "小橘在", "小橘就趴", "沙发上揉",
-                "在客厅沙发", "在客厅坐", "客厅沙发上",
-            )) or (
-                any(k in combined_text for k in ("小橘", "狸花猫", "揉猫", "撸猫", "猫猫"))
-                and any(k in combined_text for k in ("沙发", "客厅", "刚洗漱", "刚起"))
-            )
-        ) and not any(k in combined_text for k in (
-            "出发", "去吃", "餐厅", "日料", "定食", "要不要去试试", "在路上", "选餐厅", "换衣服", "开门", "菜单", "点单", "去哪吃"
+        is_explicit_morning_waking = any(k in ast_lower for k in ("刚起来", "刚起床", "洗漱完", "洗完脸", "刷完牙")) or (
+            any(k in combined_text for k in ("刚洗漱", "刚起")) and any(k in combined_text for k in ("沙发", "客厅", "小橘"))
+        )
+        if is_explicit_morning_waking and not any(k in combined_text for k in (
+            "出发", "去吃", "餐厅", "日料", "定食", "要不要去试试", "在路上", "选餐厅", "换衣服", "开门", "菜单", "点单", "去哪吃", "晚上", "晚饭", "晚餐"
         )):
             return DialogueSituation(
                 activity="刚起床洗漱完/在客厅沙发揉小橘",
                 location="老家-客厅沙发",
                 status="ACTIVE",
-                duration_minutes=60,
+                duration_minutes=45,
                 idempotency_title="客厅沙发洗漱揉猫",
             )
 
         # -------------------------------------------------------------
-        # 5. Dining at Home / Breakfast / Brunch / Milo
+        # 4b. Living Room Sofa / Petting Xiao Ju (Cat) / General Relaxing
         # -------------------------------------------------------------
+        if (
+            any(k in ast_lower for k in (
+                "揉小橘", "揉猫", "撸猫", "抱小橘", "小橘在", "小橘就趴", "沙发上揉",
+                "在客厅沙发", "在客厅坐", "客厅沙发上", "趴在旁边", "旁边呼噜",
+            )) or (
+                any(k in combined_text for k in ("小橘", "狸花猫", "揉猫", "撸猫", "猫猫"))
+                and any(k in combined_text for k in ("沙发", "客厅", "打盹", "休息"))
+            )
+        ) and not any(k in combined_text for k in (
+            "出发", "去吃", "餐厅", "日料", "定食", "要不要去试试", "在路上", "选餐厅", "换衣服", "开门", "菜单", "点单", "去哪吃"
+        )):
+            return DialogueSituation(
+                activity="在客厅沙发放松揉小橘",
+                location="老家-客厅沙发",
+                status="ACTIVE",
+                duration_minutes=45,
+                idempotency_title="客厅沙发放松揉猫",
+            )
+
+        # -------------------------------------------------------------
+        # 5. Dining at Home / Dinner, Lunch, Breakfast, Milo
+        # -------------------------------------------------------------
+        dinner_keywords = ("吃晚饭", "吃晚餐", "晚饭时间", "喝排骨汤", "莲藕汤", "煲汤", "帮妈妈洗碗", "帮家里收拾", "晚饭")
+        if any(k in combined_text for k in dinner_keywords) and not any(
+            out_k in combined_text for out_k in ("店里", "进店", "餐厅", "服务员", "日料店", "商场", "外出")
+        ):
+            return DialogueSituation(
+                activity="在餐厅享用晚餐/家庭时光",
+                location="老家-餐厅餐桌",
+                status="ACTIVE",
+                duration_minutes=60,
+                idempotency_title="享用家常晚餐",
+            )
+
         home_dining_keywords = ("吃早饭", "吃早餐", "吃午饭", "吃午餐", "喝美禄", "烤吐司", "吃炒粉", "在餐厅吃", "点外卖", "煮面", "泡面", "吃面包")
         if any(k in combined_text for k in home_dining_keywords) and not any(
             out_k in combined_text for out_k in ("店里", "进店", "餐厅", "服务员", "日料店", "商场", "外出")

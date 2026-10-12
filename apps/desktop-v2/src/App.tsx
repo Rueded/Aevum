@@ -8,6 +8,7 @@ import { DevCognitiveInspector } from "./features/dev-inspector/DevCognitiveInsp
 import { CallHUD } from "./features/call/CallHUD";
 import { PresentationSandbox } from "./presentation/PresentationSandbox";
 import { MobileChatView } from "./features/chat/MobileChatView";
+import { CompanionSwitcherModal } from "./features/switcher/CompanionSwitcherModal";
 
 import { useHealthStore } from "./stores/useHealthStore";
 import { useCharacterStore } from "./stores/useCharacterStore";
@@ -51,6 +52,7 @@ export default function App() {
   const [isGenesisOpen, setIsGenesisOpen] = useState(false);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [isSandboxOpen, setIsSandboxOpen] = useState(false);
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
 
   // Store Selectors
   const isBackendOnline = useHealthStore((s) => s.isBackendOnline);
@@ -174,6 +176,15 @@ export default function App() {
     [activeConversationId, refreshAllCharacter]
   );
 
+  const handleCompanionSwitched = useCallback(
+    async (charId: string) => {
+      console.log("Companion switched to:", charId);
+      await refreshAllCharacter();
+      await loadActiveOrCreate();
+    },
+    [refreshAllCharacter, loadActiveOrCreate]
+  );
+
   const characterName = characterState?.name || "苏棠";
 
   return (
@@ -188,6 +199,7 @@ export default function App() {
           onStartCall={startCall}
           onEndCall={endCall}
           onBargeIn={triggerBargeIn}
+          onOpenCompanionSwitcher={() => setIsSwitcherOpen(true)}
         />
       ) : (
         <AppShell
@@ -196,6 +208,7 @@ export default function App() {
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenDevInspector={() => setIsInspectorOpen(true)}
           onSwitchToMobile={() => handleSetViewMode("mobile")}
+          onOpenCompanionSwitcher={() => setIsSwitcherOpen(true)}
           stageSlot={
             <>
               <CompanionStage
@@ -242,6 +255,12 @@ export default function App() {
       )}
 
       {/* Global Modals */}
+      <CompanionSwitcherModal
+        isOpen={isSwitcherOpen}
+        onClose={() => setIsSwitcherOpen(false)}
+        onCompanionSwitched={handleCompanionSwitched}
+      />
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

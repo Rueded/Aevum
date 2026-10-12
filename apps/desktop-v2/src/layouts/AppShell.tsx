@@ -10,6 +10,7 @@ interface AppShellProps {
   onOpenSettings: () => void;
   onOpenDevInspector?: () => void;
   onSwitchToMobile?: () => void;
+  onOpenCompanionSwitcher?: () => void;
   stageSlot?: React.ReactNode;
   drawerSlot?: React.ReactNode;
 }
@@ -20,6 +21,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   onOpenSettings,
   onOpenDevInspector,
   onSwitchToMobile,
+  onOpenCompanionSwitcher,
   stageSlot,
   drawerSlot,
 }) => {
@@ -34,6 +36,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         onOpenSettings={onOpenSettings}
         onOpenDevInspector={onOpenDevInspector}
         onSwitchToMobile={onSwitchToMobile}
+        onOpenCompanionSwitcher={onOpenCompanionSwitcher}
       />
       <div className={styles.mainArea}>
         <div className={`${styles.stageContainer} ${!isStageVisible ? styles.stageHidden : ""}`}>

@@ -233,28 +233,34 @@ CharacterDebugResponse.model_rebuild()
     summary="Retrieve current character definition and situational state",
 )
 async def get_character_state(
+    character_id: Optional[str] = None,
     db: AsyncSession = Depends(get_db_session),
     reconcile: bool = True,
 ) -> CharacterStateResponse:
     """Retrieve Aevum's current identity, baseline mood, energy, and situational condition."""
-    char_def = await CharacterDefinitionService(db).get_character("aevum")
+    if not character_id:
+        from app.character.active_service import get_active_character_id
+        character_id = await get_active_character_id(db)
+
+    char_def = await CharacterDefinitionService(db).get_character(character_id)
     if char_def is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Character definition for 'aevum' not found.",
+            detail=f"Character definition for '{character_id}' not found.",
         )
 
     if reconcile:
         # Reconcile dynamic schedule with real-world time
         try:
             from app.life.schedule_engine import LifeScheduleEngine
-            await LifeScheduleEngine.reconcile_schedule(db, "aevum")
+            await LifeScheduleEngine.reconcile_schedule(db, character_id)
+            await db.commit()
         except Exception as sched_err:
             logger.warning("Dynamic schedule reconcile skipped: %s", sched_err)
 
-    char_state = await CharacterStateService(db).get_state("aevum")
-    emotion_state = await EmotionService(db).get_emotion_state("aevum")
-    life_state = await LifeService(db).get_life_state("aevum")
+    char_state = await CharacterStateService(db).get_state(character_id)
+    emotion_state = await EmotionService(db).get_emotion_state(character_id)
+    life_state = await LifeService(db).get_life_state(character_id)
 
     mood_zh = {
         "calm": "恬淡平稳",
@@ -395,7 +401,7 @@ async def update_character_state(
         await emotion_service.update_emotion_state(updated_emo, character_id="aevum", commit=False)
 
     await db.commit()
-    return await get_character_state(db, reconcile=False)
+    return await get_character_state(character_id="aevum", db=db, reconcile=False)
 
 
 @router.get(
@@ -404,11 +410,17 @@ async def update_character_state(
     summary="Retrieve current relationship dynamic with the user",
 )
 async def get_character_relationship(
+    character_id: Optional[str] = None,
     db: AsyncSession = Depends(get_db_session),
 ) -> RelationshipResponse:
     """Retrieve multidimensional relational state and natural qualitative descriptors."""
+    if not character_id:
+        from app.character.active_service import get_active_character_id
+        character_id = await get_active_character_id(db)
+
     rel_service = RelationshipService(db)
-    rel_state = await rel_service.get_relationship_state(relationship_id="user")
+    rel_id = "user" if character_id == "aevum" else character_id
+    rel_state = await rel_service.get_relationship_state(relationship_id=rel_id)
 
     return RelationshipResponse(
         summary=synthesize_relationship_summary(rel_state),
@@ -473,20 +485,26 @@ async def update_character_relationship(
     summary="Retrieve current life state, recent events, and active goals",
 )
 async def get_character_life(
+    character_id: Optional[str] = None,
     db: AsyncSession = Depends(get_db_session),
 ) -> LifeResponse:
     """Retrieve what Aevum has been doing, current location, and recent episodic events."""
+    if not character_id:
+        from app.character.active_service import get_active_character_id
+        character_id = await get_active_character_id(db)
+
     # Reconcile dynamic schedule with real-world time
     try:
         from app.life.schedule_engine import LifeScheduleEngine
-        await LifeScheduleEngine.reconcile_schedule(db, "aevum")
+        await LifeScheduleEngine.reconcile_schedule(db, character_id)
+        await db.commit()
     except Exception as sched_err:
         logger.warning("Dynamic schedule reconcile in get_life skipped: %s", sched_err)
 
     life_service = LifeService(db)
-    life_state = await life_service.get_life_state("aevum")
-    events = await life_service.list_events("aevum", limit=10)
-    goals = await life_service.list_goals("aevum")
+    life_state = await life_service.get_life_state(character_id)
+    events = await life_service.list_events(character_id, limit=10)
+    goals = await life_service.list_goals(character_id)
 
     return LifeResponse(
         current_activity=life_state.current_activity,
@@ -587,11 +605,16 @@ async def set_character_situation(
     summary="List persistent memories with entity attribution",
 )
 async def list_character_memories(
+    character_id: Optional[str] = None,
     db: AsyncSession = Depends(get_db_session),
 ) -> list[MemoryItem]:
     """Retrieve list of long-term memories distinguishing User vs Character ownership."""
+    if not character_id:
+        from app.character.active_service import get_active_character_id
+        character_id = await get_active_character_id(db)
+
     mem_service = MemoryService(db)
-    memories = await mem_service.list_memories(limit=100)
+    memories = await mem_service.list_memories(limit=100, character_id=character_id)
 
     return [
         MemoryItem(
@@ -1414,6 +1437,62 @@ async def set_active_model(payload: SetActiveModelRequest, request: Request) -> 
         "model_serve_url": serve_url,
         "avatar_data_url": avatar_url,
     }
+
+
+class CreateCompanionRequest(BaseModel):
+    name: str
+    occupation: str = "大学生 / 新朋友"
+    background: str = "初次来到这里的伙伴，喜欢记录生活和探索新事物。"
+    personality_traits: list[str] = Field(default_factory=lambda: ["温和", "真诚", "好奇"])
+    speaking_style: str = "温和自然、真诚随和"
+
+
+@router.get(
+    "/all",
+    summary="List all available companion personas with relationship and memory metadata",
+)
+async def list_all_companions(
+    db: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Retrieve list of all companions and indicate which one is currently active."""
+    from app.character.active_service import list_characters_overview
+    return await list_characters_overview(db)
+
+
+@router.post(
+    "/switch/{character_id}",
+    summary="Switch active companion persona",
+)
+async def switch_companion(
+    character_id: str,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Switch currently active companion persona without mutating data of other companions."""
+    from app.character.active_service import set_active_character_id, list_characters_overview
+    await set_active_character_id(db, character_id)
+    return await list_characters_overview(db)
+
+
+@router.post(
+    "/create-new",
+    summary="Create a new completely independent companion persona",
+)
+async def create_new_companion(
+    payload: CreateCompanionRequest,
+    db: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Create a completely independent companion with 0 memories and fresh relationship."""
+    from app.character.active_service import create_independent_companion
+    res = await create_independent_companion(
+        session=db,
+        name=payload.name,
+        occupation=payload.occupation,
+        background=payload.background,
+        personality_traits=payload.personality_traits,
+        speaking_style=payload.speaking_style,
+    )
+    return res
+
 
 
 

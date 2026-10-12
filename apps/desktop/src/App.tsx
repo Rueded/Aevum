@@ -12,6 +12,7 @@ import { CharacterGenesisModal } from "./components/CharacterGenesisModal";
 import { Live2DModelModal } from "./components/Live2DModelModal";
 import { PresentationSandbox } from "./presentation/PresentationSandbox";
 import { DevCognitiveInspector } from "./components/DevCognitiveInspector";
+import { CompanionSwitcherModal } from "./components/CompanionSwitcherModal";
 import {
   CallMode,
   CharacterCreationResponse,
@@ -195,6 +196,7 @@ export function App() {
   const [isPresentationSandboxOpen, setIsPresentationSandboxOpen] = useState<boolean>(false);
   const [isDevInspectorOpen, setIsDevInspectorOpen] = useState<boolean>(false);
   const [isLive2DModalOpen, setIsLive2DModalOpen] = useState<boolean>(false);
+  const [isCompanionSwitcherOpen, setIsCompanionSwitcherOpen] = useState<boolean>(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
   // Presentation preferences (Multi-bubble vs Single-block & WeChat emojis)
@@ -318,6 +320,30 @@ export function App() {
       window.dispatchEvent(new CustomEvent("aevum-character-genesis-completed", { detail: _res }));
     },
     [refreshCompanionState, handleCreateNewConversation]
+  );
+
+  // Phase 22: Multi-Character Switcher handler
+  const handleCompanionSwitched = useCallback(
+    async (charId: string) => {
+      try {
+        await refreshCompanionState();
+        // Fetch conversations for the newly active character
+        const convs = await api.getConversations(50, charId);
+        if (convs && convs.length > 0) {
+          const targetId = convs[0].id;
+          localStorage.setItem(LOCAL_STORAGE_CONV_KEY, targetId);
+          setActiveConversationId(targetId);
+          await loadConversation(targetId);
+        } else {
+          await handleCreateNewConversation();
+        }
+        setIsDrawerOpen(true);
+        setDrawerTab("chat");
+      } catch (err) {
+        console.warn("Error switching companion in App:", err);
+      }
+    },
+    [refreshCompanionState, loadConversation, handleCreateNewConversation]
   );
 
   // Phase 13.4: Realtime Call Controls
@@ -1155,6 +1181,7 @@ export function App() {
         onOpenGenesis={() => setIsGenesisModalOpen(true)}
         onOpenPresentationSandbox={() => setIsPresentationSandboxOpen(true)}
         onOpenDevInspector={() => setIsDevInspectorOpen(true)}
+        onOpenCompanionSwitcher={() => setIsCompanionSwitcherOpen(true)}
       />
 
       <div className="companion-main-body">
@@ -1256,6 +1283,12 @@ export function App() {
         onModelChanged={() => {
           window.dispatchEvent(new Event("aevum-avatar-updated"));
         }}
+      />
+
+      <CompanionSwitcherModal
+        isOpen={isCompanionSwitcherOpen}
+        onClose={() => setIsCompanionSwitcherOpen(false)}
+        onCompanionSwitched={handleCompanionSwitched}
       />
 
       <DevCognitiveInspector

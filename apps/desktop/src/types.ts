@@ -615,3 +615,30 @@ export interface ResolveLocalModelResponse {
   message: string;
 }
 
+export interface CompanionOverviewItem {
+  id: string;
+  name: string;
+  occupation: string;
+  background: string;
+  avatar: string;
+  is_active: boolean;
+  memory_count: number;
+  message_count: number;
+  affection: number;
+  trust: number;
+}
+
+export interface CompanionOverviewResponse {
+  active_character_id: string;
+  characters: CompanionOverviewItem[];
+}
+
+export interface CreateCompanionRequest {
+  name: string;
+  occupation?: string;
+  background?: string;
+  personality_traits?: string[];
+  speaking_style?: string;
+}
+
+

@@ -49,8 +49,22 @@ export function setBackendBaseUrl(url: string): void {
 export const BACKEND_BASE_URL = getBackendBaseUrl();
 
 export async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = `${getBackendBaseUrl()}${endpoint}`;
-  const response = await fetch(url, options);
+  const baseUrl = getBackendBaseUrl();
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${endpoint}`, options);
+  } catch (netErr: any) {
+    // If local development backend is not running, seamlessly fallback to Cloud Backend
+    if (baseUrl.includes("127.0.0.1") || baseUrl.includes("localhost")) {
+      try {
+        response = await fetch(`${CLOUD_BACKEND_URL}${endpoint}`, options);
+      } catch {
+        throw netErr;
+      }
+    } else {
+      throw netErr;
+    }
+  }
 
   if (!response.ok) {
     let errorDetail = `HTTP ${response.status}: ${response.statusText}`;

@@ -19,7 +19,7 @@ from app.relationship.models import RelationshipState
 
 logger = logging.getLogger(__name__)
 
-MAX_RELATIONSHIP_CONTEXT_CHARS: int = 3500
+MAX_RELATIONSHIP_CONTEXT_CHARS: int = 4500
 RELATIONSHIP_CONTEXT_VERSION: str = "1.0"
 
 _CONTEXT_HEADER = (

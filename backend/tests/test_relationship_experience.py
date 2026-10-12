@@ -292,11 +292,11 @@ async def test_list_experiences_limit_enforcement(test_session: AsyncSession):
         )
 
     # Request limit 2
-    res2 = await service.list_experiences(limit=2)
+    res2 = await service.list_experiences(relationship_id="default", limit=2)
     assert len(res2) == 2
 
     # Request limit 100 -> capped at 50 (returns all 5 available)
-    res_all = await service.list_experiences(limit=100)
+    res_all = await service.list_experiences(relationship_id="default", limit=100)
     assert len(res_all) == 5
 
 
@@ -327,7 +327,7 @@ async def test_duplicate_protection_exact_match(test_session: AsyncSession):
     assert second is None
 
     # Verify only 1 record exists
-    records = await service.list_experiences()
+    records = await service.list_experiences(relationship_id="default")
     assert len(records) == 1
 
 

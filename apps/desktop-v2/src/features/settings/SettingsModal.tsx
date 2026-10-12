@@ -349,7 +349,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
             </button>
           </div>
           <p className="modal-subtitle">
-            轻松定制晚晚的对话表达风格、立绘舞台、时区作息与语音交互。
+            轻松定制苏棠的对话表达风格、立绘舞台、时区作息与语音交互。
           </p>
         </div>
 
@@ -507,7 +507,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                         />
                       </div>
                       <span className="field-hint">
-                        晚晚会更乐于使用生动的可爱颜文字如 (*/ω＼*)、(¯▽¯~)~ 与你交流。
+                        苏棠会更乐于使用生动的可爱颜文字如 (*/ω＼*)、(¯▽¯~)~ 与你交流。
                       </span>
                     </div>
                   </div>
@@ -521,10 +521,10 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                 <section className="settings-section">
                   <h3>Live2D 与伴侣视觉形象管理</h3>
                   <p style={{ lineHeight: "1.6", color: "var(--text-secondary)" }}>
-                    在此可为晚晚自由配置 Live2D 经典元气少女模型（日和/静久/春）、自定义 Steam VTube Studio 模型路径（.model3.json），或导入本地专属插画立绘。
+                    在此可为苏棠自由配置 Live2D 经典元气少女模型（日和/静久/春）、自定义 Steam VTube Studio 模型路径（.model3.json），或导入本地专属插画立绘。
                   </p>
                   <p style={{ lineHeight: "1.6", color: "var(--text-secondary)", marginTop: "8px" }}>
-                    💡 提示：在主界面点击伴侣头像或立绘身体，晚晚会根据触碰进行害羞、眨眼、歪头与微笑互动！
+                    💡 提示：在主界面点击伴侣头像或立绘身体，苏棠会根据触碰进行害羞、眨眼、歪头与微笑互动！
                   </p>
                   {onOpenLive2DModal && (
                     <div style={{ marginTop: "16px" }}>
@@ -591,7 +591,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                         </option>
                       </select>
                       <span className="field-hint">
-                        晚晚的日常认知与地道口语习惯会自适应你的生活语境。
+                        苏棠的日常认知与地道口语习惯会自适应你的生活语境。
                       </span>
                     </div>
 
@@ -604,7 +604,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                         placeholder="e.g. Asia/Kuala_Lumpur, Asia/Shanghai, UTC"
                       />
                       <span className="field-hint">
-                        晚晚严格生活在真实时钟下（例如马来西亚与北京同为 UTC+8 时区）。
+                        苏棠严格生活在真实时钟下（例如马来西亚与北京同为 UTC+8 时区）。
                       </span>
                     </div>
                   </div>
@@ -615,7 +615,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                   <div className="form-grid">
                     <div className="field-group">
                       <div className="switch-row-compact">
-                        <label>允许晚晚偶尔主动关心或打招呼</label>
+                        <label>允许苏棠偶尔主动关心或打招呼</label>
                         <input
                           type="checkbox"
                           checked={proactiveEnabled}
@@ -623,7 +623,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                         />
                       </div>
                       <span className="field-hint">
-                        开启后，晚晚在想到好玩的事或挂念你时，会主动向你发送问候。
+                        开启后，苏棠在想到好玩的事或挂念你时，会主动向你发送问候。
                       </span>
                     </div>
 
@@ -666,7 +666,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                         />
                       </div>
                       <span className="field-hint" style={{ lineHeight: "1.5" }}>
-                        开启后，当晚晚深夜处于深度睡眠时，将不会立刻秒回普通文本消息（呈现呼吸睡眠状态）。如遇紧急情况，可通过<strong>连续发送 3 条以上消息</strong>或<strong>拨打语音通话</strong>，震动与铃声会将其唤醒（以睡眼惺忪、迷迷糊糊的真实状态醒来接听并回复）。若关闭，则随时发消息都会立即正常回复。
+                        开启后，当苏棠深夜处于深度睡眠时，将不会立刻秒回普通文本消息（呈现呼吸睡眠状态）。如遇紧急情况，可通过<strong>连续发送 3 条以上消息</strong>或<strong>拨打语音通话</strong>，震动与铃声会将其唤醒（以睡眼惺忪、迷迷糊糊的真实状态醒来接听并回复）。若关闭，则随时发消息都会立即正常回复。
                       </span>
                     </div>
                   </div>
@@ -702,7 +702,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                 <section className="settings-section">
                   <h3>体验主动问候 · Test Proactive Reach-Out</h3>
                   <p style={{ color: "var(--text-secondary)", marginBottom: "10px", fontSize: "13px" }}>
-                    想要测试晚晚主动找你聊天的效果吗？点击下方按钮立即触发一次真实的关心问候（即使后台处于静默状态）：
+                    想要测试苏棠主动找你聊天的效果吗？点击下方按钮立即触发一次真实的关心问候（即使后台处于静默状态）：
                   </p>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                     <button
@@ -750,7 +750,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                   <div className="section-header-row">
                     <div className="switch-text">
                       <h3>麦克风语音交互 (Push-To-Talk)</h3>
-                      <p>按住麦克风按钮即可直接与晚晚语音对话。</p>
+                      <p>按住麦克风按钮即可直接与苏棠语音对话。</p>
                     </div>
                     <label className="toggle-switch">
                       <input
@@ -769,14 +769,14 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
 
                   <div className="field-group" style={{ marginTop: "12px" }}>
                     <div className="switch-row-compact">
-                      <label>自动朗读晚晚的语音回复</label>
+                      <label>自动朗读苏棠的语音回复</label>
                       <input
                         type="checkbox"
                         checked={autoPlayVoice}
                         onChange={(e) => handleAutoPlayChange(e.target.checked)}
                       />
                     </div>
-                    <span className="field-hint">收到晚晚的回信时自动合成并播放自然拟真语音。</span>
+                    <span className="field-hint">收到苏棠的回信时自动合成并播放自然拟真语音。</span>
                   </div>
 
                   <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
@@ -918,7 +918,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = ({
                 <section className="settings-section">
                   <h3>开发者心智透视抽屉 (Cognitive Inspector)</h3>
                   <p style={{ color: "var(--text-secondary)", marginBottom: "12px" }}>
-                    实时检查晚晚的心智模型、自传事实、好感度轴线与多轮认知推演过程。支持全局快捷键 <code>Ctrl+Shift+D</code>。
+                    实时检查苏棠的心智模型、自传事实、好感度轴线与多轮认知推演过程。支持全局快捷键 <code>Ctrl+Shift+D</code>。
                   </p>
                   {onOpenDevInspector && (
                     <button

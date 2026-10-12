@@ -184,7 +184,7 @@ export const CompanionDrawer: React.FC<CompanionDrawerProps> = ({
                 onNewConversation?.();
                 onSelectTab("chat");
               }}
-              characterName={characterState?.name || "晚晚"}
+              characterName={characterState?.name || "苏棠"}
             />
           </div>
         )}
@@ -312,7 +312,7 @@ export const CompanionDrawer: React.FC<CompanionDrawerProps> = ({
 
                 <div className="bond-footnote">
                   <p style={{ margin: "0 0 4px 0", color: "var(--text-secondary)" }}>
-                    💡 <strong>关系与好感沉淀规则</strong>：好感度（Affection）与信任（Trust）源于真实的日常相处——关心作息健康、分享生活趣事与内心想法、默契玩笑与真诚赞赏都会让情感自然累积；强行表白或施压会触发晚晚的矜持与心理防线。
+                    💡 <strong>关系与好感沉淀规则</strong>：好感度（Affection）与信任（Trust）源于真实的日常相处——关心作息健康、分享生活趣事与内心想法、默契玩笑与真诚赞赏都会让情感自然累积；强行表白或施压会触发苏棠的矜持与心理防线。
                   </p>
                   <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>
                     Dynamics are governed exclusively by Aevum Core based on authentic interaction history.
@@ -343,7 +343,7 @@ export const CompanionDrawer: React.FC<CompanionDrawerProps> = ({
                 </div>
                 <div className="about-item">
                   <span className="about-label">Mood</span>
-                  <span className="about-value mood-tag">{characterState.mood}</span>
+                  <span className="about-value mood-tag">{characterState.natural_mood || characterState.mood}</span>
                 </div>
                 <div className="about-item">
                   <span className="about-label">Current Activity</span>

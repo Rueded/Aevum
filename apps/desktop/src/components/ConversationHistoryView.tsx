@@ -13,7 +13,7 @@ export const ConversationHistoryView: React.FC<ConversationHistoryViewProps> = (
   activeConversationId,
   onSelectConversation,
   onNewConversation,
-  characterName = "晚晚",
+  characterName = "苏棠",
 }) => {
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);

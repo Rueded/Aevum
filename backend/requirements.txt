@@ -10,3 +10,4 @@ tzdata>=2026.4
 python-multipart>=0.0.9
 edge-tts>=7.0.0
 python-dotenv>=1.0.0
+firebase-admin>=7.0.0

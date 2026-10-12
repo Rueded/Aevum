@@ -13,16 +13,9 @@ export const PRESET_MODELS: Live2DModelConfig[] = [
   {
     type: "preset",
     name: "🌸 日和 (Hiyori Live2D 经典元气少女)",
-    url: "http://127.0.0.1:8000/character/avatar/live2d-serve/hiyori_bundle/hiyori.model3.json",
+    url: "https://raw.githubusercontent.com/iCharlesL/Live2D-Library/master/hiyori/hiyori_free_t08.model3.json",
     previewUrl: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=400&q=80",
     description: "性格开朗阳光的 Live2D 官方元气少女，支持灵动视线跟随与呼吸律动",
-  },
-  {
-    type: "preset",
-    name: "🎀 依依 (PinkHair 甜美少女)",
-    url: "http://127.0.0.1:8000/character/avatar/live2d-serve/PinkHair_4/yiyi_chair.model3.json",
-    previewUrl: "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=400&q=80",
-    description: "治愈系粉发少女坐在椅子上，神态恬淡生动，完美契合伴侣形象",
   },
   {
     type: "preset",
@@ -32,8 +25,15 @@ export const PRESET_MODELS: Live2DModelConfig[] = [
     description: "温婉知性的二次元校园学姐风格，动作自然细腻",
   },
   {
+    type: "preset",
+    name: "🎀 春 (Haru 甜美治愈系)",
+    url: "https://cdn.jsdelivr.net/gh/guansss/pixi-live2d-display/test/assets/haru/haru_greeter_t03.model3.json",
+    previewUrl: "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=400&q=80",
+    description: "充满元气的甜美治愈系伴侣，常伴身旁",
+  },
+  {
     type: "custom_image",
-    name: "✨ 晚晚官方概念立绘 (Official Character Portrait)",
+    name: "✨ 苏棠官方概念立绘 (Official Character Portrait)",
     url: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80",
     previewUrl: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80",
     description: "唯美动漫艺术概念立绘，配合环境呼吸光环与语音波形律动",

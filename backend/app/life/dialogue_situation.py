@@ -107,16 +107,21 @@ class DialogueSituationAppraisalService:
             )
 
         # -------------------------------------------------------------
+        # -------------------------------------------------------------
         # 4. Washing Up / Living Room Sofa / Petting Xiao Ju (Cat)
         # -------------------------------------------------------------
-        if any(k in ast_lower for k in (
-            "刚起来", "刚起床", "洗漱完", "洗完脸", "刷完牙", "揉小橘",
-            "揉猫", "撸猫", "抱小橘", "小橘在", "小橘就趴", "沙发上揉",
-            "在客厅沙发", "在客厅坐", "客厅沙发上",
-        )) or (
-            any(k in combined_text for k in ("小橘", "狸花猫", "揉猫", "撸猫", "猫猫"))
-            and any(k in combined_text for k in ("沙发", "客厅", "刚洗漱", "刚起"))
-        ):
+        if (
+            any(k in ast_lower for k in (
+                "刚起来", "刚起床", "洗漱完", "洗完脸", "刷完牙", "揉小橘",
+                "揉猫", "撸猫", "抱小橘", "小橘在", "小橘就趴", "沙发上揉",
+                "在客厅沙发", "在客厅坐", "客厅沙发上",
+            )) or (
+                any(k in combined_text for k in ("小橘", "狸花猫", "揉猫", "撸猫", "猫猫"))
+                and any(k in combined_text for k in ("沙发", "客厅", "刚洗漱", "刚起"))
+            )
+        ) and not any(k in combined_text for k in (
+            "出发", "去吃", "餐厅", "日料", "定食", "要不要去试试", "在路上", "选餐厅", "换衣服", "开门", "菜单", "点单", "去哪吃"
+        )):
             return DialogueSituation(
                 activity="刚起床洗漱完/在客厅沙发揉小橘",
                 location="老家-客厅沙发",
@@ -198,7 +203,8 @@ class DialogueSituationAppraisalService:
         # -------------------------------------------------------------
         # 10. Post-Dining Mall Walk / Shopping
         # -------------------------------------------------------------
-        if any(k in combined_text for k in ("吃饱了", "买单", "结账", "吃得好撑", "走吧去逛逛", "逛街", "去商场逛逛", "消食散步")):
+        is_dining_inquiry = any(k in usr_lower for k in ("吃饱了吗", "吃饱了么", "吃饱没", "吃饱了没", "还没吃饱", "吃饱了吗？", "吃饱了吗?"))
+        if not is_dining_inquiry and any(k in combined_text for k in ("我吃饱了", "买单了", "结账走", "买完单", "吃得好撑", "走吧去逛逛", "逛街去", "去商场逛逛", "消食散步")):
             return DialogueSituation(
                 activity="商场闲逛散步/前往影城途中",
                 location="商场 (The Intermark Mall / Pavilion)",
@@ -208,9 +214,33 @@ class DialogueSituationAppraisalService:
             )
 
         # -------------------------------------------------------------
-        # 11. Restaurant Dining / Japanese Cuisine / Date Meal
+        # 11. En Route / In Car / Deciding on Destination
         # -------------------------------------------------------------
-        dining_keywords = ("点菜", "菜单", "入座", "好香", "上菜", "吃寿司", "开吃", "坐下", "这道菜", "尝尝", "进店", "到店里", "在店里", "刺身", "拉面", "烤肉", "火锅")
+        en_route_keywords = (
+            "出发吧", "想吃", "要不要去试试", "叫什么名字", "选餐厅", "挑餐厅", "在车上",
+            "去吃", "去哪吃", "没找到", "换一间", "离这里不远", "商量", "在路上", "去店里途中",
+            "快到了", "在出租车上", "花见小路", "hanamikoji", "intermark mall", "the intermark"
+        )
+        if any(k in combined_text for k in en_route_keywords) and not any(
+            seated_k in combined_text for seated_k in ("到店里了", "进店了", "坐下看", "已入座", "菜单点菜", "尝尝这道菜")
+        ):
+            return DialogueSituation(
+                activity="外出赴约途中/商量挑选约会餐厅",
+                location="雪隆外出途中 (商场/车上)",
+                status="ACTIVE",
+                duration_minutes=60,
+                idempotency_title="外出赴约途中",
+            )
+
+        # -------------------------------------------------------------
+        # 12. Restaurant Dining / Japanese Cuisine / Date Meal
+        # -------------------------------------------------------------
+        dining_keywords = (
+            "点菜", "菜单", "入座", "好香", "上菜", "吃寿司", "开吃", "坐下", "这道菜", "尝尝",
+            "进店", "到店里", "在店里", "刺身", "拉面", "烤肉", "火锅", "随便点", "想吃什么吃什么",
+            "看看有什么好吃", "点单", "午市套餐", "定食", "日料", "hanare", "hanaya", "怀石料理",
+            "吃饱了吗", "吃饱了么", "吃饱没", "吃寿司", "吃刺身", "寿司"
+        )
         if any(k in combined_text for k in dining_keywords):
             return DialogueSituation(
                 activity="在日料店共进午餐/约会用餐中",
@@ -218,18 +248,6 @@ class DialogueSituationAppraisalService:
                 status="ACTIVE",
                 duration_minutes=90,
                 idempotency_title="餐厅约会用餐",
-            )
-
-        # -------------------------------------------------------------
-        # 12. En Route / In Car / Deciding on Destination
-        # -------------------------------------------------------------
-        if any(k in combined_text for k in ("出发吧", "想吃", "要不要去试试", "叫什么名字", "选餐厅", "挑餐厅", "在车上", "去吃", "去哪吃", "没找到", "换一间", "离这里不远", "商量", "在路上", "去店里途中", "快到了", "在出租车上")):
-            return DialogueSituation(
-                activity="外出赴约途中/商量挑选约会餐厅",
-                location="雪隆外出途中 (商场/车上)",
-                status="ACTIVE",
-                duration_minutes=60,
-                idempotency_title="外出赴约途中",
             )
 
         # -------------------------------------------------------------

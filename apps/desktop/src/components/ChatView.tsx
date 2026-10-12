@@ -263,16 +263,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
       <div className="messages-container" ref={scrollContainerRef}>
         {messages.length === 0 ? (
           <div className="chat-empty-state">
-            <div className="empty-avatar">晚</div>
-            <h3>与 {characterName} 的日常对话</h3>
+            <div className="empty-avatar">{characterName ? characterName[0] : "棠"}</div>
+            <h3>与 {characterName || "苏棠"} 的日常对话</h3>
             <p className="empty-subtext">
-              晚晚是一个真实生活在马来西亚雪隆老家/槟城理大的大二音乐生，拥有自己的作息习惯、情绪起伏与长久记忆。
+              {characterName || "苏棠"}是一个真实生活在吉隆坡的计算机系大四学生兼独立游戏开发者，拥有自己的作息习惯、情绪起伏与长久记忆。
               跟她打个招呼，或者聊聊今天发生的事吧。
             </p>
             <div className="starter-chips">
               <button
                 className="chip-btn"
-                onClick={() => onInputChange("晚晚，你今天都在忙些什么呀？")}
+                onClick={() => onInputChange(`${characterName || "苏棠"}，你今天都在忙些什么呀？`)}
               >
                 "你今天都在忙些什么呀？"
               </button>
@@ -451,8 +451,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
             rows={1}
             placeholder={
               isGenerating
-                ? "晚晚正在思考与回应中... (您可以继续输入并直接发送)"
-                : "跟晚晚说点什么... (Enter 发送, Shift+Enter 换行)"
+                ? `${characterName || "苏棠"}正在思考与回应中... (您可以继续输入并直接发送)`
+                : `跟${characterName || "苏棠"}说点什么... (Enter 发送, Shift+Enter 换行)`
             }
             value={input}
             onChange={handleInput}

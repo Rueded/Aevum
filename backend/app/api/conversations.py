@@ -268,6 +268,11 @@ async def create_message(
     conversation.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(user_msg)
+    try:
+        from app.core.firestore_sync import sync_message_to_firestore
+        sync_message_to_firestore(user_msg.id, conversation_id, user_msg.role, user_msg.content, user_msg.created_at)
+    except Exception:
+        pass
 
     # 3. Load full conversation history in chronological order
     history_query = (
@@ -303,6 +308,26 @@ async def create_message(
         else:
             days = round(diff_sec / 86400, 1)
             elapsed_time_desc = f"距离上一条消息已经过去约 {days} 天（一段时间未见，各自生活继续）"
+
+        recent_context_text = " ".join([m.content for m in stored_messages[-4:]]).lower()
+        curr_user_text = payload.content.lower()
+        
+        # Check for eating speedwarp: recently sat down / looking at menu / ordering, and user asks if full
+        if diff_sec < 600 and any(k in curr_user_text for k in ("吃饱了吗", "吃饱了没", "饱了吗", "吃完了吗", "饱了没")):
+            if any(k in recent_context_text for k in ("菜单", "点菜", "点单", "刚坐下", "看看有什么好吃", "午市套餐", "日料店", "入座")):
+                elapsed_time_desc = (elapsed_time_desc or "") + (
+                    f"\n【重要物理常识与反时间扭曲预警】：现实物理世界距离刚才看菜单/点菜仅过去了约 {diff_sec // 60} 分钟（{diff_sec} 秒）！"
+                    "人类吃正餐不可能在几分钟内吃完，甚至菜都还没全上齐！苏棠绝不能顺着对方产生已经吃饱的荒谬幻觉！"
+                    "苏棠必须以真实人类的自然反应回应或打趣（例如：‘哈？才刚点完单过了几分钟呢，菜都还没上呢，哪有这么快吃饱呀！’）。"
+                )
+
+        # Check for commute speedwarp: recently leaving / heading out, and user asks if arrived
+        if diff_sec < 360 and any(k in curr_user_text for k in ("到了吗", "到了没", "你到了吗", "到哪了")):
+            if any(k in recent_context_text for k in ("出发吧", "出门", "在路上", "去店里", "换衣服", "准备出发")):
+                elapsed_time_desc = (elapsed_time_desc or "") + (
+                    f"\n【重要物理常识与反时间扭曲预警】：现实世界距离说出发仅过去了约 {diff_sec // 60} 分钟（{diff_sec} 秒）！"
+                    "现实中坐车/走路到达商场餐厅需要 15-30 分钟。苏棠绝不能瞬间移动，要如实表明才刚出发/还在路上。"
+                )
 
     # 4. Build CharacterResponseContext using CharacterEngine (Phase 6.3)
     try:
@@ -428,6 +453,11 @@ async def create_message(
     conversation.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(assistant_msg)
+    try:
+        from app.core.firestore_sync import sync_message_to_firestore
+        sync_message_to_firestore(assistant_msg.id, conversation_id, assistant_msg.role, assistant_msg.content, assistant_msg.created_at)
+    except Exception:
+        pass
 
     # Safely construct response models immediately from committed records
     user_read = MessageRead.model_validate(user_msg)
@@ -670,6 +700,11 @@ async def create_voice_message(
     conversation.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(user_msg)
+    try:
+        from app.core.firestore_sync import sync_message_to_firestore
+        sync_message_to_firestore(user_msg.id, conversation_id, user_msg.role, user_msg.content, user_msg.created_at)
+    except Exception:
+        pass
 
     # 7. Load full conversation history in chronological order
     history_query = (
@@ -730,6 +765,11 @@ async def create_voice_message(
     conversation.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(assistant_msg)
+    try:
+        from app.core.firestore_sync import sync_message_to_firestore
+        sync_message_to_firestore(assistant_msg.id, conversation_id, assistant_msg.role, assistant_msg.content, assistant_msg.created_at)
+    except Exception:
+        pass
 
     user_read = MessageRead.model_validate(user_msg)
     assistant_read = MessageRead.model_validate(assistant_msg)
@@ -982,17 +1022,18 @@ async def check_idle_nudge(
         "【情境上下文】：\n"
         + "\n".join(recent_dialogue_lines)
         + f"\n\n苏棠最后发的一句是：『{content}』。\n\n"
-        + "【当前状况】：对方在即时聊天中停顿超过3分钟没有回应了。\n"
-        + "请作为苏棠的情境与心智感知引擎判断是否需要催问。\n\n"
+        + f"【当前状况】：你们本来正在即时连续聊天中，苏棠提出了问题或商量计划，但对方停顿了约 {int(elapsed // 60)} 分钟（{int(elapsed)} 秒）没有回复。\n"
+        + "这可能的情况有：对方在认真打字、对方正在临时手忙脚乱查攻略/查餐厅/做行程计划、或者对方临时被别的事情耽搁了。\n"
+        + "请作为苏棠的情境与心智感知引擎判断是否需要发一条自然的人性化微催问/探寻。\n\n"
         + "【绝对严禁催问的情况 (必须直接输出 [NO_NUDGE])】：\n"
         + "1. 话题已经自然结束、或者双方已达成共识收尾（例如'好哦'、'那就这样'、'哈哈知道了'、讨论已完毕）；\n"
         + "2. 属于互道晚安、准备睡觉、出门忙事、告别、或者自然舒适的静默休息；\n"
         + "3. 苏棠的最后一句发言属于随口感叹、情绪附和、陈述句，并未真切向对方提出问题或等待对方做决定；\n"
         + "4. 双方正处于需要时间思考、回忆、查资料、做饭、看电影、驾驶或短暂停顿中，属于正常生活节奏，严禁神经质催促对方！\n"
         + "若符合上述任何一种情况，请严格直接输出：`[NO_NUDGE]`，不要输出任何多余字符。\n\n"
-        + "【仅在以下情况才输出催问】：\n"
-        + "苏棠上一条发言明确提出了待商量的事宜（如挑选餐厅、看什么电影、商量明天计划等），认真在等待对方建议或做决定，但对方毫无征兆长时间停滞。\n"
-        + "此时以苏棠真实的傲娇、探究、微怼口吻，输出一条简短生动的催问/调侃（1到2句话，如'人呢？'、'你不会还没查好行程吧'等，严禁机械堆砌表情包或口头禅）。\n"
+        + "【允许发出微探寻的情况】：\n"
+        + "苏棠上一条发言明确提出了待商量的事宜（如挑选餐厅、看什么电影、商量明天计划等），认真在等待对方建议或做决定，但对方突然没有了动静。\n"
+        + "此时以苏棠真实的傲娇、探究、微怼口吻，输出一条简短生动的探问/调侃（1到2句话，如'人呢？你不会没有计划，现在才开始计划行程吧？'、'怎么突然没动静了，正在查呢？'等，贴合具体商量的话题，真实灵动，严禁机械堆砌表情包或口头禅）。\n"
         + "直接输出对白文本，严禁包含任何AI声明或分析解释。"
     )
 
@@ -1016,6 +1057,11 @@ async def check_idle_nudge(
         conv.updated_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(nudge_msg)
+        try:
+            from app.core.firestore_sync import sync_message_to_firestore
+            sync_message_to_firestore(nudge_msg.id, conversation_id, nudge_msg.role.value if hasattr(nudge_msg.role, "value") else nudge_msg.role, nudge_msg.content, nudge_msg.created_at)
+        except Exception:
+            pass
 
         return {
             "nudged": True,

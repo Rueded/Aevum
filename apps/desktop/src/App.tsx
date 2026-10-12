@@ -515,8 +515,28 @@ export function App() {
 
     const initConv = async () => {
       try {
-        const list = await api.getConversations(10);
+        const list = await api.getConversations(20);
         if (list && list.length > 0) {
+          const sorted = [...list].sort((a, b) => b.message_count - a.message_count);
+          const topConv = sorted[0];
+          const savedId = localStorage.getItem(LOCAL_STORAGE_CONV_KEY);
+          const savedConv = list.find((c) => c.id === savedId);
+
+          // If saved conversation has substantial messages, keep it
+          if (savedConv && (savedConv.id === topConv?.id || savedConv.message_count >= 20)) {
+            setActiveConversationId(savedConv.id);
+            await loadConversation(savedConv.id);
+            return;
+          }
+
+          // Otherwise, pick the conversation with the rich history (e.g. 356 messages)
+          if (topConv && topConv.message_count > 0) {
+            setActiveConversationId(topConv.id);
+            localStorage.setItem(LOCAL_STORAGE_CONV_KEY, topConv.id);
+            await loadConversation(topConv.id);
+            return;
+          }
+
           setActiveConversationId(list[0].id);
           localStorage.setItem(LOCAL_STORAGE_CONV_KEY, list[0].id);
           await loadConversation(list[0].id);
@@ -534,12 +554,75 @@ export function App() {
     initConv();
   }, [checkHealth, refreshCompanionState, activeConversationId, loadConversation, handleCreateNewConversation]);
 
-  // Refresh debug data when about tab is viewed in drawer
+  // Refresh active drawer tab projections
   useEffect(() => {
-    if (isDrawerOpen && drawerTab === "about") {
-      refreshDebugData();
+    if (isDrawerOpen) {
+      if (drawerTab === "about") {
+        refreshDebugData();
+      } else if (drawerTab === "memories") {
+        api.getMemories().then(setMemories).catch(() => {});
+      } else if (drawerTab === "bond") {
+        api.getRelationship().then(setRelationship).catch(() => {});
+      }
     }
   }, [isDrawerOpen, drawerTab, refreshDebugData]);
+
+  // Step 4E: Natural hesitation idle nudge check worker (20s interval)
+  useEffect(() => {
+    if (!activeConversationId) return;
+
+    const interval = setInterval(async () => {
+      if (isGenerating) return;
+      // Do NOT interrupt if user is currently typing in input box
+      if (inputMessage && inputMessage.trim().length > 0) return;
+      // Do NOT fire idle nudge if window/tab is in background
+      if (typeof document !== "undefined" && document.hidden) return;
+
+      const currentMsgs = conversation?.messages;
+      if (!currentMsgs || currentMsgs.length === 0) return;
+
+      const lastMsg = currentMsgs[currentMsgs.length - 1];
+      if (lastMsg.role !== "assistant") return;
+
+      // Avoid double nudging if assistant already sent the last 2 consecutive messages
+      if (
+        currentMsgs.length >= 2 &&
+        currentMsgs[currentMsgs.length - 2].role === "assistant"
+      ) {
+        return;
+      }
+
+      // Check client-side elapsed time first before pinging
+      const msgTime = new Date(lastMsg.created_at).getTime();
+      const now = Date.now();
+      const elapsedSeconds = (now - msgTime) / 1000;
+      if (elapsedSeconds < 70) return;
+
+      try {
+        const res = await api.checkIdleNudge(activeConversationId, 70);
+        if (res && res.nudged && res.message) {
+          const newMsg: MessageItem = {
+            id: res.message.id,
+            conversation_id: res.message.conversation_id,
+            role: "assistant",
+            content: res.message.content,
+            created_at: res.message.created_at,
+          };
+          setConversation((prev) => ({
+            id: activeConversationId,
+            created_at: prev?.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            messages: [...(prev?.messages || []), newMsg],
+          }));
+          refreshCompanionState();
+        }
+      } catch (err) {
+        // Silently ignore transient network failures
+      }
+    }, 20000);
+
+    return () => clearInterval(interval);
+  }, [activeConversationId, isGenerating, conversation, refreshCompanionState]);
 
   // ===========================================================================
   // Step 4B: Independent Notification Polling Worker (12s interval)

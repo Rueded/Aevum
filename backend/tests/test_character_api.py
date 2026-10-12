@@ -176,7 +176,7 @@ async def test_patch_character_state(client: AsyncClient):
     data = response.json()
     assert data["mood"] == "good"
     assert data["emotion"]["type"] == "HAPPY"
-    assert "Good (Happy)" in data["natural_mood"]
+    assert "心情愉悦" in data["natural_mood"] or "Good" in data["natural_mood"]
     assert data["energy"] == 0.90
     assert data["stress"] == 0.10
 

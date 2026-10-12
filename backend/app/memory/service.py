@@ -278,6 +278,12 @@ class MemoryService:
         assert created is not None
         assert updated is not None
 
+        rec_cat = getattr(record, "category", None)
+        try:
+            cat = MemoryCategory(rec_cat) if rec_cat else MemoryCategory.FACT
+        except (ValueError, KeyError):
+            cat = MemoryCategory.FACT
+
         rec_subj = getattr(record, "subject_entity", None)
         try:
             subj_entity = MemorySubjectEntity(rec_subj) if rec_subj else MemorySubjectEntity.USER
@@ -286,7 +292,7 @@ class MemoryService:
 
         return Memory(
             id=record.id,
-            category=MemoryCategory(record.category),
+            category=cat,
             subject_entity=subj_entity,
             content=record.content,
             importance=record.importance,

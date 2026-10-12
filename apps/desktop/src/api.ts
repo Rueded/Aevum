@@ -35,11 +35,47 @@ import {
   ResolveLocalModelResponse,
 } from "./types";
 
-export const BACKEND_BASE_URL = "http://127.0.0.1:8000";
+export const CLOUD_BACKEND_URL = "https://aevum-1mcy.onrender.com";
+
+export function getBackendBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("aevum_backend_url");
+    if (saved && saved.trim()) {
+      return saved.trim().replace(/\/+$/, "");
+    }
+  }
+  return "http://127.0.0.1:8000";
+}
+
+export function setBackendBaseUrl(url: string): void {
+  if (typeof window !== "undefined") {
+    const clean = url.trim().replace(/\/+$/, "");
+    if (clean) {
+      localStorage.setItem("aevum_backend_url", clean);
+    } else {
+      localStorage.removeItem("aevum_backend_url");
+    }
+  }
+}
+
+export const BACKEND_BASE_URL = getBackendBaseUrl();
 
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const url = `${BACKEND_BASE_URL}${endpoint}`;
-  const response = await fetch(url, options);
+  const baseUrl = getBackendBaseUrl();
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${endpoint}`, options);
+  } catch (netErr: any) {
+    if (baseUrl.includes("127.0.0.1") || baseUrl.includes("localhost")) {
+      try {
+        response = await fetch(`${CLOUD_BACKEND_URL}${endpoint}`, options);
+      } catch {
+        throw netErr;
+      }
+    } else {
+      throw netErr;
+    }
+  }
 
   if (!response.ok) {
     let errorDetail = `HTTP ${response.status}: ${response.statusText}`;

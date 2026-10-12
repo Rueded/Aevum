@@ -113,7 +113,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
                 <div className="info-row">
                   <span className="info-label">Mood:</span>
-                  <span className="info-val">{characterState?.natural_mood || "Calm"}</span>
+                  <span className="info-val">{characterState?.natural_mood || "恬淡平稳"}</span>
                 </div>
                 <div className="info-row">
                   <span className="info-label">Energy:</span>

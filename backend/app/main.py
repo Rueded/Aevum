@@ -24,6 +24,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup: Initialize database tables according to declarative metadata
     await init_db()
 
+    # Hydrate from Firestore if SQLite database is newly created / empty (e.g. on Render container restart)
+    async with async_session_factory() as session:
+        try:
+            from app.core.firestore_sync import hydrate_sqlite_if_empty
+            await hydrate_sqlite_if_empty(session)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("Firestore hydration check skipped: %s", e)
+
     # Seed baseline defaults across services if needed
     async with async_session_factory() as session:
         try:

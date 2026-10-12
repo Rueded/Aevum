@@ -40,6 +40,28 @@ class MemoryCategory(str, enum.Enum):
     USER_PROBLEM = "USER_PROBLEM"
     CHARACTER_EVENT = "CHARACTER_EVENT"
 
+    @classmethod
+    def _missing_(cls, value: object) -> "MemoryCategory":
+        if isinstance(value, str):
+            v_upper = value.strip().upper()
+            if v_upper in cls._value2member_map_:
+                return cls._value2member_map_[v_upper]
+            if v_upper in ("FACTUAL", "FACTS"):
+                return cls.FACT
+            if v_upper in ("EPISODIC", "EPISODE", "EVENTS"):
+                return cls.EVENT
+            if v_upper in ("PREFERENCES",):
+                return cls.PREFERENCE
+            if v_upper in ("EXPERIENCES",):
+                return cls.EXPERIENCE
+            if v_upper in ("PROMISES",):
+                return cls.PROMISE
+            if v_upper in ("JOKES",):
+                return cls.JOKE
+            if v_upper in ("RELATIONSHIPS",):
+                return cls.RELATIONSHIP
+        return None
+
 
 class MemorySubjectEntity(str, enum.Enum):
     """Explicit entity attribution for who a memory belongs to or describes.
@@ -52,6 +74,16 @@ class MemorySubjectEntity(str, enum.Enum):
     USER = "USER"
     NPC = "NPC"
     OTHER = "OTHER"
+
+    @classmethod
+    def _missing_(cls, value: object) -> "MemorySubjectEntity | None":
+        if isinstance(value, str):
+            v_upper = value.strip().upper()
+            if v_upper in cls._value2member_map_:
+                return cls._value2member_map_[v_upper]
+            if v_upper in ("SU_TANG", "SUTANG", "WANWAN", "LIN_WAN", "CHARACTER", "COMPANION", "苏棠", "晚晚", "苏棠生日", "苏棠学业与假期", "苏棠的小猫小橘"):
+                return cls.AEVUM
+        return None
 
 
 def _validate_normalized_float(v: float, field_name: str) -> float:

@@ -473,7 +473,7 @@ async def trigger_proactive_test(
         context=context,
         idempotency_key=idempotency_key,
         conversation_id=conversation_id,
-        title="晚晚发来了新消息",
+        title="苏棠发来了新消息",
     )
     await session.commit()
     return {

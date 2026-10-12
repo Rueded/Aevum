@@ -33,7 +33,7 @@ export const PRESET_MODELS: Live2DModelConfig[] = [
   },
   {
     type: "custom_image",
-    name: "✨ 晚晚官方概念立绘 (Official Character Portrait)",
+    name: "✨ 苏棠官方概念立绘 (Official Character Portrait)",
     url: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80",
     previewUrl: "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80",
     description: "唯美动漫艺术概念立绘，配合环境呼吸光环与语音波形律动",

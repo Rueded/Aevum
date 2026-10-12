@@ -154,25 +154,19 @@ class TurnEmotionAppraisalService:
 
             if not influences:
                 # Natural emotional homeostasis / decay towards baseline
-                if current_emotion.intensity > 0.40 and current_emotion.emotion_type not in (EmotionType.CALM, EmotionType.NEUTRAL):
-                    new_intensity = max(0.25, round(current_emotion.intensity - 0.20, 3))
-                    if new_intensity <= 0.30:
-                        await self._emotion_service.update_emotion_state(
-                            character_id=character_id,
-                            emotion_type=EmotionType.CALM,
-                            intensity=0.30,
-                        )
-                        await self._synchronize_character_state(
-                            character_id=character_id,
-                            current_state=current_state,
-                            applied_emotion=EmotionType.CALM,
-                        )
-                    else:
-                        await self._emotion_service.update_emotion_state(
-                            character_id=character_id,
-                            emotion_type=current_emotion.emotion_type,
-                            intensity=new_intensity,
-                        )
+                if current_emotion.emotion_type not in (EmotionType.CALM, EmotionType.CONTENT, EmotionType.NEUTRAL):
+                    new_intensity = max(0.30, round(current_emotion.intensity - 0.15, 3))
+                    target_emo = EmotionType.CALM if new_intensity <= 0.40 else current_emotion.emotion_type
+                    await self._emotion_service.update_emotion_state(
+                        character_id=character_id,
+                        emotion_type=target_emo,
+                        intensity=new_intensity,
+                    )
+                    await self._synchronize_character_state(
+                        character_id=character_id,
+                        current_state=current_state,
+                        applied_emotion=target_emo,
+                    )
                     await self._session.commit()
                     return await self._emotion_service.get_emotion_state(character_id)
                 return current_emotion
@@ -436,6 +430,22 @@ class TurnEmotionAppraisalService:
             )
             return influences
 
+        # 9. Friendly everyday inquiry / Casual pleasant companion sharing
+        CASUAL_DAILY_SHARING_PATTERNS = [
+            r"(?:今天都在忙些什么|在忙什么|忙什么呀|在干嘛|在做什么|今天过得怎样|吃了吗|想我|出发吧|想吃|定食|日料|餐厅|电影|吃日本餐)",
+        ]
+        if any(re.search(pat, lowered_user) for pat in CASUAL_DAILY_SHARING_PATTERNS):
+            influences.append(
+                _build_influence(
+                    character_id=character_id,
+                    target_emotion=EmotionType.CONTENT,
+                    direction=EmotionInfluenceDirection.POSITIVE,
+                    strength=0.32,
+                    reason="Casual daily companion sharing and sweet warmth.",
+                )
+            )
+            return influences
+
         return influences
 
 
@@ -460,7 +470,7 @@ class TurnEmotionAppraisalService:
             loneliness_adj = -0.04
             irritation_adj = -0.02
         elif applied_emotion == EmotionType.CURIOUS:
-            target_mood = CharacterMood.FOCUSED
+            target_mood = CharacterMood.GOOD
             stress_adj = 0.0
             social_adj = +0.04
             loneliness_adj = -0.04

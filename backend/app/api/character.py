@@ -264,7 +264,10 @@ async def get_character_state(
         "tired": "微倦犯困",
         "annoyed": "傲娇小脾气",
         "reflective": "沉思感触",
-    }.get(char_state.mood.value.lower(), char_state.mood.value)
+        "neutral": "平静从容",
+        "low": "低落轻郁",
+        "irritated": "有些气恼",
+    }.get(char_state.mood.value.lower(), "恬淡平稳")
 
     emo_zh = {
         "AMUSED": "逗趣开心",
@@ -278,7 +281,19 @@ async def get_character_state(
         "SURPRISED": "惊讶好奇",
         "AFFECTIONATE": "亲昵依赖",
         "NEUTRAL": "平和自如",
-    }.get(emotion_state.emotion_type.value.upper(), emotion_state.emotion_type.value)
+        "HAPPY": "开心欢欣",
+        "CONTENT": "温馨恬淡",
+        "EXCITED": "雀跃期待",
+        "SAD": "难过失落",
+        "DISAPPOINTED": "有些失望",
+        "WORRIED": "担心挂念",
+        "FRUSTRATED": "郁闷苦恼",
+        "IRRITATED": "有些烦躁",
+        "ANGRY": "生气恼怒",
+        "LONELY": "有些寂寞",
+        "EMBARRASSED": "羞涩脸红",
+        "NERVOUS": "略带紧张",
+    }.get(emotion_state.emotion_type.value.upper(), "平和自如")
 
     if mood_zh == emo_zh or emo_zh == "平和自如":
         natural_mood_label = mood_zh
@@ -884,9 +899,10 @@ def _is_valid_model_file(f: Path) -> bool:
         import json
         with open(f, "r", encoding="utf-8") as fp:
             data = json.load(fp)
-            if "FileReferences" in data:
-                file_refs = data.get("FileReferences")
-                if not file_refs or (not file_refs.get("Moc") and not file_refs.get("Textures")):
+            if not isinstance(data, dict):
+                return False
+            if f.name.lower() == "index.json":
+                if "FileReferences" not in data and "model" not in data and "textures" not in data:
                     return False
         return True
     except Exception:

@@ -88,12 +88,12 @@ export const PresenceHeader: React.FC<PresenceHeaderProps> = ({
     <header className="presence-header">
       <div className="presence-left">
         <div className={`avatar-container ${isGenerating ? "generating" : isOnline ? "online" : "offline"}`}>
-          <div className="avatar">晚</div>
+          <div className="avatar">{characterState?.name ? characterState.name[0] : "棠"}</div>
           <span className="status-dot" />
         </div>
         <div className="character-info">
           <div className="name-row">
-            <span className="character-name">{characterState?.name || "Aevum · 晚晚"}</span>
+            <span className="character-name">{characterState?.name || "Aevum · 苏棠"}</span>
             <span className={`health-badge ${isOnline ? "online" : "offline"}`}>
               {isOnline ? "在线" : "连接中"}
             </span>
@@ -105,7 +105,7 @@ export const PresenceHeader: React.FC<PresenceHeaderProps> = ({
           </div>
           <div className="presence-status" title={presenceText}>
             {isGenerating ? (
-              <span className="generating-text">晚晚正在思考与打字中...</span>
+              <span className="generating-text">{characterState?.name || "苏棠"}正在思考与打字中...</span>
             ) : (
               <span>{presenceText}</span>
             )}

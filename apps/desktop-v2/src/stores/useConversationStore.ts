@@ -87,18 +87,22 @@ export const useConversationStore = create<ConversationStoreState>((set, get) =>
       await get().fetchConversations();
       const list = get().conversations;
       if (list.length > 0) {
-        // Priority 1: If current saved conversation has messages, keep it
+        // Find conversation with maximum messages (the primary rich conversation)
+        const sortedByMessages = [...list].sort((a, b) => b.message_count - a.message_count);
+        const maxItem = sortedByMessages[0];
+
         const currentId = get().activeConversationId;
         const currentItem = list.find((c) => c.id === currentId);
-        if (currentItem && currentItem.message_count > 0) {
+
+        // If currentItem exists and has substantial messages (or is maxItem), keep it
+        if (currentItem && (currentItem.id === maxItem?.id || currentItem.message_count >= 20)) {
           await get().selectConversation(currentItem.id);
           return;
         }
 
-        // Priority 2: Select the conversation that has chat history
-        const activeWithMessages = list.find((c) => c.message_count > 0);
-        if (activeWithMessages) {
-          await get().selectConversation(activeWithMessages.id);
+        // If there is a conversation with history (e.g. 356 messages), prioritize it over empty/short ones
+        if (maxItem && maxItem.message_count > 0) {
+          await get().selectConversation(maxItem.id);
           return;
         }
 

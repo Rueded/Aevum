@@ -249,7 +249,22 @@ class RelationshipService:
                 )
 
         await self._session.commit()
-        return await self.get_relationship_state(relationship_id=relationship_id)
+        updated_state = await self.get_relationship_state(relationship_id=relationship_id)
+        try:
+            from app.core.firestore_sync import sync_relationship_to_firestore
+            sync_relationship_to_firestore(
+                user_id=updated_state.user_id,
+                affection=updated_state.affection,
+                familiarity=updated_state.familiarity,
+                trust=updated_state.trust,
+                comfort=updated_state.comfort,
+                attachment=updated_state.attachment,
+                respect=updated_state.respect,
+                version=updated_state.version,
+            )
+        except Exception:
+            pass
+        return updated_state
 
     async def _persist_initial_state(self, initial: RelationshipState) -> None:
         """Persist the initial RelationshipRecord to SQLite."""

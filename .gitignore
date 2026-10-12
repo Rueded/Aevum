@@ -60,6 +60,9 @@ data/
 .env.*.local
 *.pem
 *.key
+*firebase*.json
+serviceAccountKey*.json
+
 
 # IDE & Editor Files
 .vscode/*

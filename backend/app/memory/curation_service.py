@@ -93,8 +93,17 @@ def check_memory_duplicate(
 
         # SequenceMatcher ratio for slight paraphrases / parenthetical annotations
         seq_ratio = difflib.SequenceMatcher(None, norm_content, norm_mem).ratio()
-        if seq_ratio >= 0.75:
+        if seq_ratio >= 0.70:
             return mem, f"Semantic duplicate (similarity {seq_ratio:.2f}) of existing memory."
+
+        # Character n-gram overlap for Chinese sentences
+        ngrams_c = _get_char_ngrams(norm_content, n=2)
+        ngrams_m = _get_char_ngrams(norm_mem, n=2)
+        if ngrams_c and ngrams_m:
+            overlap = len(ngrams_c & ngrams_m)
+            min_ngrams = min(len(ngrams_c), len(ngrams_m))
+            if min_ngrams >= 4 and (overlap / min_ngrams) >= 0.60:
+                return mem, f"N-gram overlap duplicate ({overlap / min_ngrams:.2f}) of existing memory."
 
         # Key content tokens overlap (ignoring common grammatical words)
         stopwords = {
@@ -107,7 +116,7 @@ def check_memory_duplicate(
         if tokens_c and tokens_m:
             common_tokens = tokens_c & tokens_m
             min_len = min(len(tokens_c), len(tokens_m))
-            if min_len >= 3 and (len(common_tokens) / min_len) >= 0.65:
+            if min_len >= 3 and (len(common_tokens) / min_len) >= 0.60:
                 return mem, f"Keyword overlap duplicate ({len(common_tokens) / min_len:.2f}) of existing memory."
 
         # Special anchor: user name representation across languages
@@ -115,7 +124,7 @@ def check_memory_duplicate(
             return mem, "Anchor entity '白开水' duplicate of existing memory."
 
         # Common named entity anchors (avoid duplicate preferences about the same venue/topic)
-        for anchor in ("horizon grill", "rabbit hole", "chiikawa", "robot dreams", "小橘", "xiao ju", "sembreak"):
+        for anchor in ("horizon grill", "rabbit hole", "chiikawa", "小橘", "xiao ju", "sembreak"):
             if anchor in norm_content and anchor in norm_mem:
                 return mem, f"Named anchor entity '{anchor}' duplicate of existing memory."
 

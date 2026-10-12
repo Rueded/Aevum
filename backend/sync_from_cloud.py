@@ -49,6 +49,29 @@ try:
         mem_count = cur.fetchone()[0]
         con.close()
 
+        # Anti-wipe protection: prevent empty newly-deployed cloud container from wiping local data
+        local_msg_count = 0
+        if db_path.exists():
+            try:
+                local_con = sqlite3.connect(str(db_path))
+                local_cur = local_con.cursor()
+                local_cur.execute("SELECT count(*) FROM messages")
+                local_msg_count = local_cur.fetchone()[0]
+                local_con.close()
+            except Exception:
+                local_msg_count = 0
+
+        if local_msg_count > msg_count and msg_count == 0:
+            print(f"⚠️ 警告: 云端数据库为空 (0条)，而本地已有 {local_msg_count} 条宝贵对话！")
+            print("🛑 为保护您的数据安全，已自动拦截此次覆盖！")
+            print("💡 如果云端刚重新部署，请先运行 python backend/sync_to_cloud.py 将本地数据推送到云端。")
+            if temp_path.exists():
+                try:
+                    os.remove(temp_path)
+                except Exception:
+                    pass
+            exit(1)
+
         # Clean WAL / SHM
         for ext in ["aevum.db-wal", "aevum.db-shm"]:
             wal_file = Path(__file__).parent / ext

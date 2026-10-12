@@ -370,7 +370,7 @@ export const DevCognitiveInspector: React.FC<DevCognitiveInspectorProps> = ({
             <span style={{ fontSize: "1.3rem" }}>🧠</span>
             <div>
               <h2 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 600 }}>
-                Aevum 开发者心智透视面板 · [{editName || charState?.name || "晚晚"}] (创世蓝图 v{blueprint?.version || 1})
+                Aevum 开发者心智透视面板 · [{editName || charState?.name || "苏棠"}] (创世蓝图 v{blueprint?.version || 1})
               </h2>
               <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>
                 快捷键: Ctrl+Shift+D | 当前生活: {charState?.current_activity || "休息中"} @ {charState?.current_location || "家中"} | 状态: {charState?.natural_mood || "Calm"} | 关系: {relationship?.summary || "相识"}
@@ -880,7 +880,7 @@ export const DevCognitiveInspector: React.FC<DevCognitiveInspectorProps> = ({
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      placeholder="如: 晚晚 / Aevum"
+                      placeholder="如: 苏棠 / Aevum"
                       style={{
                         width: "100%",
                         padding: "8px 12px",

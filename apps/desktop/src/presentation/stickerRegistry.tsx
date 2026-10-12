@@ -146,7 +146,7 @@ export const STICKER_REGISTRY: Record<string, StickerItem> = {
         <path d="M86 36L94 44M94 36L86 44M84 40H96M90 34V46" stroke="#F5222D" strokeWidth="2" strokeLinecap="round" />
         {/* Steam puffs */}
         <path d="M24 60C20 58 18 64 22 66" stroke="#8C8C8C" strokeWidth="2" strokeLinecap="round" />
-        <text x="60" y="108" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#CF1322">哼！不理你了！</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="11" textLength="80" lengthAdjust="spacingAndGlyphs" fontWeight="bold" fill="#CF1322">哼！不理你了！</text>
       </svg>
     ),
   },
@@ -227,7 +227,7 @@ export const STICKER_REGISTRY: Record<string, StickerItem> = {
         {/* Happy squint eyes */}
         <path d="M46 52L52 56L46 60" stroke="#135200" strokeWidth="2" strokeLinecap="round" />
         <path d="M74 52L68 56L74 60" stroke="#135200" strokeWidth="2" strokeLinecap="round" />
-        <text x="60" y="108" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#237804">嚼嚼嚼~开饭！</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="11" textLength="80" lengthAdjust="spacingAndGlyphs" fontWeight="bold" fill="#237804">嚼嚼嚼~开饭！</text>
       </svg>
     ),
   },
@@ -252,7 +252,7 @@ export const STICKER_REGISTRY: Record<string, StickerItem> = {
         <text x="32" y="40" fontSize="14" fontWeight="bold" fill="#8C8C8C">Z</text>
         <text x="44" y="30" fontSize="18" fontWeight="bold" fill="#595959">Z</text>
         <text x="58" y="22" fontSize="22" fontWeight="bold" fill="#262626">Z</text>
-        <text x="60" y="108" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#595959">彻底躺平，别叫我</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="10.5" textLength="86" lengthAdjust="spacingAndGlyphs" fontWeight="bold" fill="#595959">彻底躺平，别叫我</text>
       </svg>
     ),
   },
@@ -335,7 +335,7 @@ export const STICKER_REGISTRY: Record<string, StickerItem> = {
         <path d="M52 74C56 78 64 80 72 74" stroke="#5E3E0E" strokeWidth="2.5" strokeLinecap="round" />
         {/* Black nose */}
         <ellipse cx="60" cy="68" rx="4" ry="3" fill="#382103" />
-        <text x="60" y="108" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#A86F1A">就这？懂的都懂</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="10.5" textLength="84" lengthAdjust="spacingAndGlyphs" fontWeight="bold" fill="#A86F1A">就这？懂的都懂</text>
       </svg>
     ),
   },
@@ -407,7 +407,7 @@ export const STICKER_REGISTRY: Record<string, StickerItem> = {
         <path d="M64 42C62 36 66 32 64 26" stroke="#95DE64" strokeWidth="2.5" strokeLinecap="round" />
         {/* Tea saucer */}
         <ellipse cx="60" cy="86" rx="28" ry="4" fill="#B5F5EC" stroke="#006D75" strokeWidth="1.5" />
-        <text x="60" y="108" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#006D75">优雅喝茶，看戏</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="10.5" textLength="84" lengthAdjust="spacingAndGlyphs" fontWeight="bold" fill="#006D75">优雅喝茶，看戏</text>
       </svg>
     ),
   },
@@ -434,7 +434,7 @@ export const STICKER_REGISTRY: Record<string, StickerItem> = {
         {/* Ribbons */}
         <path d="M68 34C74 28 80 34 86 28" stroke="#FF4D4F" strokeWidth="2" strokeLinecap="round" fill="none" />
         <path d="M80 44C86 38 92 44 98 38" stroke="#1890FF" strokeWidth="2" strokeLinecap="round" fill="none" />
-        <text x="60" y="110" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#D46B08">好耶！芜湖起飞！</text>
+        <text x="60" y="110" textAnchor="middle" fontSize="11" textLength="86" lengthAdjust="spacingAndGlyphs" fontWeight="bold" fill="#D46B08">好耶！芜湖起飞！</text>
       </svg>
     ),
   },
@@ -458,7 +458,7 @@ export const STICKER_REGISTRY: Record<string, StickerItem> = {
           <rect x="-2" y="24" width="16" height="4" fill="#8C8C8C" />
           <rect x="2" y="28" width="8" height="12" fill="#874D00" />
         </g>
-        <text x="60" y="108" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#CF1322">你再说一遍试试？</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="10.5" textLength="86" lengthAdjust="spacingAndGlyphs" fontWeight="bold" fill="#CF1322">你再说一遍试试？</text>
       </svg>
     ),
   },
@@ -494,7 +494,7 @@ export const STICKER_REGISTRY: Record<string, StickerItem> = {
         <path d="M22 28C22 24 26 22 29 25C32 22 36 24 36 28C36 33 29 37 29 37C29 37 22 33 22 28Z" fill="#FF4D4F" />
         <path d="M92 24C92 21 95 19 97 21C99 19 102 21 102 24C102 28 97 31 97 31C97 31 92 28 92 24Z" fill="#FF7875" />
         {/* Caption */}
-        <text x="60" y="108" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#C41D7F">讨厌啦……害羞了</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="10.5" textLength="86" lengthAdjust="spacingAndGlyphs" fontWeight="bold" fill="#C41D7F">讨厌啦……害羞了</text>
       </svg>
     ),
   },
@@ -521,7 +521,7 @@ export const STICKER_REGISTRY: Record<string, StickerItem> = {
         {/* Wavy mouth */}
         <path d="M48 76C52 74 58 74 62 76" stroke="#614700" strokeWidth="2" strokeLinecap="round" />
         {/* Caption */}
-        <text x="60" y="108" textAnchor="middle" fontSize="13" fontWeight="bold" fill="#D48806">没眼看……脑壳疼</text>
+        <text x="60" y="108" textAnchor="middle" fontSize="10.5" textLength="86" lengthAdjust="spacingAndGlyphs" fontWeight="bold" fill="#D48806">没眼看……脑壳疼</text>
       </svg>
     ),
   },

@@ -86,37 +86,35 @@ export const MobileChatView: React.FC<MobileChatViewProps> = ({
           </div>
           <div className={styles.nameMeta}>
             <div className={styles.nameRow}>
-              <span
-                className={styles.companionName}
+              <button
+                type="button"
+                className={styles.companionNameBtn}
                 onClick={onOpenCompanionSwitcher}
-                style={{ cursor: onOpenCompanionSwitcher ? "pointer" : "default" }}
-                title={onOpenCompanionSwitcher ? "切换伴侣人设" : undefined}
+                disabled={!onOpenCompanionSwitcher}
+                title="点击切换伴侣人设"
               >
-                {characterName}
-              </span>
+                <span className={styles.companionNameText}>{characterName}</span>
+                <span className={styles.switchChevron}>▾</span>
+              </button>
               <span className={styles.moodBadge}>
                 {characterState?.natural_mood || characterState?.mood || "平静"}
               </span>
-              <span
-                className={styles.moodBadge}
-                style={{
-                  background: "rgba(236, 72, 153, 0.15)",
-                  color: "#f472b6",
-                  border: "1px solid rgba(236, 72, 153, 0.3)",
-                  cursor: "pointer",
-                }}
+              <button
+                type="button"
+                className={styles.bondBadgeBtn}
                 onClick={() => setMobileDrawerTab("bond")}
                 title={`好感度: ${Math.round((relationship?.affection ?? 0.64) * 100)}% · 信任度: ${Math.round((relationship?.trust ?? 0.8) * 100)}%`}
               >
                 💖 {Math.round((relationship?.affection ?? 0.64) * 100)}%
-              </span>
+              </button>
             </div>
             <div
               className={styles.locationSubtitle}
               onClick={() => setIsDatingModalOpen(true)}
               title="点击切换约会地点与现场"
             >
-              {statusSummary}
+              <span className={styles.locationText}>{statusSummary}</span>
+              <span className={styles.locationArrow}>›</span>
             </div>
           </div>
         </div>
@@ -232,11 +230,24 @@ export const MobileChatView: React.FC<MobileChatViewProps> = ({
               <div className={styles.drawerCompanionMeta}>
                 <div className={styles.drawerCompanionTitleRow}>
                   <span className={styles.drawerCompanionName}>{characterName}</span>
+                  {onOpenCompanionSwitcher && (
+                    <button
+                      type="button"
+                      className={styles.drawerSwitchBtn}
+                      onClick={() => {
+                        setMobileDrawerTab(null);
+                        onOpenCompanionSwitcher();
+                      }}
+                      title="切换伴侣人设"
+                    >
+                      换人设 ▾
+                    </button>
+                  )}
                   <span className={styles.moodBadge}>
                     {characterState?.natural_mood || characterState?.mood || "平静"}
                   </span>
                   <span className={styles.bondBadge}>
-                    💖 好感度 {Math.round((relationship?.affection ?? 0.64) * 100)}%
+                    💖 {Math.round((relationship?.affection ?? 0.64) * 100)}%
                   </span>
                 </div>
                 <div

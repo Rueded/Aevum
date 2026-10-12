@@ -69,14 +69,24 @@
 
 .closeBtn {
   color: var(--text-tertiary);
-  font-size: 14px;
-  padding: 2px 6px;
-  border-radius: var(--radius-xs);
+  font-size: 15px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all var(--transition-fast);
 }
 
-.closeBtn:hover {
+.closeBtn:hover,
+.closeBtn:active {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .recentStrip {
@@ -229,18 +239,33 @@
   gap: 6px;
 }
 
+.backdrop {
+  display: none;
+}
+
 @media (max-width: 640px) {
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 999;
+  }
+
   .popover {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     width: 100%;
-    height: 55vh;
-    max-height: 420px;
+    height: 60dvh;
+    max-height: 460px;
     border-radius: 20px 20px 0 0;
     border-bottom: none;
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.65);
     z-index: 1000;
+    padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
   }
 }

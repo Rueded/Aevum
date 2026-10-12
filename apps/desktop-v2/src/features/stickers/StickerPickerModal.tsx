@@ -86,7 +86,9 @@ export const StickerPickerModal: React.FC<StickerPickerModalProps> = ({
   };
 
   return (
-    <div className={styles.popover}>
+    <>
+      <div className={styles.backdrop} onClick={onClose} />
+      <div className={styles.popover}>
       <div className={styles.header}>
         <div className={styles.title}>
           <span>🎨 表情包斗图库</span>
@@ -225,5 +227,6 @@ export const StickerPickerModal: React.FC<StickerPickerModalProps> = ({
         )}
       </div>
     </div>
-  );
+  </>
+);
 };

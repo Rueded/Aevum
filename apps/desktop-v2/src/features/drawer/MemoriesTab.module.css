@@ -34,15 +34,28 @@
   gap: 6px;
   margin-bottom: 12px;
   flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+
+.filterBar::-webkit-scrollbar {
+  display: none;
 }
 
 .filterPill {
   font-size: 12px;
-  padding: 4px 10px;
+  padding: 6px 12px;
+  min-height: 32px;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.04);
   color: var(--text-secondary);
   transition: all var(--transition-fast);
+  white-space: nowrap;
+  touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
 }
 
 .filterPill:hover {
@@ -115,9 +128,22 @@
 .deleteBtn {
   color: var(--text-tertiary);
   font-size: 13px;
-  padding: 2px 6px;
+  padding: 6px 10px;
+  min-width: 34px;
+  min-height: 34px;
   border-radius: var(--radius-xs);
   transition: all var(--transition-fast);
+  touch-action: manipulation;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.deleteBtn::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
 }
 
 .deleteBtn:hover {

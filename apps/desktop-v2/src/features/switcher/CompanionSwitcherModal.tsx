@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../../api";
 import type { CompanionOverviewItem } from "../../types";
+import styles from "./CompanionSwitcherModal.module.css";
 
 interface CompanionSwitcherModalProps {
   isOpen: boolean;
@@ -142,61 +143,28 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
 
   return (
     <div
-      className="modal-overlay"
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: "rgba(0, 0, 0, 0.78)",
-        backdropFilter: "blur(8px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 2050,
-      }}
+      className={styles.overlay}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
-        className="modal-container"
-        style={{
-          width: "640px",
-          maxWidth: "94vw",
-          maxHeight: "88vh",
-          overflowY: "auto",
-          background: "#161622",
-          border: "1px solid rgba(255, 255, 255, 0.12)",
-          borderRadius: "18px",
-          padding: "24px",
-          boxShadow: "0 24px 60px rgba(0, 0, 0, 0.75)",
-          color: "#e2e8f0",
-        }}
-      >
+      <div className={styles.container}>
         {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+        <div className={styles.header}>
           <div>
-            <h2 style={{ margin: 0, fontSize: "19px", fontWeight: 700, display: "flex", alignItems: "center", gap: "8px" }}>
+            <h2 className={styles.headerTitle}>
               <span>👥</span>
               <span>伴侣人设选择与切换</span>
             </h2>
-            <p style={{ margin: "6px 0 0 0", fontSize: "12.5px", color: "rgba(255, 255, 255, 0.55)", lineHeight: 1.5 }}>
+            <p className={styles.headerSubtitle}>
               自由切换不同的陪伴者。苏棠与新人设之间<strong>记忆独立、关系好感独立、对话记录互不干扰</strong>，随时可无缝切回。
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "rgba(255,255,255,0.6)",
-              fontSize: "20px",
-              cursor: "pointer",
-              padding: "4px 8px",
-            }}
+            className={styles.closeBtn}
+            aria-label="关闭"
           >
             ✕
           </button>
@@ -204,72 +172,30 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
 
         {/* Feedback Alerts */}
         {errorMsg && (
-          <div
-            style={{
-              padding: "10px 14px",
-              marginBottom: "14px",
-              borderRadius: "8px",
-              background: "rgba(239, 68, 68, 0.15)",
-              border: "1px solid rgba(239, 68, 68, 0.35)",
-              color: "#fca5a5",
-              fontSize: "12.5px",
-            }}
-          >
+          <div className={styles.alertError}>
             ⚠️ {errorMsg}
           </div>
         )}
 
         {statusMsg && (
-          <div
-            style={{
-              padding: "10px 14px",
-              marginBottom: "14px",
-              borderRadius: "8px",
-              background: "rgba(34, 197, 94, 0.15)",
-              border: "1px solid rgba(34, 197, 94, 0.35)",
-              color: "#86efac",
-              fontSize: "12.5px",
-            }}
-          >
+          <div className={styles.alertSuccess}>
             ✨ {statusMsg}
           </div>
         )}
 
         {/* Action Toggle (List vs Create) */}
-        <div style={{ display: "flex", gap: "10px", marginBottom: "18px" }}>
+        <div className={styles.modeToggle}>
           <button
             type="button"
             onClick={() => setIsCreating(false)}
-            style={{
-              flex: 1,
-              padding: "8px 14px",
-              borderRadius: "8px",
-              border: !isCreating ? "1px solid rgba(99, 102, 241, 0.5)" : "1px solid rgba(255, 255, 255, 0.1)",
-              background: !isCreating ? "rgba(99, 102, 241, 0.2)" : "rgba(255, 255, 255, 0.04)",
-              color: !isCreating ? "#c7d2fe" : "rgba(255, 255, 255, 0.7)",
-              fontSize: "13px",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
+            className={`${styles.modeBtn} ${!isCreating ? styles.modeBtnActiveList : ""}`}
           >
             现有伴侣人设 ({companions.length})
           </button>
           <button
             type="button"
             onClick={() => setIsCreating(true)}
-            style={{
-              flex: 1,
-              padding: "8px 14px",
-              borderRadius: "8px",
-              border: isCreating ? "1px solid rgba(168, 85, 247, 0.5)" : "1px solid rgba(255, 255, 255, 0.1)",
-              background: isCreating ? "rgba(168, 85, 247, 0.2)" : "rgba(255, 255, 255, 0.04)",
-              color: isCreating ? "#d8b4fe" : "rgba(255, 255, 255, 0.7)",
-              fontSize: "13px",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
+            className={`${styles.modeBtn} ${isCreating ? styles.modeBtnActiveCreate : ""}`}
           >
             ➕ 创建全新独立新人设
           </button>
@@ -277,7 +203,7 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
 
         {/* Mode 1: Companion List */}
         {!isCreating && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div className={styles.companionList}>
             {loading && companions.length === 0 ? (
               <div style={{ textAlign: "center", padding: "30px", color: "rgba(255, 255, 255, 0.5)" }}>
                 正在加载伴侣列表...
@@ -295,126 +221,64 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
                 return (
                   <div
                     key={comp.id}
-                    style={{
-                      background: isCurActive ? "rgba(99, 102, 241, 0.12)" : "rgba(255, 255, 255, 0.03)",
-                      border: isCurActive
-                        ? "1.5px solid rgba(99, 102, 241, 0.55)"
-                        : "1px solid rgba(255, 255, 255, 0.08)",
-                      borderRadius: "14px",
-                      padding: "16px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "16px",
-                      transition: "all 0.2s ease",
-                    }}
+                    className={`${styles.companionCard} ${isCurActive ? styles.companionCardActive : ""}`}
                   >
-                    {/* Left: Avatar & Info */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "14px", flex: 1, minWidth: 0 }}>
+                    {/* Main Avatar & Meta Info */}
+                    <div className={styles.cardMainInfo}>
                       <div
-                        style={{
-                          width: "48px",
-                          height: "48px",
-                          borderRadius: "50%",
-                          background: isCurActive
-                            ? "linear-gradient(135deg, #6366f1, #a855f7)"
-                            : "rgba(255, 255, 255, 0.1)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "20px",
-                          fontWeight: 700,
-                          color: "#ffffff",
-                          flexShrink: 0,
-                          boxShadow: isCurActive ? "0 4px 14px rgba(99, 102, 241, 0.4)" : "none",
-                        }}
+                        className={`${styles.avatarCircle} ${
+                          isCurActive ? styles.avatarCircleActive : ""
+                        }`}
                       >
                         {comp.avatar_url || (comp.name ? comp.name[0] : "伴")}
                       </div>
 
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "4px" }}>
-                          <span style={{ fontSize: "16px", fontWeight: 700, color: "#ffffff" }}>
+                      <div className={styles.cardMetaContent}>
+                        <div className={styles.nameRow}>
+                          <span className={styles.nameText}>
                             {comp.name}
                           </span>
-                          <span
-                            style={{
-                              fontSize: "11px",
-                              padding: "2px 8px",
-                              borderRadius: "10px",
-                              background: "rgba(255, 255, 255, 0.08)",
-                              color: "rgba(255, 255, 255, 0.75)",
-                            }}
-                          >
+                          <span className={styles.roleBadge}>
                             {comp.role}
                           </span>
                           {isCurActive && (
-                            <span
-                              style={{
-                                fontSize: "11px",
-                                fontWeight: 600,
-                                padding: "2px 8px",
-                                borderRadius: "10px",
-                                background: "rgba(34, 197, 94, 0.2)",
-                                color: "#4ade80",
-                                border: "1px solid rgba(34, 197, 94, 0.4)",
-                              }}
-                            >
+                            <span className={styles.activeStatusBadge}>
                               ● 当前陪伴中
                             </span>
                           )}
                         </div>
 
                         {comp.description && (
-                          <div
-                            style={{
-                              fontSize: "12px",
-                              color: "rgba(255, 255, 255, 0.6)",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              marginBottom: "8px",
-                            }}
-                            title={comp.description}
-                          >
+                          <div className={styles.cardDesc} title={comp.description}>
                             {comp.description}
                           </div>
                         )}
 
                         {/* Metrics Badges */}
-                        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "11.5px" }}>
-                          <span style={{ color: "#93c5fd", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                        <div className={styles.metricsRow}>
+                          <span className={styles.metricPill} style={{ color: "#93c5fd" }}>
                             🧠 <strong>{comp.memory_count}</strong> 条共同记忆
                           </span>
-                          <span style={{ color: "#c084fc", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                          <span className={styles.metricPill} style={{ color: "#c084fc" }}>
                             💬 <strong>{comp.message_count}</strong> 条历史记录
                           </span>
-                          <span style={{ color: "#f472b6", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                          <span className={styles.metricPill} style={{ color: "#f472b6" }}>
                             ❤️ 好感度 <strong>{affectionPct}%</strong>
                           </span>
-                          <span style={{ color: "#34d399", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                          <span className={styles.metricPill} style={{ color: "#34d399" }}>
                             🤝 信任度 <strong>{trustPct}%</strong>
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right: Switch Action Button */}
-                    <div>
+                    {/* Switch Action Button (prominent touch target on mobile) */}
+                    <div className={styles.cardActionWrap}>
                       {isCurActive ? (
                         <button
                           type="button"
                           disabled
-                          style={{
-                            padding: "8px 16px",
-                            borderRadius: "8px",
-                            background: "rgba(255, 255, 255, 0.05)",
-                            border: "1px solid rgba(255, 255, 255, 0.15)",
-                            color: "rgba(255, 255, 255, 0.4)",
-                            fontSize: "12.5px",
-                            fontWeight: 600,
-                            cursor: "default",
-                          }}
+                          className={styles.activeDisabledBtn}
                         >
                           使用中
                         </button>
@@ -423,18 +287,7 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
                           type="button"
                           disabled={loading}
                           onClick={() => handleSwitch(comp.id)}
-                          style={{
-                            padding: "8px 16px",
-                            borderRadius: "8px",
-                            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                            border: "none",
-                            color: "#ffffff",
-                            fontSize: "12.5px",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
-                            transition: "all 0.15s ease",
-                          }}
+                          className={styles.switchActionBtn}
                         >
                           切换为此人设
                         </button>
@@ -449,27 +302,19 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
 
         {/* Mode 2: Create Brand New Independent Companion */}
         {isCreating && (
-          <form onSubmit={handleCreateSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <form onSubmit={handleCreateSubmit} className={styles.createForm}>
             {/* Presets Bar */}
-            <div style={{ background: "rgba(255, 255, 255, 0.02)", padding: "12px", borderRadius: "10px", border: "1px solid rgba(255, 255, 255, 0.06)" }}>
-              <div style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.55)", marginBottom: "8px" }}>
+            <div className={styles.presetsBox}>
+              <div className={styles.presetsTitle}>
                 💡 快速灵感预设（点击一键填入）：
               </div>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <div className={styles.presetsWrap}>
                 {PRESET_NEW_PERSONAS.map((p) => (
                   <button
                     key={p.name}
                     type="button"
                     onClick={() => handleApplyPreset(p)}
-                    style={{
-                      background: "rgba(255, 255, 255, 0.06)",
-                      border: "1px solid rgba(255, 255, 255, 0.12)",
-                      borderRadius: "6px",
-                      padding: "5px 10px",
-                      fontSize: "12px",
-                      color: "#c7d2fe",
-                      cursor: "pointer",
-                    }}
+                    className={styles.presetBtn}
                   >
                     ✨ {p.name} · {p.occupation.split("/")[0]}
                   </button>
@@ -478,8 +323,8 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
             </div>
 
             {/* Field: Name */}
-            <div>
-              <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "rgba(255, 255, 255, 0.8)", marginBottom: "5px" }}>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>
                 伴侣姓名 / 昵称 *
               </label>
               <input
@@ -488,22 +333,13 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="例如：叶微凉、林晨、小夏..."
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "rgba(255, 255, 255, 0.06)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  borderRadius: "8px",
-                  padding: "9px 12px",
-                  color: "#ffffff",
-                  fontSize: "13.5px",
-                }}
+                className={styles.fieldInput}
               />
             </div>
 
             {/* Field: Occupation */}
-            <div>
-              <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "rgba(255, 255, 255, 0.8)", marginBottom: "5px" }}>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>
                 身份 / 职业标签
               </label>
               <input
@@ -511,22 +347,13 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
                 value={newOccupation}
                 onChange={(e) => setNewOccupation(e.target.value)}
                 placeholder="例如：临床医学系大三学生、自由摄影师、插画师..."
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "rgba(255, 255, 255, 0.06)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  borderRadius: "8px",
-                  padding: "9px 12px",
-                  color: "#ffffff",
-                  fontSize: "13.5px",
-                }}
+                className={styles.fieldInput}
               />
             </div>
 
             {/* Field: Personality Traits */}
-            <div>
-              <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "rgba(255, 255, 255, 0.8)", marginBottom: "5px" }}>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>
                 核心性格标签 (逗号隔开)
               </label>
               <input
@@ -534,22 +361,13 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
                 value={newTraits}
                 onChange={(e) => setNewTraits(e.target.value)}
                 placeholder="例如：温柔, 清冷, 幽默, 执着..."
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "rgba(255, 255, 255, 0.06)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  borderRadius: "8px",
-                  padding: "9px 12px",
-                  color: "#ffffff",
-                  fontSize: "13.5px",
-                }}
+                className={styles.fieldInput}
               />
             </div>
 
             {/* Field: Background */}
-            <div>
-              <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "rgba(255, 255, 255, 0.8)", marginBottom: "5px" }}>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>
                 人物生活背景与日常写照
               </label>
               <textarea
@@ -557,24 +375,13 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
                 value={newBackground}
                 onChange={(e) => setNewBackground(e.target.value)}
                 placeholder="简短描述Ta的日常生活、习惯、爱好，或者与你初识的情景..."
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "rgba(255, 255, 255, 0.06)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  borderRadius: "8px",
-                  padding: "9px 12px",
-                  color: "#ffffff",
-                  fontSize: "13px",
-                  lineHeight: 1.5,
-                  resize: "vertical",
-                }}
+                className={styles.fieldTextarea}
               />
             </div>
 
             {/* Field: Speaking Style */}
-            <div>
-              <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "rgba(255, 255, 255, 0.8)", marginBottom: "5px" }}>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>
                 说话语调风格
               </label>
               <input
@@ -582,51 +389,23 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
                 value={newSpeakingStyle}
                 onChange={(e) => setNewSpeakingStyle(e.target.value)}
                 placeholder="例如：轻柔慢条斯理、开朗元气爱开玩笑、清冷克制..."
-                style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  background: "rgba(255, 255, 255, 0.06)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  borderRadius: "8px",
-                  padding: "9px 12px",
-                  color: "#ffffff",
-                  fontSize: "13px",
-                }}
+                className={styles.fieldInput}
               />
             </div>
 
             {/* Submit Button */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
+            <div className={styles.formFooter}>
               <button
                 type="button"
                 onClick={() => setIsCreating(false)}
-                style={{
-                  padding: "9px 18px",
-                  borderRadius: "8px",
-                  background: "rgba(255, 255, 255, 0.08)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  color: "rgba(255, 255, 255, 0.8)",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
+                className={styles.cancelBtn}
               >
                 取消
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                style={{
-                  padding: "9px 22px",
-                  borderRadius: "8px",
-                  background: "linear-gradient(135deg, #a855f7, #6366f1)",
-                  border: "none",
-                  color: "#ffffff",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: isSubmitting ? "not-allowed" : "pointer",
-                  boxShadow: "0 4px 14px rgba(168, 85, 247, 0.35)",
-                }}
+                className={styles.submitBtn}
               >
                 {isSubmitting ? "正在生成独立新人物..." : "✨ 生成并立即开始对话"}
               </button>

@@ -18,6 +18,7 @@
 .modal {
   width: 90%;
   max-width: 580px;
+  max-height: 90dvh;
   background: #14141e;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
@@ -26,7 +27,9 @@
   color: #f0f0f5;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .header {
@@ -113,8 +116,10 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
-  max-height: 320px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding-right: 4px;
 }
 
@@ -128,6 +133,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  touch-action: manipulation;
 }
 
 .presetCard:hover {
@@ -182,6 +188,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
 }
 
 .formGroup {
@@ -199,9 +210,9 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   color: #fff;
-  font-size: 13px;
+  font-size: 14px;
   outline: none;
 }
 
@@ -213,30 +224,79 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 8px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
 }
 
 .cancelBtn {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #ccc;
-  padding: 8px 16px;
+  padding: 9px 18px;
+  min-height: 40px;
   border-radius: 8px;
   cursor: pointer;
+  touch-action: manipulation;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .submitBtn {
   background: linear-gradient(135deg, #7b52ab, #9d65d4);
   border: none;
   color: #fff;
-  padding: 8px 20px;
+  padding: 9px 20px;
+  min-height: 40px;
   border-radius: 8px;
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
+  touch-action: manipulation;
   transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .submitBtn:hover {
   opacity: 0.9;
+}
+
+@media (max-width: 640px) {
+  .modal {
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 90dvh;
+    padding: 14px 12px;
+    gap: 10px;
+    border-radius: 16px;
+  }
+
+  .tabs {
+    gap: 6px;
+  }
+
+  .tabBtn {
+    flex: 1;
+    min-height: 36px;
+    text-align: center;
+    font-size: 13px;
+    padding: 6px 8px;
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .cancelBtn,
+  .submitBtn {
+    width: 100%;
+    min-height: 42px;
+    font-size: 13.5px;
+  }
 }

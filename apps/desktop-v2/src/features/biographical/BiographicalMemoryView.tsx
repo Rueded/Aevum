@@ -71,16 +71,20 @@ export const BiographicalMemoryView: React.FC = () => {
       </div>
 
       {/* Sub-tab Navigation */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 2, scrollbarWidth: "none" }}>
         <button
           type="button"
           onClick={() => setSelectedSubTab("milestones")}
           style={{
-            padding: "4px 10px",
+            padding: "6px 12px",
+            minHeight: 32,
             borderRadius: "var(--radius-full)",
             fontSize: 12,
             background: selectedSubTab === "milestones" ? "var(--accent-primary)" : "rgba(255,255,255,0.05)",
             color: selectedSubTab === "milestones" ? "#fff" : "var(--text-secondary)",
+            whiteSpace: "nowrap",
+            cursor: "pointer",
+            touchAction: "manipulation",
           }}
         >
           里程碑 ({data?.life_events.length || 0})
@@ -89,11 +93,15 @@ export const BiographicalMemoryView: React.FC = () => {
           type="button"
           onClick={() => setSelectedSubTab("preferences")}
           style={{
-            padding: "4px 10px",
+            padding: "6px 12px",
+            minHeight: 32,
             borderRadius: "var(--radius-full)",
             fontSize: 12,
             background: selectedSubTab === "preferences" ? "var(--accent-primary)" : "rgba(255,255,255,0.05)",
             color: selectedSubTab === "preferences" ? "#fff" : "var(--text-secondary)",
+            whiteSpace: "nowrap",
+            cursor: "pointer",
+            touchAction: "manipulation",
           }}
         >
           偏好根源 ({data?.preferences.length || 0})
@@ -102,11 +110,15 @@ export const BiographicalMemoryView: React.FC = () => {
           type="button"
           onClick={() => setSelectedSubTab("shared")}
           style={{
-            padding: "4px 10px",
+            padding: "6px 12px",
+            minHeight: 32,
             borderRadius: "var(--radius-full)",
             fontSize: 12,
             background: selectedSubTab === "shared" ? "var(--accent-primary)" : "rgba(255,255,255,0.05)",
             color: selectedSubTab === "shared" ? "#fff" : "var(--text-secondary)",
+            whiteSpace: "nowrap",
+            cursor: "pointer",
+            touchAction: "manipulation",
           }}
         >
           共同经历 ({data?.shared_episodes.length || 0})
@@ -115,11 +127,15 @@ export const BiographicalMemoryView: React.FC = () => {
           type="button"
           onClick={() => setSelectedSubTab("relational")}
           style={{
-            padding: "4px 10px",
+            padding: "6px 12px",
+            minHeight: 32,
             borderRadius: "var(--radius-full)",
             fontSize: 12,
             background: selectedSubTab === "relational" ? "var(--accent-primary)" : "rgba(255,255,255,0.05)",
             color: selectedSubTab === "relational" ? "#fff" : "var(--text-secondary)",
+            whiteSpace: "nowrap",
+            cursor: "pointer",
+            touchAction: "manipulation",
           }}
         >
           多维羁绊 (Rule 16)

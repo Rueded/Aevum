@@ -48,7 +48,7 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({ compac
           marginBottom: "12px",
           fontSize: "13px",
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
             <span>🎙️ 尚未获取音频设备访问权限，设备名称当前显示为通用标签。</span>
             <button
               type="button"
@@ -59,9 +59,10 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({ compac
                 color: "#18181b",
                 border: "none",
                 borderRadius: "4px",
-                padding: "4px 10px",
+                padding: "6px 12px",
                 fontWeight: 600,
                 cursor: "pointer",
+                touchAction: "manipulation",
               }}
             >
               {permLoading ? "请求中..." : "授权并读取设备"}
@@ -71,7 +72,7 @@ export const AudioDeviceSelector: React.FC<AudioDeviceSelectorProps> = ({ compac
         </div>
       )}
 
-      <div className="form-grid" style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "1fr 1fr", gap: "14px" }}>
+      <div className="form-grid" style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(auto-fit, minmax(240px, 1fr))", gap: "14px" }}>
         {/* Microphone Input */}
         <div className="field-group">
           <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

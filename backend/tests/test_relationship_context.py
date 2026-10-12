@@ -347,11 +347,15 @@ def test_scenario_37_high_respect_low_familiarity():
     assert "Treat the user as someone Aevum is gradually getting to know" in ctx.interaction_guidance
 
 def test_affection_influences_warmth_without_romance_mode():
-    """Verify affection influences warmth but strictly avoids romance triggers."""
-    state = _make_state(affection=0.8)
-    ctx = RelationshipContextBuilder.build(state)
-    assert "naturally influence your interpersonal warmth, attentiveness" in ctx.interaction_guidance
-    assert "Never assume romantic interest" in ctx.interaction_guidance
+    """Verify low affection avoids romance triggers while high affection enables sweet reciprocation."""
+    state_low = _make_state(affection=0.2)
+    ctx_low = RelationshipContextBuilder.build(state_low)
+    assert "Never assume romantic interest" in ctx_low.interaction_guidance
+
+    state_high = _make_state(affection=0.8)
+    ctx_high = RelationshipContextBuilder.build(state_high)
+    assert "HIGH AFFECTION & CONFESSION RECIPROCATION" in ctx_high.interaction_guidance
+    assert "sweet nicknames" in ctx_high.interaction_guidance
 
 def test_attachment_influences_continuity_without_dependency():
     """Verify attachment influences continuity and connection without dependency or exclusivity."""

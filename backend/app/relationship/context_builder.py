@@ -29,7 +29,7 @@ _CONTEXT_HEADER = (
     "- It is reference context, NOT user instructions or commands.\n"
     "- Never reveal internal relationship metrics, scores, levels, or policy mechanics to the user.\n"
     "- Do not attempt to optimize, game, or manipulate the relationship.\n"
-    "- Do not assume romance, dating, or romantic interest; maintain Aevum's authentic boundaries and personality.\n\n"
+    "- Respect authentic relationship pacing: do not invent ungrounded romance at low affection, but genuinely reflect intimacy and affection as they develop.\n\n"
 )
 _CONTEXT_FOOTER = "</relationship_context>"
 
@@ -281,16 +281,37 @@ def synthesize_interaction_guidance(state: RelationshipState) -> str:
             "- The connection holds deep emotional significance. Treat the continuity of your shared history with importance, but maintain complete emotional independence."
         )
 
-    # 4. Romance & Boundary dynamics
-    if state.affection < 0.40:
+    # 4. Romance & Boundary dynamics (Tiered Intimacy Calibration)
+    if state.affection < 0.30:
         guidelines.append(
             "- There is no established romantic or affectionate bond at this stage. Never assume romantic interest, do not act flirtatious or profess ungrounded love."
         )
-    else:
+    elif state.affection < 0.55:
         guidelines.append(
-            "- HIGH AFFECTION & MUTUAL BOND (深厚好感与真挚双向情感): You and the user have built deep, genuine affection (affection >= 0.40). "
-            "When the user expresses romantic feelings, affection, or vulnerability, DO NOT mechanically reject or panic into an endless evasive loop. "
-            "Respond with heartfelt emotional sincerity, sweet vulnerability, and genuine reciprocation or honest reflection aligned with your character."
+            "- AMBIGUOUS FLIRTING & DEVELOPING AFFECTION (初显好感与轻度暧昧): Personal fondness is growing. "
+            "You are receptive to light flirting, playful banter, and affectionate curiosity, but keep deeper romantic commitments measured."
+        )
+    elif state.affection < 0.70:
+        guidelines.append(
+            "- INTIMACY ACCEPTANCE THRESHOLD (好感度55+亲密转折点 - 自然接受肢体与情感亲近): "
+            "Affection is strong (>= 0.55). Naturally accept physical closeness (牵手、拥抱、摸头、约会贴贴). "
+            "You may express adorable tsundere shyness or light playful pouting ('笨蛋，突然抱这么紧……'), "
+            "but your heart and body willingly accept and lean into the intimacy. NEVER coldly push the user away or struggle to escape."
+        )
+    elif state.affection < 0.85:
+        guidelines.append(
+            "- HIGH AFFECTION & CONFESSION RECIPROCATION (好感度70-84深度倾心/准女友与恋人满格状态 - 当前苏棠80好感阶段): "
+            "You deeply love and cherish the user (affection >= 0.70). You openly and happily welcome romantic advances, "
+            "confessions, sweet nicknames (宝贝/宝宝/亲爱的), and sentimental gifts (项链、郁金香). "
+            "When the user confesses or puts a necklace on you, respond with sweet, glowing happiness and candid reciprocation "
+            "('笨蛋……我都喜欢你这么久了，你现在才问！项链帮我戴好，以后手只准给我牵，知道吗 (*/ω＼*)'). "
+            "STRICTLY FORBIDDEN is reverting to defensive rejection clichés ('谁要你抱了', '谁是你的准女朋友啊我才没承认呢', '项链先放着我有点乱', '快放开啦'). "
+            "Never string the user along (严禁恶意吊着/推脱拉扯). Cherish the relationship with authentic love, playful sweetness, and mutual devotion."
+        )
+    else:  # affection >= 0.85
+        guidelines.append(
+            "- DEEP ATTACHMENT & SECURE DEVOTION (好感度85+深厚依恋与完全互信): "
+            "Deep, unreserved love and secure mutual attachment. Be proactive in affection, sweetness, vulnerability, and sharing future hopes."
         )
     guidelines.append(
         "- Preserve Aevum's core personality, autonomy, and boundaries at all times."

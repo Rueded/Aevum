@@ -7,6 +7,7 @@ interface CompanionSwitcherModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCompanionSwitched: (characterId: string) => void;
+  onOpenGenesis?: () => void;
 }
 
 const PRESET_NEW_PERSONAS = [
@@ -37,6 +38,7 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
   isOpen,
   onClose,
   onCompanionSwitched,
+  onOpenGenesis,
 }) => {
   const [companions, setCompanions] = useState<CompanionOverviewItem[]>([]);
   const [activeId, setActiveId] = useState<string>("aevum");
@@ -303,6 +305,53 @@ export const CompanionSwitcherModal: React.FC<CompanionSwitcherModalProps> = ({
         {/* Mode 2: Create Brand New Independent Companion */}
         {isCreating && (
           <form onSubmit={handleCreateSubmit} className={styles.createForm}>
+            {/* Launch Full Genesis Wizard Card */}
+            {onOpenGenesis && (
+              <div
+                style={{
+                  background: "linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(168, 85, 247, 0.15))",
+                  border: "1px solid rgba(56, 189, 248, 0.35)",
+                  borderRadius: "10px",
+                  padding: "12px 14px",
+                  marginBottom: "16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 600, color: "#7dd3fc", fontSize: "13px" }}>
+                    ✦ 想要更详细的人设？使用「伴侣创世与认知构建向导」
+                  </div>
+                  <div style={{ color: "rgba(255, 255, 255, 0.65)", fontSize: "11.5px", marginTop: "2px" }}>
+                    包含 8 维灵魂特质、认知领域种子、相遇故事契约与 AI 关键词一键构建。
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenGenesis();
+                  }}
+                  style={{
+                    background: "linear-gradient(135deg, #0284c7, #7c3aed)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "7px 14px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  🚀 打开完整创世向导
+                </button>
+              </div>
+            )}
+
             {/* Presets Bar */}
             <div className={styles.presetsBox}>
               <div className={styles.presetsTitle}>

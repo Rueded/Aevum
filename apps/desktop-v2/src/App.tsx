@@ -259,6 +259,10 @@ export default function App() {
         isOpen={isSwitcherOpen}
         onClose={() => setIsSwitcherOpen(false)}
         onCompanionSwitched={handleCompanionSwitched}
+        onOpenGenesis={() => {
+          setIsSwitcherOpen(false);
+          setIsGenesisOpen(true);
+        }}
       />
 
       <SettingsModal

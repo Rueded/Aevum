@@ -136,7 +136,7 @@ class DialogueSituationAppraisalService:
                 and any(k in combined_text for k in ("沙发", "客厅", "打盹", "休息"))
             )
         ) and not any(k in combined_text for k in (
-            "出发", "去吃", "餐厅", "日料", "定食", "要不要去试试", "在路上", "选餐厅", "换衣服", "开门", "菜单", "点单", "去哪吃"
+            "阳台", "出发", "去吃", "餐厅", "日料", "定食", "要不要去试试", "在路上", "选餐厅", "换衣服", "开门", "菜单", "点单", "去哪吃"
         )):
             return DialogueSituation(
                 activity="在客厅沙发放松揉小橘",
@@ -144,6 +144,23 @@ class DialogueSituationAppraisalService:
                 status="ACTIVE",
                 duration_minutes=45,
                 idempotency_title="客厅沙发放松揉猫",
+            )
+
+        # -------------------------------------------------------------
+        # 4c. Home Balcony / Plants / Breeze / Xiao Ju on Balcony
+        # -------------------------------------------------------------
+        if any(k in ast_lower for k in (
+            "在阳台", "阳台看花", "阳台吹风", "阳台呢", "阳台上", "花花草草", "看植物", "打理植物", "阳台看风景", "看晚霞"
+        )) or (
+            any(k in combined_text for k in ("在阳台", "去阳台", "阳台"))
+            and any(k in combined_text for k in ("小橘", "花草", "植物", "吹风", "晚霞", "盆栽", "浇水"))
+        ):
+            return DialogueSituation(
+                activity="在阳台照顾花草吹风放空",
+                location="老家-阳台",
+                status="ACTIVE",
+                duration_minutes=45,
+                idempotency_title="阳台照顾花草吹风",
             )
 
         # -------------------------------------------------------------
@@ -232,13 +249,100 @@ class DialogueSituationAppraisalService:
         # 10. Post-Dining Mall Walk / Shopping
         # -------------------------------------------------------------
         is_dining_inquiry = any(k in usr_lower for k in ("吃饱了吗", "吃饱了么", "吃饱没", "吃饱了没", "还没吃饱", "吃饱了吗？", "吃饱了吗?"))
-        if not is_dining_inquiry and any(k in combined_text for k in ("我吃饱了", "买单了", "结账走", "买完单", "吃得好撑", "走吧去逛逛", "逛街去", "去商场逛逛", "消食散步")):
+        if not is_dining_inquiry and any(k in combined_text for k in ("我吃饱了", "买单了", "结账走", "买完单", "吃得好撑", "消食散步")):
             return DialogueSituation(
                 activity="商场闲逛散步/前往影城途中",
                 location="商场 (The Intermark Mall / Pavilion)",
                 status="ACTIVE",
                 duration_minutes=75,
                 idempotency_title="商场闲逛散步",
+            )
+
+        # -------------------------------------------------------------
+        # 10a. Pick-up / In Car / Passenger Seat / Transit
+        # -------------------------------------------------------------
+        is_pickup_transit = any(k in combined_text for k in (
+            "接到你", "接到她", "来接你", "我到了你出来", "上车吧", "上车了", "坐在副驾", "坐副驾",
+            "在车里", "坐在车里", "系好安全带", "在副驾驶", "开车带你", "兜风"
+        )) or (
+            any(k in usr_lower for k in ("我到了", "接你", "到了楼下", "在车上等你", "上车"))
+            and any(k in ast_lower for k in ("来啦", "这就下来", "上车", "副驾驶", "走吧", "系好", "出发"))
+        )
+        if is_pickup_transit and not any(k in combined_text for k in ("到超市了", "到店里了", "进商场了", "进店了")):
+            return DialogueSituation(
+                activity="坐在副驾驶/与对方在车上闲聊前往目的地",
+                location="车内 (副驾驶/前往目的地途中)",
+                status="ACTIVE",
+                duration_minutes=45,
+                idempotency_title="车内副驾闲聊兜风",
+            )
+
+        # -------------------------------------------------------------
+        # 10b. Supermarket & Grocery Shopping
+        # -------------------------------------------------------------
+        supermarket_keywords = ("超市", "逛超市", "买零食", "买食材", "推购物车", "生鲜区", "挑零食", "大润发", "aeon", "jaya grocer", "lotus", "买菜")
+        if any(k in combined_text for k in supermarket_keywords) and not any(
+            future_k in combined_text for future_k in ("明天", "改天", "下次再去超市", "改天去超市")
+        ):
+            return DialogueSituation(
+                activity="在超市推购物车挑选零食与食材",
+                location="超市零食与生鲜区 (Supermarket)",
+                status="ACTIVE",
+                duration_minutes=60,
+                idempotency_title="超市挑选零食食材",
+            )
+
+        # -------------------------------------------------------------
+        # 10c. Mall Shopping & Boutique Browsing
+        # -------------------------------------------------------------
+        mall_keywords = ("逛街", "逛商场", "试衣服", "买衣服", "挑小物件", "挑衣服", "商场逛逛", "文创店", "百货")
+        if any(k in combined_text for k in mall_keywords) and not any(
+            future_k in combined_text for future_k in ("明天", "改天", "下次再逛")
+        ):
+            return DialogueSituation(
+                activity="在商场悠闲逛街挑选小物件与试衣",
+                location="商场步行街与精品店",
+                status="ACTIVE",
+                duration_minutes=75,
+                idempotency_title="商场悠闲逛街购物",
+            )
+
+        # -------------------------------------------------------------
+        # 10d. Campus Classes & Lecture Hall
+        # -------------------------------------------------------------
+        campus_class_keywords = ("在教室", "上课呢", "在上课", "早八", "听讲座", "阶梯教室", "老师在讲", "专业课", "大课")
+        campus_class_negations = ("下课", "不上课", "翘课", "没上课", "放学", "逃课")
+        if any(k in combined_text for k in campus_class_keywords) and not any(k in combined_text for k in campus_class_negations):
+            return DialogueSituation(
+                activity="在大学阶梯教室认真上课听讲",
+                location="大学计算机系教学楼阶梯教室",
+                status="BUSY",
+                duration_minutes=90,
+                idempotency_title="大学阶梯教室上课",
+            )
+
+        # -------------------------------------------------------------
+        # 10e. Campus After-Class & Walkway
+        # -------------------------------------------------------------
+        if any(k in combined_text for k in ("刚下课", "下课了", "走出教室", "走出教学楼", "走在校园", "走在校道")):
+            return DialogueSituation(
+                activity="刚下课走出教学楼/走在校园林荫道",
+                location="大学校园林荫道与教学楼前",
+                status="ACTIVE",
+                duration_minutes=45,
+                idempotency_title="下课走出教学楼",
+            )
+
+        # -------------------------------------------------------------
+        # 10f. University Library & Silent Study Hall
+        # -------------------------------------------------------------
+        if any(k in combined_text for k in ("在图书馆", "图书馆自习", "在自习室", "看文献", "自习中", "写论文", "查论文", "阅览室")):
+            return DialogueSituation(
+                activity="在大学图书馆静音阅览室看书自习",
+                location="大学图书馆五楼阅览室",
+                status="ACTIVE",
+                duration_minutes=90,
+                idempotency_title="大学图书馆静音自习",
             )
 
         # -------------------------------------------------------------
@@ -263,9 +367,21 @@ class DialogueSituationAppraisalService:
         # -------------------------------------------------------------
         # 12. Restaurant Dining / Japanese Cuisine / Date Meal
         # -------------------------------------------------------------
+        # -------------------------------------------------------------
+        # 12. Restaurant Dining / Hotpot / Japanese / Date Meal
+        # -------------------------------------------------------------
+        if any(k in combined_text for k in ("吃火锅", "火锅店", "涮羊肉", "海底捞", "辣锅", "番茄锅")):
+            return DialogueSituation(
+                activity="在火锅店共进晚餐/品尝热气腾腾的火锅",
+                location="热气腾腾的火锅餐厅",
+                status="ACTIVE",
+                duration_minutes=90,
+                idempotency_title="火锅餐厅用餐",
+            )
+
         dining_keywords = (
             "点菜", "菜单", "入座", "好香", "上菜", "吃寿司", "开吃", "坐下", "这道菜", "尝尝",
-            "进店", "到店里", "在店里", "刺身", "拉面", "烤肉", "火锅", "随便点", "想吃什么吃什么",
+            "进店", "到店里", "在店里", "刺身", "拉面", "烤肉", "随便点", "想吃什么吃什么",
             "看看有什么好吃", "点单", "午市套餐", "定食", "日料", "hanare", "hanaya", "怀石料理",
             "吃饱了吗", "吃饱了么", "吃饱没", "吃寿司", "吃刺身", "寿司"
         )

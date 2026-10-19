@@ -613,6 +613,20 @@ async def list_character_memories(
         from app.character.active_service import get_active_character_id
         character_id = await get_active_character_id(db)
 
+    # Process and promote any pending candidates before listing
+    try:
+        from app.memory.curation_service import MemoryCurationService
+        curation_service = MemoryCurationService(session=db, character_id=character_id)
+        pending_cands = await curation_service.list_candidates(limit=50)
+        for c in pending_cands:
+            if hasattr(c, "status") and c.status.value == "PENDING":
+                eval_res = await curation_service.curate_candidate(c.id)
+                if hasattr(eval_res, "decision") and eval_res.decision.value == "DEFER":
+                    if c.confidence >= 0.80 and c.importance >= 0.40:
+                        await curation_service.accept_candidate(c.id)
+    except Exception as cur_err:
+        logger.debug("Automatic curation sync during list_character_memories skipped: %s", cur_err)
+
     mem_service = MemoryService(db)
     memories = await mem_service.list_memories(limit=100, character_id=character_id)
 

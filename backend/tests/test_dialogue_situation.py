@@ -137,3 +137,57 @@ async def test_apply_situation_to_records(test_session: AsyncSession):
     events = (await test_session.scalars(stmt_ev)).all()
     assert len(events) >= 1
     assert "客厅沙发揉小橘" in events[-1].title or "客厅沙发" in events[-1].description
+
+
+@pytest.mark.asyncio
+async def test_extract_pickup_in_car():
+    """Verify pickup transit into passenger car seat is accurately extracted."""
+    user = "我接到你了，上车吧"
+    assistant = "好呀！[拉开车门坐进副驾驶，熟练系上安全带] 走吧，出发！"
+    situation = DialogueSituationAppraisalService.extract_situation(user, assistant)
+    assert situation is not None
+    assert "副驾驶" in situation.location or "车内" in situation.location
+    assert "车" in situation.activity
+    assert situation.status == "ACTIVE"
+
+
+@pytest.mark.asyncio
+async def test_extract_supermarket_shopping():
+    """Verify supermarket shopping and grocery browsing is extracted."""
+    user = "下车啦，我们去超市买点零食"
+    assistant = "走走走！推个购物车，我想买薯片和旺仔牛奶，顺便去生鲜区看看！"
+    situation = DialogueSituationAppraisalService.extract_situation(user, assistant)
+    assert situation is not None
+    assert "超市" in situation.location
+    assert "超市" in situation.activity
+    assert situation.status == "ACTIVE"
+
+
+@pytest.mark.asyncio
+async def test_extract_campus_class_and_after_class():
+    """Verify campus lecture and after-class walk extraction."""
+    user = "你现在在干嘛？"
+    assistant = "在阶梯教室认真上课呢，老师在讲算法复杂度分析，正在狂做笔记。"
+    situation_class = DialogueSituationAppraisalService.extract_situation(user, assistant)
+    assert situation_class is not None
+    assert "阶梯教室" in situation_class.location or "教室" in situation_class.location
+    assert situation_class.status == "BUSY"
+
+    user2 = "下课了吗？"
+    assistant2 = "刚下课！正收拾书包走出教学楼，走在校园林荫道上呢。"
+    situation_after = DialogueSituationAppraisalService.extract_situation(user2, assistant2)
+    assert situation_after is not None
+    assert "校园" in situation_after.location or "教学楼" in situation_after.location
+    assert "下课" in situation_after.activity
+
+
+@pytest.mark.asyncio
+async def test_extract_balcony_chilling():
+    """Verify balcony routine watering plants and looking at view."""
+    user = "你现在在干嘛"
+    assistant = "我现在在阳台呢，刚把小橘喂完早饭。顺便看看我妈种的那些花花草草。"
+    situation = DialogueSituationAppraisalService.extract_situation(user, assistant)
+    assert situation is not None
+    assert "阳台" in situation.location
+    assert "阳台" in situation.activity
+

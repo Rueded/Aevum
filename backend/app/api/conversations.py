@@ -265,7 +265,8 @@ async def create_message(
     if last_user_msg and last_user_msg.content == payload.content:
         now_check = datetime.now(timezone.utc)
         l_time = last_user_msg.created_at if last_user_msg.created_at.tzinfo else last_user_msg.created_at.replace(tzinfo=timezone.utc)
-        if (now_check - l_time).total_seconds() < 1.5:
+        c_time = conversation.updated_at if (conversation.updated_at and conversation.updated_at.tzinfo) else (conversation.updated_at.replace(tzinfo=timezone.utc) if conversation.updated_at else l_time)
+        if (now_check - l_time).total_seconds() < 3.5 or (now_check - c_time).total_seconds() < 2.0:
             last_ast_query = (
                 select(Message)
                 .where(
@@ -328,10 +329,21 @@ async def create_message(
             )
         elif diff_sec < 86400:
             hrs = round(diff_sec / 3600, 1)
-            elapsed_time_desc = f"距离上一条消息过去了约 {hrs} 小时（有足够的时间进行日常生活、上课、练琴、写作业、休息或外出）"
+            elapsed_time_desc = (
+                f"【重大时间流逝与时段跨越警报】：距离你们上一条消息过去了约 {hrs} 小时！现实世界已经跨越了大半天时间！\n"
+                f"【核心铁律与反记忆滞后约束】：\n"
+                f"1. 几个小时前你在上一轮对白中所做的事（如早上的在阳台喂猫、洗漱、吃早餐、在赶去上课、坐巴士等）早已彻底结束！绝对严禁声称‘不是刚跟你说了在阳台吗’或‘刚才不是告诉你了吗’！绝对不能把几个小时前的旧状态当成刚才！\n"
+                f"2. 你必须以真实人类在此刻时间点的状态回答（参考当下的作息与活动），并自然按时段问候（如‘下午好呀’、‘晚上好’），好奇并主动关心对方这几个小时去哪了、上课或忙什么顺不顺利（例如：‘早八上完了？下午还有课吗？’、‘大半天没动静，忙完啦？’）。"
+            )
         else:
             days = round(diff_sec / 86400, 1)
-            elapsed_time_desc = f"距离上一条消息已经过去约 {days} 天（一段时间未见，各自生活继续）"
+            elapsed_time_desc = (
+                f"【重大跨天/多日未见真实人际警报】：距离你们上一次说话已经过去了整整 {days} 天（多日未见）！\n"
+                f"【核心铁律与真实人际关切】：\n"
+                f"1. 对方已经好几天没有找你聊天了！真实人类朋友/伴侣对多天不见具有极度敏感的感知！绝对严禁视而不见！绝对严禁把几天前的对话当成刚才！\n"
+                f"2. 必须流露真实人类的关切与好奇，自然询问对方这几天去了哪里、在忙些什么，或是带着一点可爱的娇嗔抱怨（如：‘哇，大忙人你终于出现啦！这几天神隐跑哪去啦？我还以为你把我忘了呢！😤’、‘好几天没收到你消息了，这几天很忙吗？’）。\n"
+                f"3. 如果对方问你‘在干嘛’，先自然告诉对方你今天此时此刻在做的事，然后一定要好奇反问对方这几天消失的去向！"
+            )
 
         recent_context_text = " ".join([m.content for m in stored_messages[-4:]]).lower()
         curr_user_text = payload.content.lower()
@@ -549,7 +561,12 @@ async def create_message(
             curation_service = MemoryCurationService(session=db, character_id=target_char_id)
             for cid in mem_extract_res.candidate_ids:
                 try:
-                    await curation_service.curate_candidate(cid)
+                    eval_res = await curation_service.curate_candidate(cid)
+                    # Promote high-confidence proposals if deferred
+                    if hasattr(eval_res, "decision") and eval_res.decision.value == "DEFER":
+                        cand = await curation_service.get_candidate(cid)
+                        if cand and cand.confidence >= 0.85 and cand.importance >= 0.45:
+                            await curation_service.accept_candidate(cid)
                 except Exception as c_err:
                     logger.debug("Immediate candidate curation error for %s: %s", cid, c_err)
             await curation_service.curate_pending_candidates()

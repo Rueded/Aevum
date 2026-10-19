@@ -519,19 +519,60 @@ class LifeScheduleEngine:
                     guidance="纯网瘾少女模式，满脑子都是抽卡、遗器双爆、新角色，极度能聊游戏梗。",
                     incident="刚强化的圣遗物全歪了防御力，当场心碎。",
                 )
-            else:
+            elif daily_vibe == "DEDICATED_ARTIST":
                 return ScheduleSlot(
-                    slot_id="sembreak_reading_cafe",
-                    activity="在海边咖啡馆看书或听歌放空 (Cafe Reading & Seaside Breeze)",
-                    location="街角海边咖啡馆 (Coastal Cafe)",
+                    slot_id="sembreak_piano",
+                    activity="在琴房练琴与扒谱 (Piano Practice & Sheet Music)",
+                    location="家中钢琴房 (Music Room)",
                     status="ACTIVE",
-                    description="点了一杯冰拿铁坐在靠窗位置，面前放着翻开的小说，耳朵里塞着耳机看窗外椰树和阳光。",
-                    energy_level=0.8,
-                    social_energy=0.6,
-                    stress_level=0.1,
-                    suggested_mood="GOOD",
-                    guidance="安静惬意的独处时光，温和随性。",
+                    description="戴着耳机在电钢琴前扒一段好听的和弦，反复练右手旋律与指法。",
+                    energy_level=0.75,
+                    social_energy=0.5,
+                    stress_level=0.2,
+                    suggested_mood="FOCUSED",
+                    guidance="专注练琴状态，偶尔会跟对方分享刚才扒出来的旋律和指法有多难弹。",
                 )
+            else:
+                # Varied progression throughout the afternoon
+                if 13.5 <= local_hour < 15.0:
+                    return ScheduleSlot(
+                        slot_id="sembreak_afternoon_coding",
+                        activity="午后书房小憩与写代码做游戏 (Afternoon Indie Dev)",
+                        location="老家-书房电脑前 (Home Study)",
+                        status="ACTIVE",
+                        description="午休后坐在书房电脑前，戴着耳机边听lo-fi边写独立游戏代码，小橘在桌角打盹。",
+                        energy_level=0.75,
+                        social_energy=0.7,
+                        stress_level=0.1,
+                        suggested_mood="GOOD",
+                        guidance="敲代码做游戏的专注放松状态，思维活跃，乐于聊游戏和编程梗。",
+                    )
+                elif 15.0 <= local_hour < 16.5:
+                    return ScheduleSlot(
+                        slot_id="sembreak_balcony_chilling",
+                        activity="在阳台照顾花草与看风景放空 (Balcony Breeze & Plants)",
+                        location="老家-阳台 (Home Balcony)",
+                        status="ACTIVE",
+                        description="走到阳台伸个懒腰，给妈妈种的几盆绿植浇水，吹吹午后的风，给蹭过来的小橘顺顺毛。",
+                        energy_level=0.8,
+                        social_energy=0.75,
+                        stress_level=0.05,
+                        suggested_mood="GOOD",
+                        guidance="阳台微风拂过，心情极度温和惬意，享受生活小确幸。",
+                    )
+                else:
+                    return ScheduleSlot(
+                        slot_id="sembreak_neighborhood_walk",
+                        activity="出门散步买冷饮或便利店挑选零食 (Neighborhood Walk & Convenience Store)",
+                        location="附近街区便利店与步道 (Convenience Store & Walkway)",
+                        status="ACTIVE",
+                        description="趁着太阳不那么烈，换了鞋下楼去附近便利店买冷饮和零食，顺便散步消食。",
+                        energy_level=0.8,
+                        social_energy=0.8,
+                        stress_level=0.05,
+                        suggested_mood="GOOD",
+                        guidance="外出散步活动状态，手里拿着冰饮，心情轻快自在。",
+                    )
 
         # Evening (17:30 - 20:00)
         elif 17.5 <= local_hour < 20.0:

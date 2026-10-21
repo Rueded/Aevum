@@ -88,3 +88,10 @@ Thumbs.db
 walkthrough.md
 implementation_plan.md
 
+# User Private Data & Custom Reference Docs
+docs/screenshot/
+docs/stickers/
+docs/conversation.json
+docs/dsh-custom.txt
+
+

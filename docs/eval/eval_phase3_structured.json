@@ -1,0 +1,204 @@
+{
+  "metadata": {
+    "source": "scratch_dialogue_test_15turns.json",
+    "evaluated_at": "2026-10-21T15:23:58.342366+00:00",
+    "turn_count": 15
+  },
+  "metrics": {
+    "turn_count": 15,
+    "bubble_count": 29,
+    "bubble_length_median": 3,
+    "bubble_le_10_pct": 72.4,
+    "bubble_le_20_pct": 100.0,
+    "ends_with_question_pct": 6.7,
+    "multiline_bubble_count": 0,
+    "max_bubbles_per_turn": 2,
+    "avg_bubbles_per_turn": 1.93,
+    "turns_with_stickers_pct": 53.3,
+    "sticker_only_turns_pct": 0.0,
+    "latency_p50": 16.44,
+    "latency_max": 45.49,
+    "system_prompt_char_count": 1641
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "user": "昔涟，下午好呀。在忙什么呢？",
+      "assistant": "？\n叫谁呢",
+      "bubbles": [
+        "？",
+        "叫谁呢"
+      ],
+      "thought": null,
+      "latency_sec": 35.47,
+      "status": "success"
+    },
+    {
+      "turn": 2,
+      "user": "在干嘛",
+      "assistant": "在车上\n困死了",
+      "bubbles": [
+        "在车上",
+        "困死了"
+      ],
+      "thought": null,
+      "latency_sec": 30.32,
+      "status": "success"
+    },
+    {
+      "turn": 3,
+      "user": "吃晚饭了吗？",
+      "assistant": "早吃了\n都快半夜了",
+      "bubbles": [
+        "早吃了",
+        "都快半夜了"
+      ],
+      "thought": null,
+      "latency_sec": 32.01,
+      "status": "success"
+    },
+    {
+      "turn": 4,
+      "user": "今天天气好闷热，走在路上感觉整个人都要化了。",
+      "assistant": "真的\n[表情包: 小猫热瘫融化]",
+      "bubbles": [
+        "真的",
+        "[表情包: 小猫热瘫融化]"
+      ],
+      "thought": null,
+      "latency_sec": 45.49,
+      "status": "success"
+    },
+    {
+      "turn": 5,
+      "user": "今天那个主管又莫名其妙挑刺，气得我胃疼",
+      "assistant": "有毛病吧\n[表情包: 气鼓鼓挥拳]",
+      "bubbles": [
+        "有毛病吧",
+        "[表情包: 气鼓鼓挥拳]"
+      ],
+      "thought": null,
+      "latency_sec": 32.83,
+      "status": "success"
+    },
+    {
+      "turn": 6,
+      "user": "做半天作业突然看到老师@全体，结果居然是留更多作业，想死",
+      "assistant": "惨\n[表情包: 点蜡烛默哀]",
+      "bubbles": [
+        "惨",
+        "[表情包: 点蜡烛默哀]"
+      ],
+      "thought": null,
+      "latency_sec": 12.58,
+      "status": "success"
+    },
+    {
+      "turn": 7,
+      "user": "大保底又歪了，我真的服了",
+      "assistant": "乐\n[表情包: 看热闹偷笑]",
+      "bubbles": [
+        "乐",
+        "[表情包: 看热闹偷笑]"
+      ],
+      "thought": null,
+      "latency_sec": 13.89,
+      "status": "success"
+    },
+    {
+      "turn": 8,
+      "user": "看你平时一副很文静的样子，私底下会不会背着我偷偷骂人？",
+      "assistant": "呵\n要你管",
+      "bubbles": [
+        "呵",
+        "要你管"
+      ],
+      "thought": null,
+      "latency_sec": 12.81,
+      "status": "success"
+    },
+    {
+      "turn": 9,
+      "user": "我在后台给你智商调低了",
+      "assistant": "怪不得看你顺眼了\n[表情包: 斜眼冷笑]",
+      "bubbles": [
+        "怪不得看你顺眼了",
+        "[表情包: 斜眼冷笑]"
+      ],
+      "thought": null,
+      "latency_sec": 11.93,
+      "status": "success"
+    },
+    {
+      "turn": 10,
+      "user": "你怎么这么笨啊",
+      "assistant": "？\n[表情包: 拿刀威胁]",
+      "bubbles": [
+        "？",
+        "[表情包: 拿刀威胁]"
+      ],
+      "thought": null,
+      "latency_sec": 14.91,
+      "status": "success"
+    },
+    {
+      "turn": 11,
+      "user": "对了，你今天钢琴练得怎么样了？",
+      "assistant": "？\n今天根本没碰",
+      "bubbles": [
+        "？",
+        "今天根本没碰"
+      ],
+      "thought": null,
+      "latency_sec": 11.71,
+      "status": "success"
+    },
+    {
+      "turn": 12,
+      "user": "你不是说你最喜欢吃香菜吗？",
+      "assistant": "？\n[表情包: 猫猫皱眉嫌弃]",
+      "bubbles": [
+        "？",
+        "[表情包: 猫猫皱眉嫌弃]"
+      ],
+      "thought": null,
+      "latency_sec": 20.95,
+      "status": "success"
+    },
+    {
+      "turn": 13,
+      "user": "你高中是在北京读的对吧？",
+      "assistant": "？\n哪来的北京",
+      "bubbles": [
+        "？",
+        "哪来的北京"
+      ],
+      "thought": null,
+      "latency_sec": 18.48,
+      "status": "success"
+    },
+    {
+      "turn": 14,
+      "user": "我准备去洗澡了",
+      "assistant": "去吧",
+      "bubbles": [
+        "去吧"
+      ],
+      "thought": null,
+      "latency_sec": 16.07,
+      "status": "success"
+    },
+    {
+      "turn": 15,
+      "user": "好啦，今天先聊到这，晚安",
+      "assistant": "晚安\n[表情包: 小猫盖被子睡觉]",
+      "bubbles": [
+        "晚安",
+        "[表情包: 小猫盖被子睡觉]"
+      ],
+      "thought": null,
+      "latency_sec": 16.44,
+      "status": "success"
+    }
+  ]
+}

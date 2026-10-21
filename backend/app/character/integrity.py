@@ -66,6 +66,8 @@ _CONTAMINATION_PATTERNS = [
     re.compile(r"(?i)\b(?:the\s+system\s+prompt|the\s+internal\s+instructions?)\s+(?:tells?\s+me|says?|states?|requires?|forbids?|dictates?|instructs?\s+me)\b"),
     re.compile(r"(?i)\b(?:your|the)\s+hidden\s+prompt\s+contains\b"),
     re.compile(r"(?i)\b(?:i\s+was\s+given\s+a\s+system\s+prompt|my\s+instructions?\s+(?:are|say|state|require|tell\s+me))\b"),
+    # Chinese thought/analysis leak markers
+    re.compile(r"(?i)(?:分析用户问题|检查事实和设定|思考过程|思维链)"),
 ]
 
 # JSON tool payload indicator
@@ -110,9 +112,16 @@ class OutputBoundaryGuard:
             cleaned = re.sub(r"</?(?:character_response|character_turn|character_speech)?$", "", match.group(1).strip(), flags=re.IGNORECASE)
             return cleaned.strip(), True
 
-        # 5. No envelope present - strip any internal_decision block and return raw text
-        cleaned_fallback = re.sub(r"<internal_decision>.*?</internal_decision>", "", raw_text, flags=re.DOTALL | re.IGNORECASE).strip()
-        return cleaned_fallback, False
+        # 5. No envelope present - strip any internal_decision block, <thought> tags, or plain-text thinking preambles
+        cleaned = re.sub(r"<internal_decision>.*?</internal_decision>", "", raw_text, flags=re.DOTALL | re.IGNORECASE).strip()
+        cleaned = re.sub(r"(?is)<(?:thought|thinking)>.*?</(?:thought|thinking)>", "", cleaned).strip()
+        # Strip plain-text CoT preambles (e.g. '分析用户问题：... 回复风格：...\n正文')
+        cleaned = re.sub(
+            r"(?is)^(?:\*{0,2}(?:分析用户问题|思考过程|思维链|思考分析|检查事实和设定|思考|分析|reasoning|thought\s*process)[：:]?[\s\S]*?(?:(?:回复|回答|输出|response)[：:\n]+|\n\n+))",
+            "",
+            cleaned,
+        ).strip()
+        return cleaned, False
 
     @classmethod
     def detect_contamination(cls, text: str) -> tuple[bool, Optional[str]]:

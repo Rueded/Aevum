@@ -19,8 +19,7 @@ class CharacterResponse(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     content: str = Field(
-        ...,
-        min_length=1,
+        default="",
         description="The synthesized assistant dialogue text.",
     )
     character_name: str = Field(
@@ -39,4 +38,8 @@ class CharacterResponse(BaseModel):
     speech_bubbles: list[str] = Field(
         default_factory=list,
         description="Realized conversational speech bubbles (GC-426 emergent multi-bubble).",
+    )
+    structured_messages: Optional[list[dict[str, Any]]] = Field(
+        default=None,
+        description="Structured message items (type: text|sticker|photo).",
     )

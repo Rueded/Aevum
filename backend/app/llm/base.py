@@ -115,7 +115,7 @@ class LLMProvider(ABC):
     async def generate_structured(
         self,
         context: "LLMContext",
-        response_schema: type[BaseModel] | None = None,
+        response_schema: type[Any] | None = None,
     ) -> str:
         """Generate structured text (e.g. JSON) adhering to an optional schema.
 
@@ -124,5 +124,14 @@ class LLMProvider(ABC):
         """
         response = await self.generate_response(context)
         return response.content
+
+    async def generate_structured_response(
+        self,
+        context: "LLMContext",
+        response_schema: type[Any] | None = None,
+    ) -> LLMResponse:
+        """Generate structured text adhering to an optional schema, returning full LLMResponse with thoughts."""
+        content = await self.generate_structured(context, response_schema)
+        return LLMResponse(content=content)
 
 

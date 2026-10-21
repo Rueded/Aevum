@@ -27,7 +27,7 @@ class Settings(BaseSettings):
         alias="GEMINI_API_KEY",
     )
     gemini_model: str = Field(
-        default="gemini-2.5-flash",
+        default="gemini-3.8-flash",
         alias="GEMINI_MODEL",
     )
     memory_auto_curation_enabled: bool = Field(

@@ -1,0 +1,18 @@
+{
+  "metadata": {
+    "source": "AEVUM_SOUL_AND_PROGRESS.md §2",
+    "bubble_count": 1287,
+    "generated_at": "2026-10-21T12:06:18.052913+00:00",
+    "notes": "Text-only chat logs; image stickers omitted in original logs per §2.4"
+  },
+  "metrics": {
+    "bubble_length_median": 6,
+    "bubble_le_10_pct": 76.7,
+    "bubble_le_20_pct": 92.3,
+    "ends_with_question_pct": 7.1,
+    "text_sticker_tag_pct": 2.6,
+    "image_stickers_pct": null,
+    "multiline_bubble_count": 0,
+    "max_bubbles_per_turn": 3
+  }
+}

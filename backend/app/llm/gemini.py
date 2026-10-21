@@ -40,7 +40,7 @@ class GeminiProvider(LLMProvider):
             client: Optional pre-configured genai.Client (useful for mocking in tests).
         """
         self.api_key = api_key or settings.gemini_api_key
-        self.model_name = model_name or settings.gemini_model or "gemini-2.5-flash"
+        self.model_name = model_name or settings.gemini_model or "gemini-3.8-flash"
         self._client = client
 
         # Initialize client if API key is provided and no client was injected
@@ -121,6 +121,15 @@ class GeminiProvider(LLMProvider):
                     )
                 )
 
+        # Gemini API invariant: contents must end with a user turn
+        if contents and contents[-1].role == "model":
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part.from_text(text="请根据以上对话记录进行处理。")],
+                )
+            )
+
         combined_system = "\n\n".join(system_parts) if system_parts else None
         return contents, combined_system
 
@@ -147,14 +156,29 @@ class GeminiProvider(LLMProvider):
 
         contents, resolved_system = self._convert_context_to_gemini(context=context)
 
+        # Configure thinking: use low thinking level for 3.x Flash, or modest budget for 2.5
+        if "3." in self.model_name or "-3-" in self.model_name or "3-flash" in self.model_name:
+            thinking_config = types.ThinkingConfig(
+                thinking_level=types.ThinkingLevel.LOW,
+                include_thoughts=True,
+            )
+        else:
+            thinking_config = types.ThinkingConfig(
+                thinking_budget=1024,
+                include_thoughts=True,
+            )
+
+        temperature = getattr(context, "temperature", 1.0)
+
         config_kwargs: dict[str, Any] = {
-            "thinking_config": types.ThinkingConfig(thinking_budget=0),
+            "thinking_config": thinking_config,
+            "temperature": temperature,
             "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True),
         }
         if resolved_system:
             config_kwargs["system_instruction"] = resolved_system
 
-        enable_grounding = getattr(context, "enable_grounding", True)
+        enable_grounding = getattr(context, "enable_grounding", False)
         if enable_grounding:
             config_kwargs["tools"] = [types.Tool(google_search=types.GoogleSearch())]
 
@@ -231,12 +255,12 @@ class GeminiProvider(LLMProvider):
             raw_response={"raw_parts": raw_parts} if raw_parts else None,
         )
 
-    async def generate_structured(
+    async def generate_structured_response(
         self,
         context: LLMContext,
         response_schema: type[Any] | None = None,
-    ) -> str:
-        """Generate structured JSON output using Gemini's native JSON mode."""
+    ) -> LLMResponse:
+        """Generate structured JSON output using Gemini's native JSON mode with thinking support."""
         if self._client is None:
             raise LLMProviderNotConfiguredError(
                 "Gemini API key is not configured. Please set GEMINI_API_KEY in the environment."
@@ -247,8 +271,24 @@ class GeminiProvider(LLMProvider):
 
         contents, resolved_system = self._convert_context_to_gemini(context=context)
 
+        # Configure thinking: use low thinking level for 3.x Flash, or modest budget for 2.5
+        if "3." in self.model_name or "-3-" in self.model_name or "3-flash" in self.model_name:
+            thinking_config = types.ThinkingConfig(
+                thinking_level=types.ThinkingLevel.LOW,
+                include_thoughts=True,
+            )
+        else:
+            thinking_config = types.ThinkingConfig(
+                thinking_budget=1024,
+                include_thoughts=True,
+            )
+
+        temperature = getattr(context, "temperature", 1.0)
+
         config_kwargs: dict[str, Any] = {
             "response_mime_type": "application/json",
+            "thinking_config": thinking_config,
+            "temperature": temperature,
             "automatic_function_calling": types.AutomaticFunctionCallingConfig(disable=True),
         }
         if resolved_system:
@@ -257,7 +297,7 @@ class GeminiProvider(LLMProvider):
             # Handle Pydantic models by stripping additionalProperties which causes Gemini API errors
             if hasattr(response_schema, "model_json_schema"):
                 schema_dict = response_schema.model_json_schema()
-                
+
                 def strip_additional_properties(schema: dict[str, Any]) -> dict[str, Any]:
                     if not isinstance(schema, dict):
                         return schema
@@ -267,11 +307,11 @@ class GeminiProvider(LLMProvider):
                             schema[k] = strip_additional_properties(v)
                         elif isinstance(v, list):
                             schema[k] = [
-                                strip_additional_properties(item) if isinstance(item, dict) else item 
+                                strip_additional_properties(item) if isinstance(item, dict) else item
                                 for item in v
                             ]
                     return schema
-                
+
                 config_kwargs["response_schema"] = strip_additional_properties(schema_dict)
             else:
                 config_kwargs["response_schema"] = response_schema
@@ -292,9 +332,50 @@ class GeminiProvider(LLMProvider):
                 err_msg = err_msg.replace(self.api_key, "[REDACTED]")
             raise LLMGenerationError(f"Gemini structured request failed: {err_msg}") from exc
 
-        content_text = getattr(response, "text", None)
+        # Extract output text, carefully filtering out internal thought/reasoning parts
+        text_parts: list[str] = []
+        thought_parts: list[str] = []
+
+        if hasattr(response, "candidates") and response.candidates:
+            cand = response.candidates[0]
+            if hasattr(cand, "content") and cand.content and hasattr(cand.content, "parts") and cand.content.parts:
+                for p in cand.content.parts:
+                    is_thought = getattr(p, "thought", False)
+                    p_text = getattr(p, "text", None)
+                    if p_text:
+                        if is_thought:
+                            thought_parts.append(p_text)
+                        else:
+                            text_parts.append(p_text)
+
+        if text_parts:
+            content_text = "".join(text_parts)
+        else:
+            content_text = getattr(response, "text", None)
+
         if not content_text or not content_text.strip():
             raise LLMGenerationError("Gemini returned an empty structured response.")
 
-        return content_text.strip()
+        thought_str = "".join(thought_parts).strip() if thought_parts else None
+
+        raw_parts = None
+        if hasattr(response, "candidates") and response.candidates:
+            cand = response.candidates[0]
+            if hasattr(cand, "content") and cand.content and hasattr(cand.content, "parts"):
+                raw_parts = cand.content.parts
+
+        return LLMResponse(
+            content=content_text.strip(),
+            thought_content=thought_str,
+            raw_response={"raw_parts": raw_parts} if raw_parts else None,
+        )
+
+    async def generate_structured(
+        self,
+        context: LLMContext,
+        response_schema: type[Any] | None = None,
+    ) -> str:
+        """Generate structured JSON output using Gemini's native JSON mode."""
+        resp = await self.generate_structured_response(context, response_schema)
+        return resp.content
 

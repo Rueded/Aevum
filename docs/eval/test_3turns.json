@@ -1,0 +1,63 @@
+{
+  "metadata": {
+    "source": "scratch_dialogue_test_3turns.json",
+    "evaluated_at": "2026-10-21T14:48:41.567088+00:00",
+    "turn_count": 3
+  },
+  "metrics": {
+    "turn_count": 3,
+    "bubble_count": 8,
+    "bubble_length_median": 5.0,
+    "bubble_le_10_pct": 87.5,
+    "bubble_le_20_pct": 100.0,
+    "ends_with_question_pct": 0.0,
+    "multiline_bubble_count": 0,
+    "max_bubbles_per_turn": 3,
+    "avg_bubbles_per_turn": 2.67,
+    "turns_with_stickers_pct": 66.7,
+    "sticker_only_turns_pct": 0.0,
+    "latency_p50": 18.6,
+    "latency_max": 19.0,
+    "system_prompt_char_count": 1567
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "user": "在干嘛",
+      "assistant": "刚扒完谱 困死了\n想趴会儿\n咋啦",
+      "bubbles": [
+        "刚扒完谱 困死了",
+        "想趴会儿",
+        "咋啦"
+      ],
+      "thought": null,
+      "latency_sec": 15.4,
+      "status": "success"
+    },
+    {
+      "turn": 2,
+      "user": "看你平时一副很文静的样子，私底下会不会背着我偷偷骂人？",
+      "assistant": "用得着背着？\n[表情包: 假笑]",
+      "bubbles": [
+        "用得着背着？",
+        "[表情包: 假笑]"
+      ],
+      "thought": null,
+      "latency_sec": 19.0,
+      "status": "success"
+    },
+    {
+      "turn": 3,
+      "user": "对了，你今天钢琴练得怎么样了？",
+      "assistant": "没练\n手懒了\n[表情包: 趴地装死]",
+      "bubbles": [
+        "没练",
+        "手懒了",
+        "[表情包: 趴地装死]"
+      ],
+      "thought": null,
+      "latency_sec": 18.6,
+      "status": "success"
+    }
+  ]
+}

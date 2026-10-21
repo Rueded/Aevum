@@ -5,7 +5,7 @@ adhering strictly to Constitutional Locks GC-425 through GC-431.
 """
 
 from enum import Enum
-from typing import Optional
+from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -177,3 +177,31 @@ class CharacterExpressionSignature(BaseModel):
         default_factory=lambda: ["好羡慕", "救命", "笑死", "这倒也是"],
         description="Zero-information affective reactions",
     )
+
+
+class TurnMessageItem(BaseModel):
+    """An individual message bubble in a conversational turn (Phase 3)."""
+    type: Literal["text", "sticker", "photo"] = Field(
+        description="Type of the message: 'text', 'sticker', or 'photo'."
+    )
+    text: Optional[str] = Field(
+        default=None,
+        description="Text content of the bubble when type is 'text'.",
+    )
+    sticker_id: Optional[str] = Field(
+        default=None,
+        description="Sticker identifier or descriptive name when type is 'sticker'.",
+    )
+    photo_id: Optional[str] = Field(
+        default=None,
+        description="Photo ID or scene reference when type is 'photo'.",
+    )
+
+
+class StructuredTurnOutput(BaseModel):
+    """Structured response container for character turn output (Phase 3)."""
+    messages: List[TurnMessageItem] = Field(
+        default_factory=list,
+        description="Sequential list of message bubbles. Can be empty for read-only silence.",
+    )
+

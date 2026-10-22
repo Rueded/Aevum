@@ -6,12 +6,13 @@ Verifies that post-turn emotion appraisal:
 - Correctly handles teasing/humor, sweet affection, and friction.
 """
 
+from datetime import datetime, timezone
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.character.state_models import CharacterMood
 from app.character.state_service import CharacterStateService
-from app.emotion.emotion_models import EmotionType
+from app.emotion.emotion_models import EmotionState, EmotionType
 from app.emotion.service import EmotionService
 from app.emotion.turn_appraisal import TurnEmotionAppraisalService
 
@@ -119,4 +120,47 @@ async def test_date_anticipation_transitions_to_excited(test_session: AsyncSessi
     assert result.emotion_type == EmotionType.EXCITED
     char_state = await CharacterStateService(test_session).get_state("aevum")
     assert char_state.mood == CharacterMood.GOOD
+
+
+@pytest.mark.asyncio
+async def test_turn_emotion_decay_homeostasis_without_influences(test_session: AsyncSession):
+    """When a neutral turn has no emotional influences, non-baseline emotions naturally decay without error."""
+    emo_service = EmotionService(test_session)
+    # Set high intensity amused state
+    current_emo = await emo_service.get_emotion_state("aevum")
+    await emo_service.update_emotion_state(
+        updated_state=EmotionState(
+            id=current_emo.id,
+            character_id="aevum",
+            emotion_type=EmotionType.AMUSED,
+            intensity=0.85,
+            created_at=current_emo.created_at,
+            updated_at=datetime.now(timezone.utc),
+            version=current_emo.version + 1,
+        ),
+        expected_version=current_emo.version,
+        character_id="aevum",
+    )
+
+    service = TurnEmotionAppraisalService(test_session)
+    result = await service.process_turn_emotion(
+        user_input="今天周四",
+        assistant_response="嗯周四",
+        character_id="aevum",
+    )
+
+    assert result is not None
+    # Decayed intensity by 0.15: 0.85 - 0.15 = 0.70
+    assert result.intensity == pytest.approx(0.70, rel=1e-2)
+    assert result.emotion_type == EmotionType.AMUSED
+
+    # A second neutral turn further decays it: 0.70 - 0.15 = 0.55
+    result2 = await service.process_turn_emotion(
+        user_input="知道了",
+        assistant_response="好的",
+        character_id="aevum",
+    )
+    assert result2 is not None
+    assert result2.intensity == pytest.approx(0.55, rel=1e-2)
+
 

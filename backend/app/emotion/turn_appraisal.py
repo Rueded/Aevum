@@ -157,10 +157,20 @@ class TurnEmotionAppraisalService:
                 if current_emotion.emotion_type not in (EmotionType.CALM, EmotionType.CONTENT, EmotionType.NEUTRAL):
                     new_intensity = max(0.30, round(current_emotion.intensity - 0.15, 3))
                     target_emo = EmotionType.CALM if new_intensity <= 0.40 else current_emotion.emotion_type
-                    await self._emotion_service.update_emotion_state(
+                    decayed_state = EmotionState(
+                        id=current_emotion.id,
                         character_id=character_id,
                         emotion_type=target_emo,
                         intensity=new_intensity,
+                        created_at=current_emotion.created_at,
+                        updated_at=datetime.now(timezone.utc),
+                        version=current_emotion.version + 1,
+                    )
+                    await self._emotion_service.update_emotion_state(
+                        updated_state=decayed_state,
+                        expected_version=current_emotion.version,
+                        character_id=character_id,
+                        commit=False,
                     )
                     await self._synchronize_character_state(
                         character_id=character_id,

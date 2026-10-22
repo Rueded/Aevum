@@ -79,13 +79,34 @@ class EmotionService:
 
     async def update_emotion_state(
         self,
-        updated_state: EmotionState,
+        updated_state: EmotionState | None = None,
         expected_version: int | None = None,
         character_id: str = DEFAULT_CHARACTER_ID,
         commit: bool = True,
+        emotion_type: Any | None = None,
+        intensity: float | None = None,
+        **kwargs: Any,
     ) -> EmotionState:
         """Update entire emotion state atomically with database-enforced optimistic concurrency."""
         now = utc_now()
+        if updated_state is None:
+            current = await self.get_emotion_state(character_id=character_id)
+            target_emo = emotion_type if emotion_type is not None else current.emotion_type
+            if isinstance(target_emo, str):
+                target_emo = EmotionType(target_emo.lower())
+            target_int = intensity if intensity is not None else current.intensity
+            updated_state = EmotionState(
+                id=current.id,
+                character_id=character_id,
+                emotion_type=target_emo,
+                intensity=target_int,
+                created_at=current.created_at,
+                updated_at=now,
+                version=current.version + 1,
+            )
+            if expected_version is None:
+                expected_version = current.version
+
         emotion_str = (
             updated_state.emotion_type.value
             if hasattr(updated_state.emotion_type, "value")

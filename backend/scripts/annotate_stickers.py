@@ -158,6 +158,14 @@ async def run_annotation(batch_size: int = 20, series_filter: str | None = None,
             logger.info("Average tokens per sticker: %.1f tokens", avg_tokens)
             logger.info("Estimated tokens for 1,000 stickers: ~%d tokens", int(avg_tokens * 1000))
 
+            if os.path.exists("aevum.db") and os.path.exists("backend/aevum.db"):
+                try:
+                    import shutil
+                    shutil.copy2("aevum.db", "backend/aevum.db")
+                    logger.info("Synchronized aevum.db -> backend/aevum.db")
+                except Exception as sync_err:
+                    logger.warning("Failed to sync to backend/aevum.db: %s", sync_err)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Pilot sticker annotator with Gemini multimodal.")

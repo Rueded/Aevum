@@ -273,6 +273,15 @@ class ProactiveLoop:
 
                 await session.commit()
 
+                # Push autonomous message to Telegram channel if active
+                try:
+                    from app.channels.telegram import TelegramChannel
+                    tg = TelegramChannel.get_instance()
+                    if tg is not None and tg.active_chat_id:
+                        asyncio.create_task(tg.push_proactive_message(list(thought.bubbles)))
+                except Exception as tg_err:
+                    logger.debug("Telegram proactive push skipped: %s", tg_err)
+
                 res_entry["reached_out"] = True
                 res_entry["reason"] = thought.thought_reason
                 res_entry["bubbles"] = list(thought.bubbles)

@@ -62,9 +62,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         from app.proactive.loop import start_proactive_loop
         proactive_task = asyncio.create_task(start_proactive_loop(interval_seconds=300.0))
 
+    # Start Telegram channel runner if enabled (Phase 7 §10)
+    telegram_channel = None
+    if settings.environment != "test" and (settings.telegram_enabled or settings.telegram_bot_token):
+        try:
+            from app.channels.telegram import start_telegram_channel
+            telegram_channel = await start_telegram_channel()
+        except Exception as tg_init_err:
+            import logging
+            logging.getLogger(__name__).warning("Telegram channel startup skipped: %s", tg_init_err)
+
     yield
 
     # Shutdown: Cleanly cancel background tasks and dispose of database engine
+    if telegram_channel is not None:
+        try:
+            await telegram_channel.stop()
+        except Exception:
+            pass
+
     if proactive_task is not None:
         proactive_task.cancel()
         try:

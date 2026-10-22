@@ -48,6 +48,19 @@ class Settings(BaseSettings):
         alias="AEVUM_TIMEZONE",
     )
 
+    telegram_bot_token: str | None = Field(
+        default=None,
+        alias="TELEGRAM_BOT_TOKEN",
+    )
+    telegram_allowed_user_ids: str = Field(
+        default="",
+        alias="TELEGRAM_ALLOWED_USER_IDS",
+    )
+    telegram_enabled: bool = Field(
+        default=False,
+        alias="TELEGRAM_ENABLED",
+    )
+
     @field_validator("aevum_timezone")
     @classmethod
     def validate_timezone(cls, v: str) -> str:

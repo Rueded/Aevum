@@ -57,7 +57,7 @@ def _create_sample_character_definition() -> CharacterDefinition:
 
 
 def test_prompt_assembler_contains_sticker_rules_and_tags():
-    """Prompt assembler emits Rule 29 describing the sticker gallery and supported tags."""
+    """Prompt assembler emits WeChat-style sticker rules."""
     char_def = _create_sample_character_definition()
     char_ctx = CharacterDefinitionContext.from_definition(char_def)
 
@@ -104,12 +104,8 @@ def test_prompt_assembler_contains_sticker_rules_and_tags():
     llm_context = ResponseContextAssembler.assemble(ctx)
     prompt_text = "\n".join(llm_context.system_instructions)
 
-    assert "29. Meme Stickers & Playful Battle" in prompt_text
-    assert "斗图生态" in prompt_text
-    assert "[sticker:cat_bonk]" in prompt_text
-    assert "[sticker:cat_pout]" in prompt_text
-    assert "[sticker:cat_pat]" in prompt_text
-    assert "[sticker:doge_smirk]" in prompt_text
+    assert "表情包是万能表达" in prompt_text
+    assert "[表情包: 描述]" in prompt_text
 
 
 def test_conversational_parser_extracts_sticker_burst_bubbles():
@@ -157,7 +153,7 @@ ignored: none
 
 
 def test_prompt_assembler_contains_gamer_vulnerability_and_slacking_rules():
-    """Prompt assembler emits Rules 30, 31, and 32 for gamer resonance, vulnerability, and slacking."""
+    """Prompt assembler emits WeChat rules for casual peer banter (e.g. 抽卡歪了, 幸灾乐祸 '乐', 严禁油腻说教)."""
     char_def = _create_sample_character_definition()
     char_ctx = CharacterDefinitionContext.from_definition(char_def)
     state = CharacterState(
@@ -194,13 +190,6 @@ def test_prompt_assembler_contains_gamer_vulnerability_and_slacking_rules():
     llm_context = ResponseContextAssembler.assemble(ctx)
     prompt_text = "\n".join(llm_context.system_instructions)
 
-    assert "30. Deep Gamer Resonance & Gaming Culture" in prompt_text
-    assert "游戏联机与电竞共鸣" in prompt_text
-    assert "大保底" in prompt_text
-    assert "圣遗物" in prompt_text
-
-    assert "31. Unconditional Affectionate Bias & Vulnerability Cushioning" in prompt_text
-    assert "无条件偏心与情绪兜底保护" in prompt_text
-
-    assert "32. Slacking, Night-Owl & Exam Cramming Camaraderie" in prompt_text
-    assert "熬夜修仙、赶DDL与赖床摆烂共鸣" in prompt_text
+    assert "熟人抽卡歪了等倒霉事可以直接幸灾乐祸" in prompt_text
+    assert "严禁当心理咨询师或理性说教" in prompt_text
+    assert "严禁说“抱抱不哭”" in prompt_text

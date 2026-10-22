@@ -119,9 +119,15 @@ class StickerService:
         for rec in filtered_pool:
             score = 1.0
 
-            # Weight by personal favorite taste
-            if rec.is_favorite:
+            # Weight by user priority: root stickers first, then favorite series
+            if rec.series == "菲比/散装常用":
+                score += 6.0
+            elif rec.is_favorite:
                 score += 3.0
+
+            # Favor stickers with confirmed annotation
+            if rec.is_annotated:
+                score += 2.0
 
             # Weight by matching emotion tags
             try:

@@ -20,6 +20,7 @@ from app.db.models import (
     StateTransitionAuditRecord,
     DesktopUserSettingsRecord,
     ProactiveNotificationRecord,
+    StickerRecord,
 )
 from app.db.session import (
     Base,
@@ -42,6 +43,7 @@ __all__ = [
     "StateTransitionAuditRecord",
     "DesktopUserSettingsRecord",
     "ProactiveNotificationRecord",
+    "StickerRecord",
     "Conversation",
     "EmotionEventRecord",
     "EmotionInfluenceRecord",

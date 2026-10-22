@@ -430,6 +430,22 @@ class CharacterEngine:
             except Exception as exc:
                 logger.debug("Automatic deception grievance processing skipped: %s", exc)
 
+        sticker_candidates_prompt = None
+        if self._session:
+            try:
+                from app.stickers.service import StickerService
+                st_svc = StickerService(self._session)
+                emo_type = str(getattr(emotion_ctx, "emotion_type", "neutral"))
+                candidates = await st_svc.get_contextual_candidates(
+                    current_emotion=emo_type,
+                    dialogue_snippet=cleaned_user_input,
+                    limit=8,
+                )
+                if candidates:
+                    sticker_candidates_prompt = StickerService.format_candidates_prompt(candidates)
+            except Exception as exc:
+                logger.debug("Sticker candidate retrieval skipped: %s", exc)
+
         return CharacterResponseContext(
             user_input=cleaned_user_input,
             character=char_ctx,
@@ -459,5 +475,6 @@ class CharacterEngine:
             deception_grievance=deception_grievance,
             elapsed_time_description=elapsed_time_description,
             conversation_summary=conversation_summary,
+            sticker_candidates_prompt=sticker_candidates_prompt,
         )
 

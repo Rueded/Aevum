@@ -412,5 +412,9 @@ class CharacterResponseContext(BaseModel):
         default=None,
         description="Rolling summary of earlier conversation history (Phase 4).",
     )
+    sticker_candidates_prompt: Optional[str] = Field(
+        default=None,
+        description="Formatted candidates and usage rules for multimodal stickers (Phase 6).",
+    )
 
 

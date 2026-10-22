@@ -75,6 +75,8 @@ SCHEMA_MIGRATIONS: dict[str, list[tuple[str, str]]] = {
     ],
     # Cross-turn deception & cognitive grievances table
     "character_deception_grievances": [],
+    # Phase 6: Cataloged multimodal stickers & memes
+    "stickers": [],
 }
 
 

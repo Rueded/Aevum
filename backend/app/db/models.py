@@ -1357,3 +1357,27 @@ class CharacterDeceptionGrievanceRecord(Base):
     verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     confronted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class StickerRecord(Base):
+    """Represents a cataloged sticker/meme item with multimodal metadata (Phase 6 §9.2)."""
+
+    __tablename__ = "stickers"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False, unique=True, index=True)
+    thumb_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    file_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    dhash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    series: Mapped[str] = mapped_column(String(100), nullable=False, default="散装常用", index=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    text_ocr: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    emotion_tags: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    usage_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(String(50), nullable=False, default="user_imported")
+    is_favorite: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    is_annotated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    use_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+

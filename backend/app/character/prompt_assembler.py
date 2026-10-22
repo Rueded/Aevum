@@ -368,6 +368,8 @@ class ResponseContextAssembler:
             system_instruction_blocks.append(f"【前期对话摘要与关键背景】\n{context.conversation_summary}")
         if facts_block:
             system_instruction_blocks.append(facts_block)
+        if getattr(context, "sticker_candidates_prompt", None):
+            system_instruction_blocks.append(context.sticker_candidates_prompt)
         system_instruction_blocks.append(rules_block)
 
         # Verify system prompt size bound (<= 6000 chars)

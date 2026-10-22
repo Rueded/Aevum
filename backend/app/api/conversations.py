@@ -512,6 +512,19 @@ async def create_message(
     if llm_response.speech_bubbles:
         assistant_read.speech_bubbles = llm_response.speech_bubbles
 
+    # Track sticker usage if any sticker was selected (Phase 6 §9.2)
+    try:
+        from app.stickers.service import StickerService
+        stk_svc = StickerService(db)
+        for bubble in assistant_read.speech_bubbles or [assistant_msg.content]:
+            m = re.search(r"\[(?:表情包[：:]?\s*([^\]]+)|sticker:([a-zA-Z0-9_\-]+))\]", bubble)
+            if m:
+                s_id = (m.group(1) or m.group(2) or "").strip()
+                if s_id:
+                    await stk_svc.record_usage(s_id)
+    except Exception as exc:
+        logger.debug("Sticker usage tracking skipped: %s", exc)
+
     # 8b. Synchronous deterministic micro-progressions (<1ms, no LLM call)
     try:
         from app.life.dialogue_situation import DialogueSituationAppraisalService
@@ -772,6 +785,19 @@ async def create_voice_message(
     assistant_read = MessageRead.model_validate(assistant_msg)
     if llm_response.speech_bubbles:
         assistant_read.speech_bubbles = llm_response.speech_bubbles
+
+    # Track sticker usage if any sticker was selected (Phase 6 §9.2)
+    try:
+        from app.stickers.service import StickerService
+        stk_svc = StickerService(db)
+        for bubble in assistant_read.speech_bubbles or [assistant_msg.content]:
+            m = re.search(r"\[(?:表情包[：:]?\s*([^\]]+)|sticker:([a-zA-Z0-9_\-]+))\]", bubble)
+            if m:
+                s_id = (m.group(1) or m.group(2) or "").strip()
+                if s_id:
+                    await stk_svc.record_usage(s_id)
+    except Exception as exc:
+        logger.debug("Sticker usage tracking skipped: %s", exc)
 
     # 11. Asynchronous post-turn pipeline (Phase 4)
     interaction_context = chat_messages + [

@@ -18,7 +18,7 @@ class ShapeController:
     MAX_SINGLE_BUBBLE_CHARS = 60
     PUNCTUATION_SPLIT_REGEX = re.compile(r"([。！？!？~\n]+)")
     REFLEX_QUESTION_REGEX = re.compile(r"([，,\s]*(?:你呢|那你呢|你今天呢)[？?~～!！]*\s*)$")
-    STICKER_IN_TEXT_REGEX = re.compile(r"\[(?:表情包[：:]?\s*([^\]]+))\]")
+    STICKER_IN_TEXT_REGEX = re.compile(r"\[(?:表情包[：:]?\s*([^\]]+)|sticker:([a-zA-Z0-9_\-]+))\]")
 
     @classmethod
     def _clean_punctuation(cls, text: str) -> str:
@@ -109,7 +109,7 @@ class ShapeController:
             pre = text[last_idx:m.start()].strip()
             if pre:
                 result.append(TurnMessageItem(type="text", text=pre))
-            sticker_name = m.group(1).strip()
+            sticker_name = (m.group(1) or m.group(2) or "").strip()
             if sticker_name:
                 result.append(TurnMessageItem(type="sticker", sticker_id=sticker_name))
             last_idx = m.end()

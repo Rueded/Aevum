@@ -21,6 +21,11 @@ class ShapeController:
     STICKER_IN_TEXT_REGEX = re.compile(r"\[(?:表情包[：:]?\s*([^\]]+))\]")
 
     @classmethod
+    def _clean_punctuation(cls, text: str) -> str:
+        """Strip trailing periods per Brief §6.3 (friend side had 0% trailing periods)."""
+        return re.sub(r"[.。]+$", "", text).strip()
+
+    @classmethod
     def process(
         cls,
         raw_output: StructuredTurnOutput,
@@ -31,7 +36,7 @@ class ShapeController:
         """Apply code-level shape transformations to the structured messages."""
         items: List[TurnMessageItem] = []
 
-        # 1. First pass: normalize and separate mixed text/stickers
+        # 1. First pass: normalize, separate mixed text/stickers, shape punctuation
         for msg in raw_output.messages:
             if msg.type == "sticker":
                 sid = (msg.sticker_id or "").strip()
@@ -50,11 +55,13 @@ class ShapeController:
                 extracted_parts = cls._separate_inline_stickers(text)
                 for part in extracted_parts:
                     if part.type == "text":
-                        # If text > 60 chars, split by punctuation
-                        split_texts = cls._split_long_text(part.text or "")
+                        raw_t = part.text or ""
+                        # Split by comma if reasonable, else split long text
+                        split_texts = cls._split_comma_and_long_text(raw_t)
                         for st in split_texts:
-                            if st.strip():
-                                items.append(TurnMessageItem(type="text", text=st.strip()))
+                            cleaned = cls._clean_punctuation(st)
+                            if cleaned:
+                                items.append(TurnMessageItem(type="text", text=cleaned))
                     else:
                         items.append(part)
 
@@ -63,6 +70,7 @@ class ShapeController:
             last_item = items[-1]
             if last_item.type == "text" and last_item.text:
                 cleaned = cls.REFLEX_QUESTION_REGEX.sub("", last_item.text).strip()
+                cleaned = cls._clean_punctuation(cleaned)
                 if cleaned:
                     last_item.text = cleaned
                 elif len(items) > 1:
@@ -70,10 +78,10 @@ class ShapeController:
                     items.pop()
 
         # 3. Energy & Bubble Count Limit (Updated per Brief §2 & §6.3)
-        # Fatigued or very low energy: max 2 bubbles
+        # Fatigued or very low energy: max 1 bubble per Brief §6.3
         # Normal or excited: allows natural 1–6 bursts, capping hard at 8
         if is_tired or energy_level < 0.35:
-            max_bubbles = 2
+            max_bubbles = 1
         elif energy_level > 0.8:
             max_bubbles = 8
         else:
@@ -112,6 +120,33 @@ class ShapeController:
 
         if not result and text.strip():
             result.append(TurnMessageItem(type="text", text=text.strip()))
+
+        return result
+
+    @classmethod
+    def _split_comma_and_long_text(cls, text: str) -> List[str]:
+        """Splits long text and shapes comma pauses into separate bubbles or spaces."""
+        long_splits = cls._split_long_text(text)
+        result: List[str] = []
+
+        for chunk in long_splits:
+            chunk = chunk.strip()
+            if not chunk:
+                continue
+
+            # Check if chunk contains commas
+            if "，" in chunk or "," in chunk:
+                parts = [p.strip() for p in re.split(r"[,，]", chunk) if p.strip()]
+                # If splitting into 2-3 natural short phrases (each >= 2 chars)
+                if 1 < len(parts) <= 3 and all(len(p) >= 2 for p in parts):
+                    result.extend(parts)
+                else:
+                    # Otherwise replace commas with spaces to avoid formal punctuation
+                    space_chunk = re.sub(r"[,，]", " ", chunk)
+                    space_chunk = re.sub(r"\s+", " ", space_chunk).strip()
+                    result.append(space_chunk)
+            else:
+                result.append(chunk)
 
         return result
 

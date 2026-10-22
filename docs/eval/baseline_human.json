@@ -1,18 +1,19 @@
 {
   "metadata": {
-    "source": "AEVUM_SOUL_AND_PROGRESS.md §2",
-    "bubble_count": 1287,
-    "generated_at": "2026-10-21T12:06:18.052913+00:00",
-    "notes": "Text-only chat logs; image stickers omitted in original logs per §2.4"
+    "source": "docs/conversation.json (friend side / her per Brief §9.1b)",
+    "bubble_count": 549,
+    "turn_count": 219,
+    "generated_at": "2026-10-22T02:07:36.865002+00:00"
   },
   "metrics": {
-    "bubble_length_median": 6,
-    "bubble_le_10_pct": 76.7,
-    "bubble_le_20_pct": 92.3,
-    "ends_with_question_pct": 7.1,
-    "text_sticker_tag_pct": 2.6,
-    "image_stickers_pct": null,
+    "bubble_length_median": 5,
+    "bubble_le_10_pct": 87.6,
+    "bubble_le_20_pct": 97.4,
+    "ends_with_question_pct": 2.4,
     "multiline_bubble_count": 0,
-    "max_bubbles_per_turn": 3
+    "max_bubbles_per_turn": 18,
+    "avg_bubbles_per_turn": 3,
+    "turns_with_stickers_pct": 25.1,
+    "sticker_only_turns_pct": 2.7
   }
 }

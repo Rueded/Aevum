@@ -69,12 +69,15 @@ class ShapeController:
                     # If the entire bubble was just "你呢？", remove it
                     items.pop()
 
-        # 3. Energy & Bubble Count Limit
-        # Fatigued or very low energy: max 1 (or 2 if 1 text + 1 sticker)
+        # 3. Energy & Bubble Count Limit (Updated per Brief §2 & §6.3)
+        # Fatigued or very low energy: max 2 bubbles
+        # Normal or excited: allows natural 1–6 bursts, capping hard at 8
         if is_tired or energy_level < 0.35:
             max_bubbles = 2
+        elif energy_level > 0.8:
+            max_bubbles = 8
         else:
-            max_bubbles = 3
+            max_bubbles = 6
 
         if len(items) > max_bubbles:
             # Preserve sticker if one was dropped in truncation

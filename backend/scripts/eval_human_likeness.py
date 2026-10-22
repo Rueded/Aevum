@@ -67,10 +67,74 @@ def extract_bubbles_from_turn(assistant_turn: Any) -> List[str]:
     return paras if paras else [content.strip()] if content.strip() else []
 
 
-def calculate_human_baseline(soul_file: Path = SOUL_MD) -> Dict[str, Any]:
-    """Parse real human conversations in AEVUM_SOUL_AND_PROGRESS.md §2."""
+def calculate_human_baseline(conv_json: Path = PROJECT_ROOT / "docs" / "conversation.json", soul_file: Path = SOUL_MD) -> Dict[str, Any]:
+    """Parse real human conversations in docs/conversation.json (Brief §9.1b) or fallback to AEVUM_SOUL_AND_PROGRESS.md §2."""
+    if conv_json.exists():
+        with open(conv_json, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        friend_bubbles = []
+        friend_turns = 0
+        friend_turns_with_sticker = 0
+        friend_sticker_only_turns = 0
+        friend_turn_counts = []
+
+        for sec in data:
+            dialogue = sec.get("dialogue", [])
+            if not dialogue:
+                continue
+
+            current_speaker = None
+            current_turn = []
+            for msg in dialogue:
+                spk = "user" if msg.get("speaker") == "你" else "friend"
+                if spk != current_speaker:
+                    if current_turn and current_speaker == "friend":
+                        friend_turns += 1
+                        friend_turn_counts.append(len(current_turn))
+                        if any("sticker" in str(m) for m in current_turn):
+                            friend_turns_with_sticker += 1
+                        if all("sticker" in str(m) and not m.get("content") for m in current_turn):
+                            friend_sticker_only_turns += 1
+                    current_speaker = spk
+                    current_turn = [msg]
+                else:
+                    current_turn.append(msg)
+
+                if spk == "friend" and msg.get("content"):
+                    friend_bubbles.append(msg["content"].strip())
+
+            if current_turn and current_speaker == "friend":
+                friend_turns += 1
+                friend_turn_counts.append(len(current_turn))
+                if any("sticker" in str(m) for m in current_turn):
+                    friend_turns_with_sticker += 1
+                if all("sticker" in str(m) and not m.get("content") for m in current_turn):
+                    friend_sticker_only_turns += 1
+
+        f_lens = [len(b) for b in friend_bubbles]
+        return {
+            "metadata": {
+                "source": "docs/conversation.json (friend side / her per Brief §9.1b)",
+                "bubble_count": len(friend_bubbles),
+                "turn_count": friend_turns,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            "metrics": {
+                "bubble_length_median": round(statistics.median(f_lens), 1) if f_lens else 0,
+                "bubble_le_10_pct": round(sum(1 for l in f_lens if l <= 10) / len(f_lens) * 100, 1) if f_lens else 0,
+                "bubble_le_20_pct": round(sum(1 for l in f_lens if l <= 20) / len(f_lens) * 100, 1) if f_lens else 0,
+                "ends_with_question_pct": round(sum(1 for b in friend_bubbles if is_question(b)) / len(friend_bubbles) * 100, 1) if friend_bubbles else 0,
+                "multiline_bubble_count": 0,
+                "max_bubbles_per_turn": max(friend_turn_counts) if friend_turn_counts else 6,
+                "avg_bubbles_per_turn": round(statistics.mean(friend_turn_counts), 2) if friend_turn_counts else 2.0,
+                "turns_with_stickers_pct": round(friend_turns_with_sticker / friend_turns * 100, 1) if friend_turns else 0,
+                "sticker_only_turns_pct": round(friend_sticker_only_turns / friend_turns * 100, 1) if friend_turns else 0,
+            },
+        }
+
     if not soul_file.exists():
-        raise FileNotFoundError(f"Soul file not found at {soul_file}")
+        raise FileNotFoundError(f"Neither conversation.json nor soul file found at {soul_file}")
 
     with open(soul_file, "r", encoding="utf-8") as f:
         lines = f.readlines()

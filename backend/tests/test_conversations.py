@@ -684,12 +684,13 @@ async def test_idle_nudge_skips_on_farewell_or_closed_topic(
         json={"role": "user", "content": "我要去睡了，晚安"},
     )
 
-    # Calling check-idle with 0s threshold
+    # Calling check-idle with 0s threshold - model recognizes bedtime and stays silent
+    fake_provider.response_text = "[NO_NUDGE]"
     res = await client.post(f"/conversations/{conv_id}/check-idle?idle_threshold=0")
     assert res.status_code == 200
     data = res.json()
     assert data["nudged"] is False
-    assert data["reason"] == "conversation_farewell_or_closed"
+    assert data["reason"] in ("conversation_farewell_or_closed", "topic_naturally_concluded")
 
 
 @pytest.mark.asyncio
@@ -708,6 +709,7 @@ async def test_idle_nudge_skips_when_model_evaluates_topic_concluded(
     )
 
     # Calling check-idle
+    fake_provider.response_text = "[NO_NUDGE]"
     res = await client.post(f"/conversations/{conv_id}/check-idle?idle_threshold=0")
     assert res.status_code == 200
     data = res.json()

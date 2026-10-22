@@ -72,6 +72,10 @@ class MessageCreateResponse(BaseModel):
         default="generated",
         description="Status indicator ('generated', 'provider_not_configured', 'failed').",
     )
+    reply_delay_seconds: float = Field(
+        default=0.0,
+        description="Recommended display delay in seconds reflecting character's life activity (Phase 5 §8.6).",
+    )
 
 
 

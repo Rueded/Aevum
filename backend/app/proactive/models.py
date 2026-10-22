@@ -53,6 +53,7 @@ class SuppressionReason(str, enum.Enum):
     COOLDOWN = "COOLDOWN"
     HIGH_FATIGUE = "HIGH_FATIGUE"
     SLEEPING = "SLEEPING"
+    BUSY = "BUSY"
     LOW_INTENT = "LOW_INTENT"
     EXPIRED = "EXPIRED"
 
@@ -73,9 +74,9 @@ class ProactiveIntent(BaseModel):
 
 
 class DesktopUserSettings(BaseModel):
-    """Validated user settings and privacy boundaries (Lock-in 4, 8, 9)."""
+    """Validated user settings and privacy boundaries (Lock-in 4, 8, 9; Phase 5 §8.6)."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     character_id: str = "aevum"
     proactive_enabled: bool = False
@@ -87,6 +88,8 @@ class DesktopUserSettings(BaseModel):
     min_cooldown_minutes: int = Field(default=120, ge=15, le=720)
     idle_awareness_enabled: bool = False
     idle_threshold_seconds: int = Field(default=300, ge=30, le=3600)
+    reply_latency_enabled: bool = False
+    max_reply_latency_minutes: int = Field(default=15, ge=1, le=120)
     dnd_until: Optional[datetime] = None
 
     @field_validator("timezone")

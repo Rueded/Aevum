@@ -92,6 +92,8 @@ class DesktopUserSettingsUpdate(BaseModel):
     idle_threshold_seconds: Optional[int] = Field(default=None, ge=30, le=3600)
     user_country: Optional[str] = Field(default=None, description="User cultural locale/country (e.g. 'MY', 'CN', 'SG', 'TW', 'GLOBAL').")
     sleep_realism_enabled: Optional[bool] = Field(default=None, description="Whether character realistically sleeps and does not answer single messages during deep sleep.")
+    reply_latency_enabled: Optional[bool] = Field(default=None, description="Whether character realistically replies with natural activity-based delay.")
+    max_reply_latency_minutes: Optional[int] = Field(default=None, ge=1, le=60, description="Upper bound in minutes for activity-based delayed reply.")
 
     @field_validator("timezone")
     @classmethod

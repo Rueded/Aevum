@@ -70,6 +70,8 @@ SCHEMA_MIGRATIONS: dict[str, list[tuple[str, str]]] = {
     ],
     "desktop_user_settings": [
         ("user_country", "VARCHAR(32) NOT NULL DEFAULT 'MY'"),
+        ("reply_latency_enabled", "BOOLEAN NOT NULL DEFAULT 0"),
+        ("max_reply_latency_minutes", "INTEGER NOT NULL DEFAULT 15"),
     ],
     # Cross-turn deception & cognitive grievances table
     "character_deception_grievances": [],

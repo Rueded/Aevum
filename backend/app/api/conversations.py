@@ -569,10 +569,21 @@ async def create_message(
         )
 
     # 10. Return both persisted messages
+    calculated_delay = 0.0
+    if desktop_settings and getattr(desktop_settings, "reply_latency_enabled", False):
+        from app.character.latency_policy import ReplyLatencyPolicy
+        calculated_delay = ReplyLatencyPolicy.calculate_delay_seconds(
+            current_activity=response_context.character_state.current_activity,
+            current_status=getattr(response_context.character_state, "status", None),
+            max_latency_minutes=getattr(desktop_settings, "max_reply_latency_minutes", 15),
+            latency_enabled=True,
+        )
+
     return MessageCreateResponse(
         message=user_read,
         assistant_response=assistant_read,
         assistant_status="generated",
+        reply_delay_seconds=calculated_delay,
     )
 
 
@@ -884,74 +895,9 @@ async def check_idle_nudge(
     if elapsed < idle_threshold:
         return {"nudged": False, "reason": "within_threshold", "elapsed_seconds": elapsed}
 
-    # 1. Check for explicit farewell, bedtime, or sign-off in recent messages
-    recent_texts = " ".join([m.content for m in conv.messages[-3:]]).lower()
-    farewell_keywords = (
-        "晚安",
-        "好梦",
-        "做个好梦",
-        "去睡了",
-        "睡觉了",
-        "先睡了",
-        "准备睡了",
-        "洗洗睡",
-        "拜拜",
-        "先下了",
-        "明天见",
-        "下次聊",
-        "改天聊",
-        "先去忙",
-        "要去忙",
-        "先干活",
-        "去开会",
-        "去洗澡",
-        "出门了",
-        "回头聊",
-        "先不聊",
-        "不打扰了",
-        "不打扰你",
-        "那就这样",
-        "明天不见不散",
-        "明天见啦",
-        "路上小心",
-        "你也早点睡",
-        "快去睡吧",
-        "快去忙吧",
-    )
-    if any(kw in recent_texts for kw in farewell_keywords):
-        return {"nudged": False, "reason": "conversation_farewell_or_closed"}
-
-    # 2. Verify if companion was waiting for a plan, answer, or response
     content = last_msg.content
-    is_expecting_reply = any(
-        q in content
-        for q in (
-            "?",
-            "？",
-            "吗",
-            "呢",
-            "吧",
-            "计划",
-            "去哪",
-            "想吃",
-            "如何",
-            "怎样",
-            "什么",
-            "你觉得",
-            "要不要",
-            "换一间",
-            "哪间",
-            "电影",
-            "餐厅",
-            "行程",
-        )
-    )
 
-    # If the last message was a statement without active question/proposal, do not nudge
-    if not is_expecting_reply:
-        return {"nudged": False, "reason": "not_expecting_immediate_reply"}
-
-    # 3. Synthesize natural hesitation nudge with topic closure appraisal
+    # Synthesize natural hesitation nudge with LLM topic closure appraisal (Brief §8.5: removed 60+ hardcoded keywords)
     recent_dialogue_lines = [
         f"{'对方' if m.role == MessageRole.USER else '苏棠'}: {m.content}"
         for m in conv.messages[-6:]
@@ -971,7 +917,7 @@ async def check_idle_nudge(
         + "若符合上述任何一种情况，请严格直接输出：`[NO_NUDGE]`，不要输出任何多余字符。\n\n"
         + "【允许发出微探寻的情况】：\n"
         + "苏棠上一条发言明确提出了待商量的事宜（如挑选餐厅、看什么电影、商量明天计划等），认真在等待对方建议或做决定，但对方突然没有了动静。\n"
-        + "此时以苏棠真实的傲娇、探究、微怼口吻，输出一条简短生动的探问/调侃（1到2句话，如'人呢？你不会没有计划，现在才开始计划行程吧？'、'怎么突然没动静了，正在查呢？'等，贴合具体商量的话题，真实灵动，严禁机械堆砌表情包或口头禅）。\n"
+        + "此时以苏棠真实的口吻，输出 1-2 句简短微信气泡（如'人呢 正在查吗'，贴合具体商量的话题，真实灵动）。\n"
         + "直接输出对白文本，严禁包含任何AI声明或分析解释。"
     )
 
@@ -986,10 +932,19 @@ async def check_idle_nudge(
         if not nudge_text or "[NO_NUDGE]" in nudge_text or "NO_NUDGE" in nudge_text:
             return {"nudged": False, "reason": "topic_naturally_concluded"}
 
+        # Shape through ShapeController (Brief §6.3 / §8.2)
+        from app.character.conversational_models import StructuredTurnOutput, TurnMessageItem
+        from app.character.shape_controller import ShapeController
+
+        raw_turn = StructuredTurnOutput(messages=[TurnMessageItem(type="text", text=nudge_text)])
+        shaped = ShapeController.process(raw_turn, energy_level=0.7, curiosity_active=True)
+        bubbles = ShapeController.render_bubbles(shaped)
+        final_text = bubbles[0] if bubbles else nudge_text
+
         nudge_msg = Message(
             conversation_id=conversation_id,
             role=MessageRole.ASSISTANT,
-            content=nudge_text,
+            content=final_text,
         )
         db.add(nudge_msg)
         conv.updated_at = datetime.now(timezone.utc)

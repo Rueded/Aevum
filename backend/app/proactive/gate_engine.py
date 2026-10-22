@@ -59,6 +59,7 @@ class ProactiveGateEngine:
         recent_notifications: Iterable[Any],
         fatigue: float = 0.0,
         current_activity: Optional[str] = None,
+        unreplied_count: int = 0,
     ) -> GateEvaluationResult:
         """
         Evaluate all 6 deterministic gates.
@@ -154,10 +155,11 @@ class ProactiveGateEngine:
             )
         gate_breakdown["daily_cap"] = True
 
-        # Gate 5: Cooldown Interval
+        # Gate 5: Cooldown Interval (Doubled if 2+ unreplied reach-outs per Brief §8.4)
+        effective_cooldown = settings.min_cooldown_minutes * 2 if unreplied_count >= 2 else settings.min_cooldown_minutes
         if most_recent_delivered_at is not None:
             elapsed_minutes = (current_time - most_recent_delivered_at).total_seconds() / 60.0
-            if elapsed_minutes < settings.min_cooldown_minutes:
+            if elapsed_minutes < effective_cooldown:
                 return GateEvaluationResult(
                     passed=False,
                     suppression_reason=SuppressionReason.COOLDOWN,
@@ -166,14 +168,23 @@ class ProactiveGateEngine:
                 )
         gate_breakdown["cooldown"] = True
 
-        # Gate 6: Physiological State & Sleep
-        if current_activity in ("SLEEP", "night_sleep", "nap"):
-            return GateEvaluationResult(
-                passed=False,
-                suppression_reason=SuppressionReason.SLEEPING,
-                gate_breakdown=gate_breakdown,
-                evaluation_time=current_time,
-            )
+        # Gate 6: Physiological State, Sleep & Busy Guard (Brief §8.4)
+        if current_activity:
+            act_l = current_activity.lower()
+            if any(k in act_l for k in ("sleep", "night_sleep", "nap", "睡觉", "睡眠", "小憩", "熟睡")):
+                return GateEvaluationResult(
+                    passed=False,
+                    suppression_reason=SuppressionReason.SLEEPING,
+                    gate_breakdown=gate_breakdown,
+                    evaluation_time=current_time,
+                )
+            if any(k in act_l for k in ("上课", "class", "lecture", "考试", "exam", "工作", "work", "开会", "meeting", "合奏")):
+                return GateEvaluationResult(
+                    passed=False,
+                    suppression_reason=SuppressionReason.BUSY,
+                    gate_breakdown=gate_breakdown,
+                    evaluation_time=current_time,
+                )
 
         if fatigue >= self.FATIGUE_CEILING:
             return GateEvaluationResult(

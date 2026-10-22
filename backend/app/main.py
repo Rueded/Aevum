@@ -54,8 +54,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         except Exception:
             pass
 
+    # Start Proactive autonomous background loop (Phase 5 §8.1)
+    proactive_task = None
+    if settings.environment != "test":
+        import asyncio
+        from app.proactive.loop import start_proactive_loop
+        proactive_task = asyncio.create_task(start_proactive_loop(interval_seconds=300.0))
+
     yield
-    # Shutdown: Cleanly dispose of database engine
+
+    # Shutdown: Cleanly cancel background tasks and dispose of database engine
+    if proactive_task is not None:
+        proactive_task.cancel()
+        try:
+            await proactive_task
+        except (asyncio.CancelledError, Exception):
+            pass
+
     await engine.dispose()
 
     # Write shutdown marker if requested by supervisor or integration test

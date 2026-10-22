@@ -1,7 +1,8 @@
-"""Proactive Message Generator (Phase 8 Lock-in 6, 13).
+"""Proactive Message Generator (Phase 8 Lock-in 6, 13; Phase 5 §8.5).
 
 Generates character-grounded proactive reach-out messages strictly bounded by
 ProactiveContext and validated through OutputBoundaryGuard.
+Per Brief §8.5: English fallbacks removed. If LLM fails or is absent, stays silent.
 """
 
 import logging
@@ -9,7 +10,7 @@ from typing import Optional
 
 from app.character.integrity import OutputBoundaryGuard
 from app.llm.base import ChatMessage, LLMProvider
-from app.proactive.models import ProactiveContext, ProactiveIntentType
+from app.proactive.models import ProactiveContext
 
 logger = logging.getLogger(__name__)
 
@@ -25,38 +26,20 @@ class ProactiveMessageGenerator:
         self._llm_provider = llm_provider
         self._guard = guard or OutputBoundaryGuard()
 
-    def _format_grounded_fallback(self, context: ProactiveContext) -> str:
-        """Deterministic, grounded speech fallback matching the approved intent."""
-        intent = context.approved_intent
-        activity = intent.grounding_activity_title or context.current_activity
-
-        if intent.intent_type == ProactiveIntentType.SHARE_EXPERIENCE:
-            if activity:
-                formatted_act = activity.replace("_", " ")
-                return f"Hey, I just finished {formatted_act}. How is your day going?"
-            return "Hey, just taking a break and thought I'd check in."
-        elif intent.intent_type == ProactiveIntentType.SOCIAL_CHECKIN:
-            return "Hey, had a quick moment between things. Hope everything's going well on your end."
-        elif intent.intent_type == ProactiveIntentType.TASK_REMINDER:
-            hook = intent.topic_hook or "a task we noted"
-            return f"Just a gentle reminder regarding {hook}."
-        else:
-            return "Hey, had a thought I wanted to share with you when you have a moment."
-
     async def generate_proactive_message(self, context: ProactiveContext) -> str:
         """
         Synthesize a proactive reach-out message strictly from ProactiveContext.
 
         Passes all generated text through OutputBoundaryGuard to ensure
         clean speech envelope and prevent leakage.
+        If no provider is configured or LLM generation fails, returns an empty string
+        (Brief §8.5: LLM 失败就什么都不发).
         """
-        intent = context.approved_intent
-
         if self._llm_provider is None:
-            raw_speech = self._format_grounded_fallback(context)
-            # Wrap in envelope to validate through guard
-            enveloped = f"<character_response><character_speech>{raw_speech}</character_speech></character_response>"
-            return self._guard.verify_and_clean(enveloped)
+            logger.debug("No LLM provider configured for proactive message generator. Staying silent.")
+            return ""
+
+        intent = context.approved_intent
 
         # Construct strictly filtered prompt context (Lock-in 6 & 13)
         system_prompt = (
@@ -88,8 +71,5 @@ class ProactiveMessageGenerator:
             sanitized = self._guard.verify_and_clean(raw_text)
             return sanitized
         except Exception as err:
-            logger.warning("LLM generation failed for proactive reach-out: %s. Using fallback.", err)
-            raw_fallback = self._format_grounded_fallback(context)
-            enveloped_fallback = f"<character_response><character_speech>{raw_fallback}</character_speech></character_response>"
-            return self._guard.verify_and_clean(enveloped_fallback)
-
+            logger.warning("LLM generation failed for proactive reach-out: %s. Staying silent.", err)
+            return ""

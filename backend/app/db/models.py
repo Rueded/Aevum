@@ -49,6 +49,11 @@ class Conversation(Base):
         nullable=False,
         index=True,
     )
+    summary: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        default=None,
+    )
 
     # Relationship to messages, ordered chronologically
     messages: Mapped[list["Message"]] = relationship(

@@ -408,5 +408,9 @@ class CharacterResponseContext(BaseModel):
         default=None,
         description="Authentic human description of physical elapsed time since the previous turn.",
     )
+    conversation_summary: Optional[str] = Field(
+        default=None,
+        description="Rolling summary of earlier conversation history (Phase 4).",
+    )
 
 

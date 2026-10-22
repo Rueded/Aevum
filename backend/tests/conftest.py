@@ -16,6 +16,7 @@ from app.llm import (
     get_llm_provider,
 )
 from app.main import app
+from sqlalchemy.pool import StaticPool
 
 # Ensure tests run strictly in test environment (ADR-021 & Rule 7)
 settings.environment = "test"
@@ -61,6 +62,16 @@ class FakeLLMProvider(LLMProvider):
             return self.structured_response_text
         return '{"signals": []}'
 
+    async def generate_structured_response(
+        self,
+        context: LLMContext,
+        response_schema=None,
+    ) -> LLMResponse:
+        self.structured_call_history.append(context)
+        if self.structured_response_text is not None:
+            return LLMResponse(content=self.structured_response_text)
+        return LLMResponse(content=self.response_text)
+
 
 
 
@@ -73,7 +84,12 @@ def fake_provider() -> FakeLLMProvider:
 @pytest.fixture
 async def test_engine():
     """Create a temporary in-memory async SQLite engine for tests."""
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    engine = create_async_engine(
+        TEST_DATABASE_URL,
+        echo=False,
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield engine
@@ -83,13 +99,14 @@ async def test_engine():
 
 
 @pytest.fixture
-async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
+async def test_session(test_engine, monkeypatch) -> AsyncGenerator[AsyncSession, None]:
     """Create an isolated test session."""
     session_factory = async_sessionmaker(
         bind=test_engine,
         class_=AsyncSession,
         expire_on_commit=False,
     )
+    monkeypatch.setattr("app.character.post_turn_service.async_session_factory", session_factory)
     async with session_factory() as session:
         yield session
 

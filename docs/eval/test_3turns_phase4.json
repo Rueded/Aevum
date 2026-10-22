@@ -1,0 +1,61 @@
+{
+  "metadata": {
+    "source": "scratch_dialogue_test_3turns.json",
+    "evaluated_at": "2026-10-22T02:45:44.627923+00:00",
+    "turn_count": 3
+  },
+  "metrics": {
+    "turn_count": 3,
+    "bubble_count": 6,
+    "bubble_length_median": 2.0,
+    "bubble_le_10_pct": 100.0,
+    "bubble_le_20_pct": 100.0,
+    "ends_with_question_pct": 0.0,
+    "multiline_bubble_count": 0,
+    "max_bubbles_per_turn": 2,
+    "avg_bubbles_per_turn": 2,
+    "turns_with_stickers_pct": 0.0,
+    "sticker_only_turns_pct": 0.0,
+    "latency_p50": 5.71,
+    "latency_max": 8.57,
+    "system_prompt_char_count": 1656
+  },
+  "turns": [
+    {
+      "turn": 1,
+      "user": "在干嘛",
+      "assistant": "逛商场呢\n咋啦",
+      "bubbles": [
+        "逛商场呢",
+        "咋啦"
+      ],
+      "thought": null,
+      "latency_sec": 8.57,
+      "status": "success"
+    },
+    {
+      "turn": 2,
+      "user": "看你平时一副很文静的样子，私底下会不会背着我偷偷骂人？",
+      "assistant": "呵\n你猜",
+      "bubbles": [
+        "呵",
+        "你猜"
+      ],
+      "thought": null,
+      "latency_sec": 5.71,
+      "status": "success"
+    },
+    {
+      "turn": 3,
+      "user": "对了，你今天钢琴练得怎么样了？",
+      "assistant": "？\n今天在外面呢 没摸琴",
+      "bubbles": [
+        "？",
+        "今天在外面呢 没摸琴"
+      ],
+      "thought": null,
+      "latency_sec": 5.48,
+      "status": "success"
+    }
+  ]
+}

@@ -127,6 +127,7 @@ class CharacterEngine:
         user_country: Optional[str] = None,
         deception_grievance: Optional[CognitiveGrievanceContext] = None,
         elapsed_time_description: Optional[str] = None,
+        conversation_summary: Optional[str] = None,
     ) -> CharacterResponseContext:
         """Gather all relevant domain contexts into a structured CharacterResponseContext.
 
@@ -457,5 +458,6 @@ class CharacterEngine:
             user_country=user_country,
             deception_grievance=deception_grievance,
             elapsed_time_description=elapsed_time_description,
+            conversation_summary=conversation_summary,
         )
 

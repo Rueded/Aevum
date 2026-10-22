@@ -17,6 +17,7 @@ SCHEMA_MIGRATIONS: dict[str, list[tuple[str, str]]] = {
     ],
     "conversations": [
         ("character_id", "VARCHAR(36) NOT NULL DEFAULT 'aevum'"),
+        ("summary", "TEXT NULL"),
     ],
     "memories": [
         ("subject_entity", "VARCHAR NOT NULL DEFAULT 'USER'"),

@@ -364,6 +364,8 @@ class ResponseContextAssembler:
             relationship_block,
             memory_block,
         ]
+        if getattr(context, "conversation_summary", None):
+            system_instruction_blocks.append(f"【前期对话摘要与关键背景】\n{context.conversation_summary}")
         if facts_block:
             system_instruction_blocks.append(facts_block)
         system_instruction_blocks.append(rules_block)

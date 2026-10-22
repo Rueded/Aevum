@@ -3,7 +3,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from app.character.post_turn_service import PostTurnService
 from sqlalchemy import delete as sql_delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -216,6 +217,7 @@ async def get_conversation(
 async def create_message(
     conversation_id: str,
     payload: MessageCreate,
+    background_tasks: BackgroundTasks = None,
     db: AsyncSession = Depends(get_db_session),
     llm_provider: LLMProvider = Depends(get_llm_provider),
     embedding_provider: EmbeddingProvider | None = Depends(get_embedding_provider),
@@ -382,6 +384,7 @@ async def create_message(
             character_id=target_char_id,
             user_id="user",
             elapsed_time_description=elapsed_time_desc,
+            conversation_summary=getattr(conversation, "summary", None),
         )
     except Exception as exc:
         logger.error("CharacterEngine failed: %s", exc)
@@ -462,10 +465,11 @@ async def create_message(
     if is_sound_asleep_suppressed and sleep_response_to_return is not None:
         return sleep_response_to_return
 
-    # 5. Convert into provider-neutral ChatMessage format
+    # 5. History Window (Phase 4): Bound active chat history to recent 30 messages
+    recent_stored = stored_messages[-30:] if len(stored_messages) > 30 else stored_messages
     chat_messages = [
         ChatMessage(role=m.role, content=m.content)
-        for m in stored_messages
+        for m in recent_stored
     ]
 
     # 6. Call the LLM provider through ResponseGenerator (Phase 6.3)
@@ -508,115 +512,7 @@ async def create_message(
     if llm_response.speech_bubbles:
         assistant_read.speech_bubbles = llm_response.speech_bubbles
 
-    interaction_context = chat_messages + [
-        ChatMessage(role=assistant_msg.role, content=assistant_msg.content)
-    ]
-
-    # 9. Non-critical post-turn processing: Relationship signals (isolated boundary)
-    try:
-        extraction_service = RelationshipSignalExtractionService(llm_provider=llm_provider)
-        extraction_result = await extraction_service.extract_signals(interaction_context)
-        if extraction_result.is_success and extraction_result.signals:
-            rel_service = RelationshipService(db)
-            current_rel = await rel_service.get_relationship_state(relationship_id=rel_id)
-            rel_update = apply_relationship_signals(
-                state=current_rel,
-                signals=extraction_result.signals,
-            )
-            if rel_update is not None:
-                await rel_service.apply_update(
-                    update_data=rel_update,
-                    expected_version=current_rel.version,
-                    relationship_id=rel_id,
-                )
-
-            # Record accepted relationship experiences (Phase 4.4)
-            exp_service = RelationshipExperienceService(db)
-            await exp_service.record_signals(
-                signals=extraction_result.signals,
-                relationship_id=rel_id,
-            )
-    except Exception as exc:
-        await db.rollback()
-        logger.warning(
-            "Relationship signal and experience processing failed for conversation '%s': %s",
-            conversation_id,
-            exc,
-        )
-
-    # 9b. Non-critical post-turn processing: Memory extraction and curation (isolated boundary)
-    try:
-        from app.memory.curation_service import MemoryCurationService
-        from app.memory.extraction_service import MemoryExtractionService
-
-        mem_extraction_service = MemoryExtractionService(
-            session=db,
-            llm_provider=llm_provider,
-            character_id=target_char_id,
-        )
-        mem_extract_res = await mem_extraction_service.extract_and_create_candidates(
-            messages=interaction_context,
-        )
-        if mem_extract_res.is_success and mem_extract_res.candidate_ids:
-            curation_service = MemoryCurationService(session=db, character_id=target_char_id)
-            for cid in mem_extract_res.candidate_ids:
-                try:
-                    eval_res = await curation_service.curate_candidate(cid)
-                    # Promote high-confidence proposals if deferred
-                    if hasattr(eval_res, "decision") and eval_res.decision.value == "DEFER":
-                        cand = await curation_service.get_candidate(cid)
-                        if cand and cand.confidence >= 0.85 and cand.importance >= 0.45:
-                            await curation_service.accept_candidate(cid)
-                except Exception as c_err:
-                    logger.debug("Immediate candidate curation error for %s: %s", cid, c_err)
-            await curation_service.curate_pending_candidates()
-    except Exception as exc:
-        await db.rollback()
-        logger.warning(
-            "Memory candidate extraction and curation failed for conversation '%s': %s",
-            conversation_id,
-            exc,
-        )
-
-    # 9c. Non-critical post-turn processing: Emotion & Mood transitions (isolated boundary)
-    try:
-        from app.emotion.turn_appraisal import TurnEmotionAppraisalService
-        turn_emotion_service = TurnEmotionAppraisalService(session=db)
-        await turn_emotion_service.process_turn_emotion(
-            user_input=payload.content,
-            assistant_response=assistant_msg.content,
-            response_context=response_context,
-            character_id=target_char_id,
-        )
-    except Exception as exc:
-        await db.rollback()
-        logger.warning(
-            "Emotion and mood post-turn appraisal failed for conversation '%s': %s",
-            conversation_id,
-            exc,
-        )
-
-    # 9d. Non-critical post-turn processing: Deception & Cognitive Grievance lifecycle (isolated boundary)
-    try:
-        if response_context.deception_grievance:
-            from app.reality.deception_service import DeceptionService
-            from app.reality.deception_models import GrievanceStage
-            dec_svc = DeceptionService(db)
-            dg = response_context.deception_grievance
-            if dg.stage == GrievanceStage.VERIFIED_DECEPTION:
-                # Assistant has just confronted the user in this generated message
-                await dec_svc.mark_confronted(dg.grievance_id)
-            elif dg.stage == GrievanceStage.RECONCILING:
-                # Assistant has just forgiven and reconciled with the user
-                await dec_svc.reconcile_grievance(dg.grievance_id)
-    except Exception as exc:
-        logger.warning(
-            "Deception grievance post-turn progression failed for conversation '%s': %s",
-            conversation_id,
-            exc,
-        )
-
-    # 9e. Non-critical post-turn processing: Situational & Dialogue Commitment Extraction
+    # 8b. Synchronous deterministic micro-progressions (<1ms, no LLM call)
     try:
         from app.life.dialogue_situation import DialogueSituationAppraisalService
         detected_situation = DialogueSituationAppraisalService.extract_situation(
@@ -629,9 +525,48 @@ async def create_message(
                 character_id=target_char_id,
                 situation=detected_situation,
             )
-    except Exception as sit_err:
-        await db.rollback()
-        logger.warning("Dialogue situational commitment extraction error: %s", sit_err)
+        if response_context.deception_grievance:
+            from app.reality.deception_service import DeceptionService
+            from app.reality.deception_models import GrievanceStage
+            dec_svc = DeceptionService(db)
+            dg = response_context.deception_grievance
+            if dg.stage == GrievanceStage.VERIFIED_DECEPTION:
+                await dec_svc.mark_confronted(dg.grievance_id)
+            elif dg.stage == GrievanceStage.RECONCILING:
+                await dec_svc.reconcile_grievance(dg.grievance_id)
+        await db.commit()
+    except Exception as sync_err:
+        logger.debug("Inline micro-progression skipped: %s", sync_err)
+
+    interaction_context = chat_messages + [
+        ChatMessage(role=assistant_msg.role, content=assistant_msg.content)
+    ]
+
+    # 9. Asynchronous post-turn pipeline (Phase 4): Merged extraction & background state update
+    if background_tasks is not None:
+        background_tasks.add_task(
+            PostTurnService.run_post_turn_pipeline,
+            conversation_id=conversation_id,
+            target_char_id=target_char_id,
+            rel_id=rel_id,
+            user_text=payload.content,
+            assistant_text=assistant_msg.content,
+            interaction_context=interaction_context,
+            llm_provider=llm_provider,
+        )
+    else:
+        import asyncio
+        asyncio.create_task(
+            PostTurnService.run_post_turn_pipeline(
+                conversation_id=conversation_id,
+                target_char_id=target_char_id,
+                rel_id=rel_id,
+                user_text=payload.content,
+                assistant_text=assistant_msg.content,
+                interaction_context=interaction_context,
+                llm_provider=llm_provider,
+            )
+        )
 
     # 10. Return both persisted messages
     return MessageCreateResponse(
@@ -650,6 +585,7 @@ async def create_message(
 async def create_voice_message(
     conversation_id: str,
     payload: VoiceMessageCreate,
+    background_tasks: BackgroundTasks = None,
     db: AsyncSession = Depends(get_db_session),
     llm_provider: LLMProvider = Depends(get_llm_provider),
     embedding_provider: EmbeddingProvider | None = Depends(get_embedding_provider),
@@ -785,8 +721,9 @@ async def create_voice_message(
             detail="Internal character engine failure.",
         ) from exc
 
-    # 9. Invoke LLM provider
-    chat_messages = [ChatMessage(role=m.role, content=m.content) for m in stored_messages]
+    # 9. Invoke LLM provider (Phase 4 history window)
+    recent_stored = stored_messages[-30:] if len(stored_messages) > 30 else stored_messages
+    chat_messages = [ChatMessage(role=m.role, content=m.content) for m in recent_stored]
     try:
         response_generator = ResponseGenerator(provider=llm_provider)
         llm_response = await response_generator.generate_response(
@@ -825,81 +762,33 @@ async def create_voice_message(
     if llm_response.speech_bubbles:
         assistant_read.speech_bubbles = llm_response.speech_bubbles
 
-    # 11. Post-turn processing (Relationship + Memory, non-critical)
+    # 11. Asynchronous post-turn pipeline (Phase 4)
     interaction_context = chat_messages + [
         ChatMessage(role=assistant_msg.role, content=assistant_msg.content)
     ]
-    try:
-        extraction_service = RelationshipSignalExtractionService(llm_provider=llm_provider)
-        extraction_result = await extraction_service.extract_signals(interaction_context)
-        if extraction_result.is_success and extraction_result.signals:
-            rel_service = RelationshipService(db)
-            current_rel = await rel_service.get_relationship_state(relationship_id="user")
-            rel_update = apply_relationship_signals(
-                state=current_rel,
-                signals=extraction_result.signals,
-            )
-            if rel_update is not None:
-                await rel_service.apply_update(
-                    update_data=rel_update,
-                    expected_version=current_rel.version,
-                    relationship_id="user",
-                )
-            exp_service = RelationshipExperienceService(db)
-            await exp_service.record_signals(
-                signals=extraction_result.signals,
-                relationship_id="user",
-            )
-    except Exception as exc:
-        await db.rollback()
-        logger.warning(
-            "Relationship processing failed in voice turn for conversation '%s': %s",
-            conversation_id,
-            exc,
-        )
-
-    try:
-        from app.memory.curation_service import MemoryCurationService
-        from app.memory.extraction_service import MemoryExtractionService
-
-        mem_extraction_service = MemoryExtractionService(
-            session=db,
+    if background_tasks is not None:
+        background_tasks.add_task(
+            PostTurnService.run_post_turn_pipeline,
+            conversation_id=conversation_id,
+            target_char_id="aevum",
+            rel_id="user",
+            user_text=transcribed_text,
+            assistant_text=assistant_msg.content,
+            interaction_context=interaction_context,
             llm_provider=llm_provider,
         )
-        mem_extract_res = await mem_extraction_service.extract_and_create_candidates(
-            messages=interaction_context,
-        )
-        if mem_extract_res.is_success and mem_extract_res.candidate_ids:
-            curation_service = MemoryCurationService(session=db)
-            for cid in mem_extract_res.candidate_ids:
-                try:
-                    await curation_service.curate_candidate(cid)
-                except Exception as c_err:
-                    logger.debug("Immediate candidate curation error for %s: %s", cid, c_err)
-            await curation_service.curate_pending_candidates()
-    except Exception as exc:
-        await db.rollback()
-        logger.warning(
-            "Memory extraction failed in voice turn for conversation '%s': %s",
-            conversation_id,
-            exc,
-        )
-
-    try:
-        from app.emotion.turn_appraisal import TurnEmotionAppraisalService
-        turn_emotion_service = TurnEmotionAppraisalService(session=db)
-        await turn_emotion_service.process_turn_emotion(
-            user_input=transcribed_text,
-            assistant_response=assistant_msg.content,
-            response_context=response_context,
-            character_id="aevum",
-        )
-    except Exception as exc:
-        await db.rollback()
-        logger.warning(
-            "Emotion and mood voice post-turn appraisal failed for conversation '%s': %s",
-            conversation_id,
-            exc,
+    else:
+        import asyncio
+        asyncio.create_task(
+            PostTurnService.run_post_turn_pipeline(
+                conversation_id=conversation_id,
+                target_char_id="aevum",
+                rel_id="user",
+                user_text=transcribed_text,
+                assistant_text=assistant_msg.content,
+                interaction_context=interaction_context,
+                llm_provider=llm_provider,
+            )
         )
 
     # 12. Spoken Reply Audio Synthesis (TTS) - Decoupled Fault Resilience (Lock B)

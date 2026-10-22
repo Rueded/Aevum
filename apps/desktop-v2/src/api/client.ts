@@ -5,22 +5,16 @@ export const CLOUD_BACKEND_URL = "https://aevum-1mcy.onrender.com";
 
 export function getBackendBaseUrl(): string {
   if (typeof window !== "undefined") {
-    const isNativeMobile = Capacitor.isNativePlatform() || (window as any).Capacitor !== undefined;
     const saved = localStorage.getItem("aevum_backend_url");
 
     if (saved && saved.trim()) {
       const clean = saved.trim().replace(/\/+$/, "");
-      // On mobile native app, ignore accidental/legacy localhost/127.0.0.1 settings
-      if (isNativeMobile && (clean.includes("localhost") || clean.includes("127.0.0.1"))) {
+      // Discard expired Render URL so it never gets stuck
+      if (clean.includes("onrender.com")) {
         localStorage.removeItem("aevum_backend_url");
-        return CLOUD_BACKEND_URL;
+      } else {
+        return clean;
       }
-      return clean;
-    }
-
-    // If running inside Capacitor Native Mobile App, default to 24/7 cloud backend
-    if (isNativeMobile) {
-      return CLOUD_BACKEND_URL;
     }
 
     if (
@@ -54,16 +48,9 @@ export async function fetchJson<T>(endpoint: string, options?: RequestInit): Pro
   try {
     response = await fetch(`${baseUrl}${endpoint}`, options);
   } catch (netErr: any) {
-    // If local development backend is not running, seamlessly fallback to Cloud Backend
-    if (baseUrl.includes("127.0.0.1") || baseUrl.includes("localhost")) {
-      try {
-        response = await fetch(`${CLOUD_BACKEND_URL}${endpoint}`, options);
-      } catch {
-        throw netErr;
-      }
-    } else {
-      throw netErr;
-    }
+    throw new Error(
+      `无法连接到 Aevum 后端服务 (${baseUrl})。请确认本地电脑已运行后端服务 (uvicorn port 8000)。错误: ${netErr.message || netErr}`
+    );
   }
 
   if (!response.ok) {

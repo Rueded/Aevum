@@ -143,6 +143,7 @@ async def test_send_bubbles_with_sticker_resolution(tmp_path):
     ch.client.send_message = AsyncMock()
     ch.client.send_photo = AsyncMock()
     ch.client.send_animation = AsyncMock()
+    ch.client.send_sticker = AsyncMock()
 
     with patch("app.channels.telegram.StickerService") as mock_service_cls:
         mock_svc = MagicMock()
@@ -155,8 +156,8 @@ async def test_send_bubbles_with_sticker_resolution(tmp_path):
 
         # Bubble 1: text "笑死"
         ch.client.send_message.assert_called_once_with(12345, "笑死")
-        # Bubble 2: photo sticker
-        ch.client.send_photo.assert_called_once()
+        # Bubble 2: native webp sticker
+        ch.client.send_sticker.assert_called_once()
         mock_svc.record_usage.assert_called_once_with("stk-1")
 
 

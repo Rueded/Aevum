@@ -81,12 +81,26 @@ class TelegramClient:
         resp.raise_for_status()
         return resp.json()["result"]
 
-    async def send_photo(self, chat_id: int, photo_bytes: bytes, caption: Optional[str] = None) -> dict[str, Any]:
-        files = {"photo": ("photo.jpg", photo_bytes, "image/jpeg")}
+    async def send_photo(
+        self,
+        chat_id: int,
+        photo_bytes: bytes,
+        caption: Optional[str] = None,
+        filename: str = "photo.jpg",
+        mime_type: str = "image/jpeg",
+    ) -> dict[str, Any]:
+        files = {"photo": (filename, photo_bytes, mime_type)}
         data: dict[str, Any] = {"chat_id": chat_id}
         if caption:
             data["caption"] = caption
         resp = await self._http.post(f"{self.api_url}/sendPhoto", data=data, files=files)
+        resp.raise_for_status()
+        return resp.json()["result"]
+
+    async def send_sticker(self, chat_id: int, sticker_bytes: bytes) -> dict[str, Any]:
+        files = {"sticker": ("sticker.webp", sticker_bytes, "image/webp")}
+        data: dict[str, Any] = {"chat_id": chat_id}
+        resp = await self._http.post(f"{self.api_url}/sendSticker", data=data, files=files)
         resp.raise_for_status()
         return resp.json()["result"]
 
@@ -553,6 +567,24 @@ class TelegramChannel:
             # 8. Send bubbles to Telegram with typing indicator and human intervals
             await self._send_bubbles_to_telegram(chat_id, bubbles, session)
 
+    @staticmethod
+    def _resolve_file_path(path_str: str) -> Optional[Path]:
+        p = Path(path_str)
+        if p.is_absolute() and p.exists():
+            return p
+        if p.exists():
+            return p.resolve()
+        # Relative to parent of cwd (e.g. if cwd is backend/)
+        p_parent = Path("..") / path_str
+        if p_parent.exists():
+            return p_parent.resolve()
+        # Relative to _PROJECT_ROOT
+        from app.core.config import _PROJECT_ROOT
+        p_root = _PROJECT_ROOT / path_str
+        if p_root.exists():
+            return p_root.resolve()
+        return None
+
     async def _send_bubbles_to_telegram(
         self, chat_id: int, bubbles: list[str], session: AsyncSession
     ) -> None:
@@ -570,8 +602,10 @@ class TelegramChannel:
                 stk_query = (sticker_match.group(1) or sticker_match.group(2) or "").strip()
                 stk_item = await stk_svc.get_sticker_by_name_or_hash(stk_query)
 
-                # If sticker file exists on disk
-                if stk_item and os.path.exists(stk_item.file_path):
+                # Resolve file path across project and working directory
+                resolved_path = self._resolve_file_path(stk_item.file_path) if stk_item else None
+
+                if stk_item and resolved_path and resolved_path.exists():
                     await stk_svc.record_usage(stk_item.id)
 
                     # Remaining text without sticker
@@ -579,27 +613,54 @@ class TelegramChannel:
                         r"\[(?:表情包[：:]?\s*[^\]]+|sticker:[a-zA-Z0-9_\-]+)\]", "", bubble_clean
                     ).strip()
 
-                    # Send typing/upload indicator
+                    # If there is separate text accompanying the sticker, send text first
+                    if remaining_text:
+                        await self.client.send_chat_action(chat_id, "typing")
+                        await asyncio.sleep(min(1.5, max(0.4, len(remaining_text) * 0.07)))
+                        await self.client.send_message(chat_id, remaining_text)
+                        await asyncio.sleep(0.4)
+
+                    # Send typing/upload indicator for media
                     await self.client.send_chat_action(chat_id, "choose_sticker")
-                    await asyncio.sleep(0.6)
+                    await asyncio.sleep(0.4)
 
-                    # Send sticker
-                    file_ext = os.path.splitext(stk_item.file_path)[1].lower()
-                    with open(stk_item.file_path, "rb") as f:
-                        file_bytes = f.read()
+                    file_ext = resolved_path.suffix.lower()
+                    file_bytes = resolved_path.read_bytes()
 
-                    if file_ext == ".gif":
-                        await self.client.send_animation(chat_id, file_bytes, caption=remaining_text or None)
-                    elif file_ext in (".webp", ".png", ".jpg", ".jpeg"):
-                        await self.client.send_photo(chat_id, file_bytes, caption=remaining_text or None)
-                    else:
-                        await self.client.send_document(
-                            chat_id, file_bytes, filename=os.path.basename(stk_item.file_path), caption=remaining_text or None
-                        )
+                    try:
+                        if file_ext == ".gif":
+                            await self.client.send_animation(chat_id, file_bytes)
+                        elif file_ext == ".webp":
+                            # Telegram native sticker endpoint
+                            try:
+                                await self.client.send_sticker(chat_id, file_bytes)
+                            except Exception as stk_err:
+                                logger.debug("sendSticker fallback to sendDocument: %s", stk_err)
+                                await self.client.send_document(chat_id, file_bytes, filename=resolved_path.name)
+                        elif file_ext in (".png", ".jpg", ".jpeg"):
+                            mime = "image/png" if file_ext == ".png" else "image/jpeg"
+                            await self.client.send_photo(chat_id, file_bytes, filename=resolved_path.name, mime_type=mime)
+                        else:
+                            await self.client.send_document(
+                                chat_id, file_bytes, filename=resolved_path.name
+                            )
+                        logger.info("Sent sticker to Telegram: %s (%s)", stk_item.id, resolved_path.name)
+                    except Exception as send_err:
+                        logger.error("Failed to send sticker media to Telegram: %s", send_err)
+                        display_name = stk_item.description or stk_item.text_ocr or "表情包"
+                        await self.client.send_message(chat_id, f"[表情包: {display_name}]")
 
                     if idx < len(bubbles) - 1:
                         await asyncio.sleep(0.8)
                     continue
+                elif stk_item:
+                    # Sticker recorded in DB but image file missing from disk
+                    display_name = stk_item.description or stk_item.text_ocr or "表情包"
+                    bubble_clean = re.sub(
+                        r"\[(?:表情包[：:]?\s*[^\]]+|sticker:[a-zA-Z0-9_\-]+)\]",
+                        f"[表情包: {display_name}]",
+                        bubble_clean,
+                    )
 
             # Standard text bubble
             await self.client.send_chat_action(chat_id, "typing")

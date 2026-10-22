@@ -27,6 +27,7 @@ export default defineConfig({
       "/memory": "http://127.0.0.1:8000",
       "/relationship": "http://127.0.0.1:8000",
       "/desktop": "http://127.0.0.1:8000",
+      "/stickers": "http://127.0.0.1:8000",
     },
   },
 });
